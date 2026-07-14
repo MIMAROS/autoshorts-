@@ -270,8 +270,8 @@ export default function Page() {
                   subtitle_lang: subtitleLang,
                   subtitle_config: subConfig
               };
-              if (trimStart !== '') payload.trim_start = parseInt(trimStart as string);
-              if (trimEnd !== '') payload.trim_end = parseInt(trimEnd as string);
+              if (trimStart !== '') payload.trim_start = Number(trimStart);
+              if (trimEnd !== '') payload.trim_end = Number(trimEnd);
               
               const res = await fetch(`/api/process-video`, {
                 method: 'POST',
