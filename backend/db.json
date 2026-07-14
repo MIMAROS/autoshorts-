@@ -1,0 +1,52 @@
+[
+    {
+        "job_id": "e0dc0aae-08ab-4ce1-a67d-904a03e47b9a",
+        "title": "Verliere ich den Verstand? Wenn das Monster erwacht, RENNT!",
+        "thumbnail": "/videos/AutoShort_e0dc0aae-08ab-4ce1-a67d-904a03e47b9a_Hook_1.mp4",
+        "clips": [
+            "/videos/AutoShort_e0dc0aae-08ab-4ce1-a67d-904a03e47b9a_Hook_1.mp4",
+            "/videos/AutoShort_e0dc0aae-08ab-4ce1-a67d-904a03e47b9a_Hook_2.mp4",
+            "/videos/AutoShort_e0dc0aae-08ab-4ce1-a67d-904a03e47b9a_Hook_3.mp4"
+        ]
+    },
+    {
+        "job_id": "b2a4cefd-3567-4307-a6fc-f68479a79db4",
+        "title": "Ich verliere den Verstand! Totale Kontrolle verloren",
+        "thumbnail": "/videos/AutoShort_b2a4cefd-3567-4307-a6fc-f68479a79db4_Hook_1.mp4",
+        "clips": [
+            "/videos/AutoShort_b2a4cefd-3567-4307-a6fc-f68479a79db4_Hook_1.mp4",
+            "/videos/AutoShort_b2a4cefd-3567-4307-a6fc-f68479a79db4_Hook_2.mp4",
+            "/videos/AutoShort_b2a4cefd-3567-4307-a6fc-f68479a79db4_Hook_3.mp4"
+        ]
+    },
+    {
+        "job_id": "5984a4fc-6438-4b2b-8fbb-44fd3d607ae3",
+        "title": "Ich verliere die Kontrolle! Dr. Banner's letzte Warnung",
+        "thumbnail": "/videos/AutoShort_5984a4fc-6438-4b2b-8fbb-44fd3d607ae3_Hook_1.mp4",
+        "clips": [
+            "/videos/AutoShort_5984a4fc-6438-4b2b-8fbb-44fd3d607ae3_Hook_1.mp4",
+            "/videos/AutoShort_5984a4fc-6438-4b2b-8fbb-44fd3d607ae3_Hook_2.mp4",
+            "/videos/AutoShort_5984a4fc-6438-4b2b-8fbb-44fd3d607ae3_Hook_3.mp4"
+        ]
+    },
+    {
+        "job_id": "fb1c5147-7463-44c3-9571-9a4df4cc2a67",
+        "title": "Ich verlier den Verstand: Wenn du die Kontrolle verlierst...",
+        "thumbnail": "/videos/AutoShort_fb1c5147-7463-44c3-9571-9a4df4cc2a67_Hook_1.mp4",
+        "clips": [
+            "/videos/AutoShort_fb1c5147-7463-44c3-9571-9a4df4cc2a67_Hook_1.mp4",
+            "/videos/AutoShort_fb1c5147-7463-44c3-9571-9a4df4cc2a67_Hook_2.mp4",
+            "/videos/AutoShort_fb1c5147-7463-44c3-9571-9a4df4cc2a67_Hook_3.mp4"
+        ]
+    },
+    {
+        "job_id": "38864cb5-e0f5-4add-8cdb-9c6ad02d29af",
+        "title": "Hulk's Furchtbare Warnung: Lauf Weg!",
+        "thumbnail": "/videos/AutoShort_38864cb5-e0f5-4add-8cdb-9c6ad02d29af_Hook_1.mp4",
+        "clips": [
+            "/videos/AutoShort_38864cb5-e0f5-4add-8cdb-9c6ad02d29af_Hook_1.mp4",
+            "/videos/AutoShort_38864cb5-e0f5-4add-8cdb-9c6ad02d29af_Hook_2.mp4",
+            "/videos/AutoShort_38864cb5-e0f5-4add-8cdb-9c6ad02d29af_Hook_3.mp4"
+        ]
+    }
+]

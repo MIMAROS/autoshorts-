@@ -1,0 +1,14 @@
+node_modules/
+.next/
+out/
+__pycache__/
+*.pyc
+temp/
+Fertige_Shorts/
+.env
+client_secret*.json
+*.sqlite
+
+venv/
+
+ffmpeg.exe
