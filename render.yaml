@@ -4,7 +4,7 @@ services:
     env: docker
     dockerfilePath: backend/Dockerfile
     dockerContext: backend
-    plan: starter
+    plan: free
     envVars:
       - key: SUPABASE_URL
         sync: false
@@ -16,7 +16,7 @@ services:
     env: docker
     dockerfilePath: frontend/Dockerfile
     dockerContext: frontend
-    plan: starter
+    plan: free
     envVars:
       - key: NEXT_PUBLIC_API_URL
         fromService:
