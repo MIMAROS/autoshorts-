@@ -71,7 +71,7 @@ export default function Page() {
 
   const fetchAuthStatus = async () => {
     try {
-        const res = await fetch('/api/auth/status');
+        const res = await fetch('https://autoshorts-backend-3s1b.onrender.com/api/auth/status');
         const data = await res.json();
         setAuthStatus({ youtube: data.youtube, tiktok: data.tiktok });
     } catch (e) {
@@ -81,7 +81,7 @@ export default function Page() {
 
   const fetchSchedules = async () => {
     try {
-        const res = await fetch(`/api/schedules`);
+        const res = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/schedules`);
         const data = await res.json();
         setSchedules(data.schedules || []);
     } catch (e) {
@@ -91,7 +91,7 @@ export default function Page() {
 
   const fetchHistory = async () => {
     try {
-        const res = await fetch(`/api/history`);
+        const res = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/history`);
         const data = await res.json();
         setHistory(data.history || []);
     } catch (e) {
@@ -157,7 +157,7 @@ export default function Page() {
       if (!url) return;
       setIsFetchingMetadata(true);
       try {
-          const res = await fetch('/api/video-info', {
+          const res = await fetch('https://autoshorts-backend-3s1b.onrender.com/api/video-info', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ youtube_url: url })
@@ -201,7 +201,7 @@ export default function Page() {
       if (logoFile) {
           const logoData = new FormData();
           logoData.append('file', logoFile);
-          const logoRes = await fetch('/api/upload-logo', { method: 'POST', body: logoData });
+          const logoRes = await fetch('https://autoshorts-backend-3s1b.onrender.com/api/upload-logo', { method: 'POST', body: logoData });
           if (logoRes.ok) {
               const parsedLogo = await logoRes.json();
               finalLogoPath = parsedLogo.logo_path;
@@ -236,7 +236,7 @@ export default function Page() {
           formData.append('subtitle_lang', subtitleLang);
           formData.append('subtitle_config', JSON.stringify(subConfig));
           
-          const res = await fetch(`/api/process-sequence`, {
+          const res = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/process-sequence`, {
               method: 'POST',
               body: formData
           });
@@ -254,7 +254,7 @@ export default function Page() {
               if (trimStart !== '') formData.append('trim_start', trimStart.toString());
               if (trimEnd !== '') formData.append('trim_end', trimEnd.toString());
               
-              const res = await fetch(`/api/upload-video`, {
+              const res = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/upload-video`, {
                   method: 'POST',
                   body: formData
               });
@@ -272,7 +272,7 @@ export default function Page() {
               if (trimStart !== '') payload.trim_start = Number(trimStart);
               if (trimEnd !== '') payload.trim_end = Number(trimEnd);
               
-              const res = await fetch(`/api/process-video`, {
+              const res = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/process-video`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -287,7 +287,7 @@ export default function Page() {
 
       const interval = setInterval(async () => {
         try {
-          const statusRes = await fetch(`/api/status/${jobId}`);
+          const statusRes = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/status/${jobId}`);
           const statusData = await statusRes.json();
           
           if (statusData.status === 'error') {
@@ -332,7 +332,7 @@ export default function Page() {
 
   const handleScheduleSubmit = async () => {
     try {
-        await fetch(`/api/schedule`, {
+        await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/schedule`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -836,7 +836,7 @@ export default function Page() {
                           
                           <div className="w-full md:w-[240px] shrink-0 relative bg-background rounded-xl overflow-hidden shadow-2xl border border-borderGlass flex items-center justify-center aspect-[9/16]">
                               {clip.videoUrl ? (
-                                  <video src={clip.videoUrl} controls className="absolute inset-0 w-full h-full object-cover z-20" />
+                                  <video src={clip.videoUrl.startsWith('/') ? 'https://autoshorts-backend-3s1b.onrender.com' + clip.videoUrl : clip.videoUrl} controls className="absolute inset-0 w-full h-full object-cover z-20" />
                               ) : (
                                   <div className="text-textDim text-sm">Video lädt...</div>
                               )}
@@ -957,7 +957,7 @@ export default function Page() {
 
   const handleOAuthConnect = async (platform: string) => {
       try {
-          const res = await fetch(`/api/auth/${platform}`, { method: 'POST' });
+          const res = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/auth/${platform}`, { method: 'POST' });
           if (res.ok) {
               const data = await res.json();
               if (data.auth_url) {
@@ -1058,7 +1058,7 @@ export default function Page() {
                       {selectedProject.clips?.map((clipUrl: string, idx: number) => (
                           <div key={idx} className="flex flex-col gap-4 bg-background/50 rounded-xl p-4 border border-borderGlass">
                               <h3 className="font-bold text-center text-mimaros-gold">Variante {idx + 1}</h3>
-                              <video src={clipUrl} controls className="w-full aspect-[9/16] bg-black rounded-lg object-contain" />
+                              <video src={clipUrl.startsWith('/') ? 'https://autoshorts-backend-3s1b.onrender.com' + clipUrl : clipUrl} controls className="w-full aspect-[9/16] bg-black rounded-lg object-contain" />
                               <button onClick={() => {
                                   setSchedulingClip({ id: 'hist_'+idx, title: `Variante ${idx+1}`, videoUrl: clipUrl, rationale: '' });
                                   setScheduleForm(prev => ({...prev, platforms: ['YouTube Shorts']}));
@@ -1151,3 +1151,5 @@ export default function Page() {
     </div>
   );
 }
+
+
