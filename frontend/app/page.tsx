@@ -258,6 +258,12 @@ export default function Page() {
                   method: 'POST',
                   body: formData
               });
+              
+              if (!res.ok) {
+                  const text = await res.text().catch(() => '');
+                  throw new Error(`Upload fehlgeschlagen (${res.status}): ${text}`);
+              }
+              
               const data = await res.json();
               jobId = data.job_id;
           } else {
@@ -323,10 +329,10 @@ export default function Page() {
         }
       }, 3000);
       
-    } catch (error) {
+    } catch (error: any) {
       console.error(error);
       setIsProcessing(false);
-      setStatusMessage('Verbindung zum Server fehlgeschlagen.');
+      setStatusMessage(`Fehler: ${error.message}`);
     }
   };
 
