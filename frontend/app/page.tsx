@@ -164,10 +164,9 @@ export default function Page() {
           });
           
           if (!res.ok) {
-              console.error(`HTTP error! status: ${res.status}`);
               const text = await res.text();
               console.error("Response body:", text);
-              alert("Fehler beim Laden der Video-Informationen. Bitte überprüfe den Link.");
+              alert("Fehler vom Server: " + text);
               return;
           }
           
