@@ -183,8 +183,9 @@ def process_clip(video_path: str, transcript_data: dict, start_time: float, end_
     try:
         result = subprocess.run(command, capture_output=True, text=True, timeout=900)
         if result.returncode != 0:
-            print(f"FFmpeg Fehler: {result.stderr}")
-            raise RuntimeError(f"FFmpeg Fehler: {result.stderr}")
+            error_msg = result.stderr[-1000:] if result.stderr and len(result.stderr) > 1000 else result.stderr
+            print(f"FFmpeg Fehler: {error_msg}")
+            raise RuntimeError(f"FFmpeg Fehler: {error_msg}")
     except subprocess.TimeoutExpired:
         raise RuntimeError("FFmpeg hat zu lange gebraucht (Timeout).")
     finally:
@@ -211,7 +212,8 @@ def generate_preview(video_path: str, output_path: str, config: dict):
     try:
         result = subprocess.run(command, capture_output=True, text=True, timeout=60)
         if result.returncode != 0:
-            raise RuntimeError(f"FFmpeg Error: {result.stderr}")
+            error_msg = result.stderr[-1000:] if result.stderr and len(result.stderr) > 1000 else result.stderr
+            raise RuntimeError(f"FFmpeg Error: {error_msg}")
     finally:
         if os.path.exists(dummy_srt_path):
             try: os.remove(dummy_srt_path)
@@ -242,8 +244,9 @@ def normalize_clip(input_path: str, output_path: str, resolution: str = "1080p")
     print(f"Normalisiere Clip: {input_path}")
     result = subprocess.run(command, capture_output=True, text=True, timeout=900)
     if result.returncode != 0:
-        print(f"Fehler bei Normalisierung: {result.stderr}")
-        raise RuntimeError(f"FFmpeg Normalisierungsfehler: {result.stderr}")
+        error_msg = result.stderr[-1000:] if result.stderr and len(result.stderr) > 1000 else result.stderr
+        print(f"Fehler bei Normalisierung: {error_msg}")
+        raise RuntimeError(f"FFmpeg Normalisierungsfehler: {error_msg}")
     return output_path
 
 def get_video_duration(video_path: str) -> float:
@@ -319,7 +322,8 @@ def stitch_clips(clip_paths: list, output_path: str):
     result = subprocess.run(command, capture_output=True, text=True, timeout=900)
     
     if result.returncode != 0:
-        raise RuntimeError(f"FFmpeg Stitching Fehler (xfade): {result.stderr}")
+        error_msg = result.stderr[-1000:] if result.stderr and len(result.stderr) > 1000 else result.stderr
+        raise RuntimeError(f"FFmpeg Stitching Fehler (xfade): {error_msg}")
     return output_path
 
 def apply_branding_and_subs(stitched_path: str, transcript_data: dict, output_path: str, subtitle_config: dict):
@@ -333,8 +337,9 @@ def apply_branding_and_subs(stitched_path: str, transcript_data: dict, output_pa
     print(f"Führe FFmpeg (Branding) aus: {' '.join(command)}")
     result = subprocess.run(command, capture_output=True, text=True, timeout=900)
     if result.returncode != 0:
-        print(f"FFmpeg Fehler: {result.stderr}")
-        raise RuntimeError(f"FFmpeg Fehler: {result.stderr}")
+        error_msg = result.stderr[-1000:] if result.stderr and len(result.stderr) > 1000 else result.stderr
+        print(f"FFmpeg Fehler: {error_msg}")
+        raise RuntimeError(f"FFmpeg Fehler: {error_msg}")
         
     if os.path.exists(srt_path):
         try: os.remove(srt_path)
