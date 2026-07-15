@@ -71,7 +71,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     watermark_text = config.get("watermark_text", "mimaros.eu").replace("'", "\\")
     if watermark_text:
         vf_filter += f",drawbox=x=(iw-300)/2:y=ih-80:w=300:h=50:color=black@0.6:t=fill"
-        vf_filter += f",drawtext=text='{watermark_text}':fontcolor=white:fontsize=22:font='Arial':x=(w-text_w)/2:y=ih-65"
+        vf_filter += f",drawtext=text='{watermark_text}':fontcolor=white:fontsize=22:font='Arial':x=(w-text_w)/2:y=h-65"
         
     vf_filter += "[v_base]"
     filter_complex = vf_filter
