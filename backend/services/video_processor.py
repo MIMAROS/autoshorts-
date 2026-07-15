@@ -80,9 +80,16 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     filter_complex = vf_filter
     
     cmd = ["ffmpeg", "-y"]
-    if start_time:
+    if start_time and video_path != "demo":
         cmd.extend(["-ss", str(start_time)])
-    cmd.extend(["-i", video_path])
+        
+    if video_path == "demo":
+        if resolution == "1080p":
+            cmd.extend(["-f", "lavfi", "-i", "color=c=black:s=1080x1920:r=30"])
+        else:
+            cmd.extend(["-f", "lavfi", "-i", "color=c=black:s=720x1280:r=30"])
+    else:
+        cmd.extend(["-i", video_path])
     
     if logo_path and os.path.exists(logo_path) and use_master_ci:
         cmd.extend(["-i", logo_path])

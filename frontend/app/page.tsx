@@ -188,6 +188,36 @@ export default function Page() {
       }
   };
 
+  const handleGeneratePreview = async () => {
+      setIsGlobalPreviewing(true);
+      try {
+          const config = {
+              ...globalSubtitleConfig,
+              use_master_ci: useMasterCi,
+              primaryColor,
+              textColor,
+              logoPosition,
+              design: globalSubtitleConfig.design || 'minimalist',
+              resolution
+          };
+
+          const res = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/preview-clip`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ clip_path: 'demo', config })
+          });
+          
+          if (!res.ok) throw new Error("Preview generation failed");
+          
+          const data = await res.json();
+          setGlobalPreviewUrl(`https://autoshorts-backend-3s1b.onrender.com${data.preview_url}`);
+      } catch (err) {
+          console.error(err);
+      } finally {
+          setIsGlobalPreviewing(false);
+      }
+  };
+
   const handleProcess = async () => {
     if (!isSequenceMode && !youtubeUrl && !localFile) return;
     if (isSequenceMode && sequence.length === 0) return;
@@ -777,8 +807,9 @@ export default function Page() {
                             backgroundImage: "url('https://images.unsplash.com/photo-1616469829941-c7200edec809?auto=format&fit=crop&w=400&q=80')",
                             border: useMasterCi ? `4px solid ${primaryColor}` : '1px solid var(--borderGlass)'
                         }}>
-                            
-                            {useMasterCi ? (
+                            {globalPreviewUrl ? (
+                                <video src={globalPreviewUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover" />
+                            ) : useMasterCi ? (
                                 <>
                                     {logoPreview && (
                                         <div className="absolute w-10 h-10 rounded bg-white/10 backdrop-blur-sm" style={{
@@ -815,6 +846,14 @@ export default function Page() {
                                 </div>
                             )}
                         </div>
+                        <button 
+                            onClick={handleGeneratePreview} 
+                            disabled={isGlobalPreviewing}
+                            className="mt-4 w-full max-w-[220px] bg-panel hover:bg-mimaros-blue/20 border border-borderGlass text-textDim text-xs font-bold py-2 rounded-lg flex items-center justify-center gap-2 transition-all"
+                        >
+                            {isGlobalPreviewing ? <Loader2 className="animate-spin w-3 h-3" /> : <Play className="w-3 h-3" />}
+                            {isGlobalPreviewing ? "Generiere..." : "Als Video ansehen (3s)"}
+                        </button>
                     </div>
                 </div>
 
