@@ -7,7 +7,7 @@ import threading
 # Für produktiven, kostenlosen Einsatz ist "base" ein guter Kompromiss aus Geschwindigkeit und Genauigkeit.
 MODEL_NAME = "tiny"
 print(f"Lade lokales Whisper Modell '{MODEL_NAME}' (faster-whisper)...")
-model = WhisperModel(MODEL_NAME, device="cpu", compute_type="int8")
+model = WhisperModel(MODEL_NAME, device="cpu", compute_type="int8", cpu_threads=1, num_workers=1)
 
 # Whisper is not thread-safe, so we need a lock for concurrent FastAPI background tasks
 transcribe_lock = threading.Lock()

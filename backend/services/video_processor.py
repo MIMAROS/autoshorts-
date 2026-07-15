@@ -109,6 +109,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         "-map", "0:a?",
         "-c:a", "aac",
         "-c:v", "libx264",
+        "-threads", "1",
         "-preset", "ultrafast",
         output_path
     ])
@@ -234,6 +235,7 @@ def normalize_clip(input_path: str, output_path: str, resolution: str = "1080p")
         "-i", input_path,
         "-vf", vf_scale,
         "-c:v", "libx264",
+        "-threads", "1",
         "-preset", "fast",
         "-c:a", "aac",
         "-ar", "48000",
@@ -313,6 +315,7 @@ def stitch_clips(clip_paths: list, output_path: str):
         "-map", "[v_out]",
         "-map", "[a_out]",
         "-c:v", "libx264",
+        "-threads", "1",
         "-preset", "fast",
         "-c:a", "aac",
         output_path
