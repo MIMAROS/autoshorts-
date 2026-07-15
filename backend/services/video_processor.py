@@ -10,7 +10,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     use_master_ci = config.get("use_master_ci", True)
     
     # Defaults (Mimaros)
-    primary_color = config.get("primaryColor", "#0052cc")
+    primary_color = config.get("primaryColor", "#14AEEA")
     text_color = config.get("textColor", "#ffffff")
     logo_path = config.get("logoPath", None)
     logo_pos = config.get("logoPosition", "top-left")
@@ -20,17 +20,17 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     
     if not use_master_ci:
         # Fallback to Mimaros Minimalist
-        style = "FontName=Arial,FontSize=26,PrimaryColour=&H00FFFFFF,BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=120"
-        primary_color = "#0052cc"
+        style = "FontName=Arial,FontSize=16,PrimaryColour=&H00FFFFFF,BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=300"
+        primary_color = "#14AEEA"
         logo_path = None
     else:
-        design = config.get("design", "hormozi")
+        design = config.get("design", "minimalist")
         if design == "minimalist":
-            style = f"FontName=Arial,FontSize=26,PrimaryColour={ass_text_color},BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=120"
+            style = f"FontName=Arial,FontSize=16,PrimaryColour={ass_text_color},BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=300"
         elif design == "neon":
-            style = f"FontName=Courier New,FontSize=28,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=2,Shadow=2,MarginV=120"
+            style = f"FontName=Courier New,FontSize=18,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=2,Shadow=2,MarginV=300"
         else: # hormozi
-            style = f"FontName=Impact,FontSize=30,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=4,Shadow=0,MarginV=120"
+            style = f"FontName=Impact,FontSize=20,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=4,Shadow=0,MarginV=300"
             
     resolution = config.get("resolution", "720p")
     if resolution == "1080p":
@@ -51,7 +51,8 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     
     cta = config.get("cta", "none")
     cta_text = ""
-    cta_box_color = f"{primary_color}@0.9"
+    # Mimaros CI CTA Style: Mimaros Blue background
+    cta_box_color = "0x14AEEA@0.9"
     if cta == "subscribe":
         cta_text = "JETZT ABONNIEREN"
     elif cta == "follow":
@@ -60,13 +61,14 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         cta_text = "MEHR VIDEOS"
         
     if cta_text and use_master_ci:
-        safe_cta = cta_text.replace("'", "\\")
+        safe_cta = cta_text.replace("'", "\\'")
         enable_str = ""
         dur_val = float(duration) if duration else 0.0
         if dur_val > 3.0:
             start_cta = dur_val - 3.0
             enable_str = f":enable='between(t,{start_cta},{dur_val})'"
-        vf_filter += f",drawtext=text='{safe_cta}':fontcolor=white:fontsize=32:font='Arial':box=1:boxcolor={cta_box_color}:boxborderw=15:x=(w-text_w)/2:y=h-360{enable_str}"
+        # Add Mimaros CI Pill
+        vf_filter += f",drawtext=text='{safe_cta}':fontcolor=white:fontsize=36:font='Arial':box=1:boxcolor={cta_box_color}:boxborderw=20:x=(w-text_w)/2:y=h-400{enable_str}"
         
     watermark_text = config.get("watermark_text", "mimaros.eu").replace("'", "\\")
     if watermark_text:
@@ -135,25 +137,38 @@ def generate_srt(segments: list, start_time: float, end_time: float, srt_path: s
     index = 1
     with open(srt_path, 'w', encoding='utf-8') as f:
         for segment in segments:
-            # Wenn Segment Wörter hat (word_timestamps=True von Whisper)
             if "words" in segment:
+                chunk = []
                 for word in segment["words"]:
                     w_start = word["start"]
                     w_end = word["end"]
                     w_text = word["word"].strip()
                     
                     if w_start >= start_time and w_end <= end_time:
-                        # Relativiere die Zeit zum Start des Clips
-                        rel_start = w_start - start_time
-                        rel_end = w_end - start_time
+                        chunk.append({"text": w_text, "start": w_start, "end": w_end})
                         
-                        f.write(f"{index}\n")
-                        f.write(f"{format_time(rel_start)} --> {format_time(rel_end)}\n")
-                        # Mache das aktuelle Wort groß/hervorgehoben für "Dynamik" (im MVP einfaches Text-Layout)
-                        f.write(f"{w_text.upper()}\n\n")
-                        index += 1
+                        if len(chunk) >= 3:
+                            rel_start = chunk[0]["start"] - start_time
+                            rel_end = chunk[-1]["end"] - start_time
+                            chunk_text = " ".join([w["text"] for w in chunk])
+                            
+                            f.write(f"{index}\n")
+                            f.write(f"{format_time(rel_start)} --> {format_time(rel_end)}\n")
+                            f.write(f"{chunk_text.upper()}\n\n")
+                            index += 1
+                            chunk = []
+                
+                # Write remaining words in chunk
+                if chunk:
+                    rel_start = chunk[0]["start"] - start_time
+                    rel_end = chunk[-1]["end"] - start_time
+                    chunk_text = " ".join([w["text"] for w in chunk])
+                    
+                    f.write(f"{index}\n")
+                    f.write(f"{format_time(rel_start)} --> {format_time(rel_end)}\n")
+                    f.write(f"{chunk_text.upper()}\n\n")
+                    index += 1
             else:
-                # Fallback, falls keine Wörter existieren, nimm Segment
                 s_start = segment["start"]
                 s_end = segment["end"]
                 if s_start >= start_time and s_end <= end_time:
@@ -161,7 +176,7 @@ def generate_srt(segments: list, start_time: float, end_time: float, srt_path: s
                     rel_end = s_end - start_time
                     f.write(f"{index}\n")
                     f.write(f"{format_time(rel_start)} --> {format_time(rel_end)}\n")
-                    f.write(f"{segment['text'].strip()}\n\n")
+                    f.write(f"{segment['text'].strip().upper()}\n\n")
                     index += 1
 
 
