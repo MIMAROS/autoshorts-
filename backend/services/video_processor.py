@@ -20,17 +20,17 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     
     if not use_master_ci:
         # Fallback to Mimaros Minimalist
-        style = "FontName=Arial,FontSize=16,PrimaryColour=&H00FFFFFF,BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=300"
+        style = "FontName=Arial,FontSize=16,PrimaryColour=&H00FFFFFF,BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=40"
         primary_color = "#14AEEA"
         logo_path = None
     else:
         design = config.get("design", "minimalist")
         if design == "minimalist":
-            style = f"FontName=Arial,FontSize=16,PrimaryColour={ass_text_color},BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=300"
+            style = f"FontName=Arial,FontSize=16,PrimaryColour={ass_text_color},BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=40"
         elif design == "neon":
-            style = f"FontName=Courier New,FontSize=18,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=2,Shadow=2,MarginV=300"
+            style = f"FontName=Courier New,FontSize=18,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=2,Shadow=2,MarginV=40"
         else: # hormozi
-            style = f"FontName=Impact,FontSize=20,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=4,Shadow=0,MarginV=300"
+            style = f"FontName=Impact,FontSize=20,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=4,Shadow=0,MarginV=40"
             
     resolution = config.get("resolution", "720p")
     if resolution == "1080p":
@@ -67,13 +67,14 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         if dur_val > 3.0:
             start_cta = dur_val - 3.0
             enable_str = f":enable='between(t,{start_cta},{dur_val})'"
-        # Add Mimaros CI Pill
-        vf_filter += f",drawtext=text='{safe_cta}':fontcolor=white:fontsize=36:font='Arial':box=1:boxcolor={cta_box_color}:boxborderw=20:x=(w-text_w)/2:y=h-400{enable_str}"
+        # Add Mimaros CI Pill (Bottom below subtitles)
+        vf_filter += f",drawtext=text='{safe_cta}':fontcolor=white:fontsize=36:font='Arial':box=1:boxcolor={cta_box_color}:boxborderw=20:x=(w-text_w)/2:y=h-150{enable_str}"
         
-    watermark_text = config.get("watermark_text", "mimaros.eu").replace("'", "\\")
+    watermark_text = config.get("watermark_text", "mimaros.eu").replace("'", "\\'")
     if watermark_text:
-        vf_filter += f",drawbox=x=(iw-300)/2:y=ih-80:w=300:h=50:color=black@0.6:t=fill"
-        vf_filter += f",drawtext=text='{watermark_text}':fontcolor=white:fontsize=22:font='Arial':x=(w-text_w)/2:y=h-65"
+        # Watermark at the top of the screen like the preview
+        vf_filter += f",drawbox=x=(iw-300)/2:y=150:w=300:h=50:color=black@0.6:t=fill"
+        vf_filter += f",drawtext=text='{watermark_text}':fontcolor=white:fontsize=22:font='Arial':x=(w-text_w)/2:y=165"
         
     vf_filter += "[v_base]"
     filter_complex = vf_filter
