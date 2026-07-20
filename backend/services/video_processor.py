@@ -85,9 +85,9 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         
     if video_path == "demo":
         if resolution == "1080p":
-            cmd.extend(["-f", "lavfi", "-i", "color=c=black:s=1080x1920:r=30"])
+            cmd.extend(["-f", "lavfi", "-i", "color=c=0x151515:s=1080x1920:r=30"])
         else:
-            cmd.extend(["-f", "lavfi", "-i", "color=c=black:s=720x1280:r=30"])
+            cmd.extend(["-f", "lavfi", "-i", "color=c=0x151515:s=720x1280:r=30"])
     else:
         cmd.extend(["-i", video_path])
     

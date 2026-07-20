@@ -441,7 +441,7 @@ async def preview_clip(request: PreviewRequest):
     from services.video_processor import generate_preview
     
     if request.clip_path == "demo":
-        abs_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp", "demo.mp4")
+        abs_path = "demo"
     else:
         abs_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Fertige_Shorts", os.path.basename(request.clip_path))
         
