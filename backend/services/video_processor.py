@@ -225,8 +225,8 @@ def generate_preview(video_path: str, output_path: str, config: dict):
     dummy_srt_path = os.path.join(base_dir, f"dummy_{os.path.basename(output_path)}.srt")
     
     with open(dummy_srt_path, "w", encoding="utf-8") as f:
-        f.write("1\\n00:00:00,000 --> 00:00:01,500\\nDEIN\\n\\n")
-        f.write("2\\n00:00:01,500 --> 00:00:03,000\\nUNTERTITEL\\n\\n")
+        f.write("1\n00:00:00,000 --> 00:00:01,500\nDEIN\n\n")
+        f.write("2\n00:00:01,500 --> 00:00:03,000\nUNTERTITEL\n\n")
         
     escaped_srt_path = dummy_srt_path.replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
     config["resolution"] = "720p"

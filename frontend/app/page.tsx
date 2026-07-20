@@ -33,12 +33,14 @@ export default function Page() {
   
   // Global Design & Preview State
   const [globalSubtitleConfig, setGlobalSubtitleConfig] = useState({ design: 'hormozi', cta: 'follow', text: '', template: 'clean_lower_third', watermark_text: 'mimaros.eu' });
-    const [useMasterCi, setUseMasterCi] = useState(true);
+  const [useMasterCi, setUseMasterCi] = useState(true);
   const [primaryColor, setPrimaryColor] = useState('#14AEEA');
   const [textColor, setTextColor] = useState('#ffffff');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPosition, setLogoPosition] = useState('top-left');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
+  const [logoPath, setLogoPath] = useState<string>('');
+  const [logoUploading, setLogoUploading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [globalPreviewUrl, setGlobalPreviewUrl] = useState('');
   const [isGlobalPreviewing, setIsGlobalPreviewing] = useState(false);
@@ -145,11 +147,26 @@ export default function Page() {
       setSequence(prev => prev.filter((_, i) => i !== index));
   };
 
-  const handleLogoUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
-    if (e.target.files && e.target.files[0]) {
+  const handleLogoUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files.length > 0) {
       const file = e.target.files[0];
       setLogoFile(file);
       setLogoPreview(URL.createObjectURL(file));
+      
+      setLogoUploading(true);
+      const logoData = new FormData();
+      logoData.append('file', file);
+      try {
+          const logoRes = await fetch('https://autoshorts-backend-3s1b.onrender.com/api/upload-logo', { method: 'POST', body: logoData });
+          if (logoRes.ok) {
+              const parsedLogo = await logoRes.json();
+              setLogoPath(parsedLogo.logo_path);
+          }
+      } catch (err) {
+          console.error("Logo upload error:", err);
+      } finally {
+          setLogoUploading(false);
+      }
     }
   };
 
@@ -197,6 +214,7 @@ export default function Page() {
               primaryColor,
               textColor,
               logoPosition,
+              logoPath: logoPath || null,
               design: globalSubtitleConfig.design || 'minimalist',
               resolution
           };
@@ -218,6 +236,14 @@ export default function Page() {
       }
   };
 
+  useEffect(() => {
+      const delayDebounce = setTimeout(() => {
+          handleGeneratePreview();
+      }, 1000); // 1000ms debounce
+      
+      return () => clearTimeout(delayDebounce);
+  }, [globalSubtitleConfig, useMasterCi, primaryColor, textColor, logoPosition, logoPath, resolution]);
+
   const handleProcess = async () => {
     if (!isSequenceMode && !youtubeUrl && !localFile) return;
     if (isSequenceMode && sequence.length === 0) return;
@@ -227,23 +253,12 @@ export default function Page() {
     setClips([]);
     
     try {
-      let finalLogoPath = null;
-      if (logoFile) {
-          const logoData = new FormData();
-          logoData.append('file', logoFile);
-          const logoRes = await fetch('https://autoshorts-backend-3s1b.onrender.com/api/upload-logo', { method: 'POST', body: logoData });
-          if (logoRes.ok) {
-              const parsedLogo = await logoRes.json();
-              finalLogoPath = parsedLogo.logo_path;
-          }
-      }
-      
       const subConfig = {
           ...globalSubtitleConfig,
           primaryColor,
           textColor,
           logoPosition,
-          logoPath: finalLogoPath,
+          logoPath: logoPath || null,
           useMasterCi
       };
       
@@ -762,7 +777,7 @@ export default function Page() {
                                                             <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
                                                         </svg>
                                                         <span className="font-medium text-sm text-textDim truncate max-w-[150px]">
-                                                            {logoFile ? logoFile.name : 'Logo (.png)'}
+                                                            {logoUploading ? 'Lade hoch...' : (logoFile ? logoFile.name : 'Logo (.png)')}
                                                         </span>
                                                     </span>
                                                     <input type="file" name="file_upload" className="hidden" accept=".png,.jpg,.jpeg" onChange={handleLogoUpload} />
@@ -791,6 +806,34 @@ export default function Page() {
                                             placeholder="z.B. @deinkanal"
                                         />
                                     </div>
+
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Untertitel Design</label>
+                                            <select 
+                                                value={globalSubtitleConfig.design}
+                                                onChange={(e) => setGlobalSubtitleConfig({...globalSubtitleConfig, design: e.target.value})}
+                                                className="w-full bg-background/50 border border-borderGlass rounded-xl px-3 h-12 text-sm text-white focus:outline-none focus:border-mimaros-blue/50"
+                                            >
+                                                <option value="hormozi">Hormozi (Impact)</option>
+                                                <option value="neon">Neon (Courier)</option>
+                                                <option value="minimalist">Minimalistisch (Arial)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Call-to-Action (CTA)</label>
+                                            <select 
+                                                value={globalSubtitleConfig.cta}
+                                                onChange={(e) => setGlobalSubtitleConfig({...globalSubtitleConfig, cta: e.target.value})}
+                                                className="w-full bg-background/50 border border-borderGlass rounded-xl px-3 h-12 text-sm text-white focus:outline-none focus:border-mimaros-blue/50"
+                                            >
+                                                <option value="none">Kein CTA</option>
+                                                <option value="follow">Folgen für mehr</option>
+                                                <option value="subscribe">Jetzt abonnieren</option>
+                                                <option value="more">Mehr Videos</option>
+                                            </select>
+                                        </div>
+                                    </div>
                                 </div>
                             ) : (
                                 <div className="p-4 bg-background/50 border border-borderGlass rounded-xl">
@@ -802,17 +845,26 @@ export default function Page() {
 
                     {/* Right: Live Preview */}
                     <div className="col-span-1 flex flex-col items-center justify-center">
-                        <label className="block text-xs font-bold text-textDim uppercase mb-3 w-full text-center">Live Style-Vorschau</label>
+                        <label className="block text-xs font-bold text-textDim uppercase mb-3 w-full text-center flex items-center justify-center gap-1.5">
+                            Live Style-Vorschau
+                            <span className="inline-flex items-center px-1.5 py-0.5 rounded text-[8px] font-bold bg-mimaros-blue/10 text-mimaros-blue border border-mimaros-blue/20 uppercase tracking-wider">Auto</span>
+                        </label>
                         <div className="w-full max-w-[220px] bg-background rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center aspect-[9/16] relative bg-cover bg-center transition-all duration-300" style={{
                             backgroundImage: "url('https://images.unsplash.com/photo-1616469829941-c7200edec809?auto=format&fit=crop&w=400&q=80')",
                             border: useMasterCi ? `4px solid ${primaryColor}` : '1px solid var(--borderGlass)'
                         }}>
+                            {isGlobalPreviewing && (
+                                <div className="absolute inset-0 bg-black/80 backdrop-blur-sm z-30 flex flex-col items-center justify-center space-y-2">
+                                    <Loader2 className="animate-spin w-8 h-8 text-mimaros-blue" />
+                                    <span className="text-[10px] text-textDim font-sans">Rendere Vorschau...</span>
+                                </div>
+                            )}
                             {globalPreviewUrl ? (
-                                <video src={globalPreviewUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover" />
+                                <video src={globalPreviewUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-20" />
                             ) : useMasterCi ? (
                                 <>
                                     {logoPreview && (
-                                        <div className="absolute w-10 h-10 rounded bg-white/10 backdrop-blur-sm" style={{
+                                        <div className="absolute w-10 h-10 rounded bg-white/10 backdrop-blur-sm z-10" style={{
                                             top: logoPosition.includes('top') ? '16px' : 'auto',
                                             bottom: logoPosition.includes('bottom') ? '16px' : 'auto',
                                             left: logoPosition.includes('left') ? '16px' : 'auto',
@@ -823,37 +875,35 @@ export default function Page() {
                                             backgroundRepeat: 'no-repeat'
                                         }}></div>
                                     )}
-                                    <div className="absolute top-16 left-0 right-0 flex justify-center">
+                                    <div className="absolute top-16 left-0 right-0 flex justify-center z-10">
                                         <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 flex items-center gap-2">
                                             <span className="text-white text-[10px] font-medium tracking-wide">
                                                 {globalSubtitleConfig.watermark_text || "mimaros.eu"}
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="absolute bottom-16 left-0 right-0 text-center font-sans font-bold text-sm bg-black/60 mx-2 p-2 rounded-lg border-l-4" style={{ borderColor: primaryColor, color: textColor }}>
+                                    <div className="absolute bottom-16 left-0 right-0 text-center font-sans font-bold text-sm bg-black/60 mx-2 p-2 rounded-lg border-l-4 z-10" style={{ borderColor: primaryColor, color: textColor }}>
                                         DYNAMISCHE UNTERTITEL
                                         <br/><span className="text-[10px] font-normal opacity-80">Beispieltext</span>
                                     </div>
-                                    <div className="absolute bottom-4 left-0 right-0 flex justify-center">
-                                        <button className="text-white text-[10px] font-bold px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)]" style={{ backgroundColor: primaryColor }}>
-                                            FOLGEN FÜR MEHR
-                                        </button>
+                                    <div className="absolute bottom-4 left-0 right-0 flex justify-center z-10">
+                                        {globalSubtitleConfig.cta !== 'none' && (
+                                            <button className="text-white text-[10px] font-bold px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] uppercase" style={{ backgroundColor: primaryColor }}>
+                                                {globalSubtitleConfig.cta === 'follow' ? 'FOLGEN FÜR MEHR' : globalSubtitleConfig.cta === 'subscribe' ? 'JETZT ABONNIEREN' : globalSubtitleConfig.cta === 'more' ? 'MEHR VIDEOS' : 'CTA TEXT'}
+                                            </button>
+                                        )}
                                     </div>
                                 </>
                             ) : (
-                                <div className="absolute bottom-12 left-0 right-0 text-center text-white font-sans font-bold text-xs bg-black/50 mx-4 p-1">
+                                <div className="absolute bottom-12 left-0 right-0 text-center text-white font-sans font-bold text-xs bg-black/50 mx-4 p-1 z-10">
                                     STANDARD UNTERTITEL
                                 </div>
                             )}
                         </div>
-                        <button 
-                            onClick={handleGeneratePreview} 
-                            disabled={isGlobalPreviewing}
-                            className="mt-4 w-full max-w-[220px] bg-panel hover:bg-mimaros-blue/20 border border-borderGlass text-textDim text-xs font-bold py-2 rounded-lg flex items-center justify-center gap-2 transition-all"
-                        >
-                            {isGlobalPreviewing ? <Loader2 className="animate-spin w-3 h-3" /> : <Play className="w-3 h-3" />}
-                            {isGlobalPreviewing ? "Generiere..." : "Als Video ansehen (3s)"}
-                        </button>
+                        <div className="mt-3 text-[10px] text-textDim flex items-center gap-1.5">
+                            <span className={`w-1.5 h-1.5 rounded-full ${isGlobalPreviewing ? 'bg-mimaros-gold animate-pulse' : 'bg-green-500'}`} />
+                            {isGlobalPreviewing ? 'Aktualisiere Vorschau...' : 'Vorschau bereit'}
+                        </div>
                     </div>
                 </div>
 
