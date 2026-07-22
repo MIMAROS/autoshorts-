@@ -276,7 +276,7 @@ def generate_srt(segments: list, start_time: float, end_time: float, srt_path: s
     """
     if config is None:
         config = {}
-    highlight_color = config.get("highlightColor", "#FFC72C")
+    highlight_color = config.get("highlightColor", "#C89B31")
     
     def format_time(seconds: float) -> str:
         hours = int(seconds // 3600)
@@ -392,7 +392,7 @@ def generate_preview(video_path: str, output_path: str, config: dict):
     os.makedirs(base_dir, exist_ok=True)
     dummy_srt_path = os.path.join(base_dir, f"dummy_{os.path.basename(output_path)}.srt")
     
-    highlight = config.get("highlightColor", "#FFC72C")
+    highlight = config.get("highlightColor", "#C89B31")
     with open(dummy_srt_path, "w", encoding="utf-8") as f:
         f.write(f"1\n00:00:00,000 --> 00:00:01,000\n<font color=\"{highlight}\">DEIN</font> UNTERTITEL VORSCHAU\n\n")
         f.write(f"2\n00:00:01,000 --> 00:00:02,000\nDEIN <font color=\"{highlight}\">UNTERTITEL</font> VORSCHAU\n\n")

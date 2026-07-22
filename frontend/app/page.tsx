@@ -36,7 +36,7 @@ export default function Page() {
   const [useMasterCi, setUseMasterCi] = useState(true);
   const [primaryColor, setPrimaryColor] = useState('#14AEEA');
   const [textColor, setTextColor] = useState('#ffffff');
-  const [highlightColor, setHighlightColor] = useState('#FFC72C');
+  const [highlightColor, setHighlightColor] = useState('#C89B31');
   const [fontName, setFontName] = useState('Work Sans');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPosition, setLogoPosition] = useState('top-left');
