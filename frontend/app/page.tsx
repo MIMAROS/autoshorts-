@@ -938,7 +938,7 @@ export default function Page() {
                                              </span>
                                          </div>
                                      </div>
-                                    <div className="absolute bottom-16 left-0 right-0 text-center font-bold text-[10px] bg-black/60 mx-2 p-2 rounded-lg border-l-4 z-10" style={{ borderColor: primaryColor, color: textColor, fontFamily: fontName }}>
+                                    <div className="absolute bottom-28 left-0 right-0 text-center font-bold text-[10px] bg-[#0B192C]/70 max-w-[80%] mx-auto p-2 rounded-lg shadow-lg z-10" style={{ color: textColor, fontFamily: fontName }}>
                                         DYNAMISCHE <span style={{ color: highlightColor }}>UNTERTITEL</span>
                                         <br/><span className="text-[8px] font-normal opacity-80" style={{ fontFamily: fontName }}>Beispieltext</span>
                                     </div>

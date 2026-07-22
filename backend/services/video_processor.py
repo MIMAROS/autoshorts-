@@ -128,24 +128,10 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         
     hook_header = config.get("hookHeader", "").strip().replace("'", "\\'")
     
-    if not use_master_ci:
-        # Fallback to Mimaros Minimalist
-        style = f"FontName={ass_font},FontSize=12,PrimaryColour=&H00FFFFFF,BackColour=&H662C190B,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=40"
-        primary_color = "#14AEEA"
-        logo_path = None
-    else:
-        design = config.get("design", "minimalist")
-        # Subtitle-Backdrop Layer: 60% opacity Mimaros Deep Blue (#0B192C) -> &H662C190B.
-        # Every style gets BorderStyle=3 (backdrop box banner)
-        if design == "minimalist":
-            style = f"FontName={ass_font},FontSize=15,PrimaryColour={ass_text_color},BackColour=&H662C190B,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=60"
-        elif design == "neon":
-            style = f"FontName={ass_font},FontSize=17,PrimaryColour={ass_text_color},BackColour=&H662C190B,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=60"
-        else: # hormozi
-            style = f"FontName={ass_font},FontSize=20,PrimaryColour={ass_text_color},BackColour=&H662C190B,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=60"
-            
     resolution = config.get("resolution", "720p")
     if resolution == "1080p":
+        ass_margin_v = 640
+        ass_margin_lr = 120
         vf_scale = "scale='if(gt(a,9/16),-1,1080)':'if(gt(a,9/16),1920,-1)',crop=1080:1920"
         border_thickness = 10
         logo_width = 180
@@ -153,12 +139,30 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         margin_y = 150 if hook_header else 30
         cta_offset_y = 280
     else:
+        ass_margin_v = 420
+        ass_margin_lr = 80
         vf_scale = "scale='if(gt(a,9/16),-1,720)':'if(gt(a,9/16),1280,-1)',crop=720:1280"
         border_thickness = 6
         logo_width = 120
         margin_x = 40
         margin_y = 100 if hook_header else 20
         cta_offset_y = 200
+
+    if not use_master_ci:
+        # Fallback to Mimaros Minimalist
+        style = f"FontName={ass_font},FontSize=12,PrimaryColour=&H00FFFFFF,BackColour=&H662C190B,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginL={ass_margin_lr},MarginR={ass_margin_lr},MarginV={ass_margin_v}"
+        primary_color = "#14AEEA"
+        logo_path = None
+    else:
+        design = config.get("design", "minimalist")
+        # Subtitle-Backdrop Layer: 60% opacity Mimaros Deep Blue (#0B192C) -> &H662C190B.
+        # Every style gets BorderStyle=3 (backdrop box banner)
+        if design == "minimalist":
+            style = f"FontName={ass_font},FontSize=15,PrimaryColour={ass_text_color},BackColour=&H662C190B,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginL={ass_margin_lr},MarginR={ass_margin_lr},MarginV={ass_margin_v}"
+        elif design == "neon":
+            style = f"FontName={ass_font},FontSize=17,PrimaryColour={ass_text_color},BackColour=&H662C190B,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginL={ass_margin_lr},MarginR={ass_margin_lr},MarginV={ass_margin_v}"
+        else: # hormozi
+            style = f"FontName={ass_font},FontSize=20,PrimaryColour={ass_text_color},BackColour=&H662C190B,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginL={ass_margin_lr},MarginR={ass_margin_lr},MarginV={ass_margin_v}"
 
     # Start building filtergraph for video stream 0
     vf_filter = f"[0:v]{vf_scale}"
