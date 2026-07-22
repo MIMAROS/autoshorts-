@@ -32,7 +32,7 @@ export default function Page() {
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
   
   // Global Design & Preview State
-  const [globalSubtitleConfig, setGlobalSubtitleConfig] = useState({ design: 'hormozi', cta: 'follow', text: '', template: 'clean_lower_third', watermark_text: 'mimaros.eu' });
+  const [globalSubtitleConfig, setGlobalSubtitleConfig] = useState({ design: 'minimalist', cta: 'follow', text: '', template: 'clean_lower_third', watermark_text: 'mimaros.eu' });
   const [useMasterCi, setUseMasterCi] = useState(true);
   const [primaryColor, setPrimaryColor] = useState('#14AEEA');
   const [textColor, setTextColor] = useState('#ffffff');
