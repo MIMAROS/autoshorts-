@@ -9,9 +9,9 @@ def ensure_fonts():
     os.makedirs(fonts_dir, exist_ok=True)
     
     fonts = {
-        "WorkSans-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/worksans/WorkSans-Bold.ttf",
+        "WorkSans-Bold.ttf": "https://fonts.gstatic.com/s/worksans/v24/QGY_z_wNahGAdqQ43RhVcIgYT2Xz5u32K67QBi8Jow.ttf",
         "Lato-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/lato/Lato-Bold.ttf",
-        "Montserrat-Black.ttf": "https://github.com/google/fonts/raw/main/ofl/montserrat/Montserrat-Black.ttf"
+        "Montserrat-Black.ttf": "https://fonts.gstatic.com/s/montserrat/v31/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCvC73w5aX8.ttf"
     }
     
     for font_name, url in fonts.items():
@@ -41,8 +41,15 @@ def generate_cta_button_image(text: str, bg_color_hex: str, text_color_hex: str,
         
     # Get the font
     fonts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "fonts")
-    font_file = "WorkSans-Bold.ttf" if font_name == "Work Sans" else "Lato-Bold.ttf"
+    if font_name == "Work Sans":
+        font_file = "WorkSans-Bold.ttf"
+    elif font_name == "Montserrat":
+        font_file = "Montserrat-Black.ttf"
+    else:
+        font_file = "Lato-Bold.ttf"
     font_path = os.path.join(fonts_dir, font_file)
+    if not os.path.exists(font_path):
+        ensure_fonts()
     if not os.path.exists(font_path):
         font_path = "arial.ttf" # system fallback
         
