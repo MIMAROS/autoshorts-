@@ -126,32 +126,38 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     else:
         ass_font = "Impact"
         
+    hook_header = config.get("hookHeader", "").strip().replace("'", "\\'")
+    
     if not use_master_ci:
         # Fallback to Mimaros Minimalist
-        style = f"FontName={ass_font},FontSize=12,PrimaryColour=&H00FFFFFF,BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=40"
+        style = f"FontName={ass_font},FontSize=12,PrimaryColour=&H00FFFFFF,BackColour=&H662C190B,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=40"
         primary_color = "#14AEEA"
         logo_path = None
     else:
         design = config.get("design", "minimalist")
+        # Subtitle-Backdrop Layer: 60% opacity Mimaros Deep Blue (#0B192C) -> &H662C190B.
+        # Every style gets BorderStyle=3 (backdrop box banner)
         if design == "minimalist":
-            style = f"FontName={ass_font},FontSize=15,PrimaryColour={ass_text_color},BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=60"
+            style = f"FontName={ass_font},FontSize=15,PrimaryColour={ass_text_color},BackColour=&H662C190B,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=60"
         elif design == "neon":
-            style = f"FontName={ass_font},FontSize=17,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=3,Shadow=3,MarginV=60"
+            style = f"FontName={ass_font},FontSize=17,PrimaryColour={ass_text_color},BackColour=&H662C190B,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=60"
         else: # hormozi
-            style = f"FontName={ass_font},FontSize=20,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=5,Shadow=0,MarginV=60"
+            style = f"FontName={ass_font},FontSize=20,PrimaryColour={ass_text_color},BackColour=&H662C190B,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=60"
             
     resolution = config.get("resolution", "720p")
     if resolution == "1080p":
         vf_scale = "scale='if(gt(a,9/16),-1,1080)':'if(gt(a,9/16),1920,-1)',crop=1080:1920"
         border_thickness = 10
         logo_width = 180
-        margin_x, margin_y = 60, 60
+        margin_x = 60
+        margin_y = 150 if hook_header else 30
         cta_offset_y = 280
     else:
         vf_scale = "scale='if(gt(a,9/16),-1,720)':'if(gt(a,9/16),1280,-1)',crop=720:1280"
         border_thickness = 6
         logo_width = 120
-        margin_x, margin_y = 40, 40
+        margin_x = 40
+        margin_y = 100 if hook_header else 20
         cta_offset_y = 200
 
     # Start building filtergraph for video stream 0
@@ -161,14 +167,30 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         # Add primaryColor Border
         vf_filter += f",drawbox=x=0:y=0:w=iw:h=ih:color={primary_color}:thickness={border_thickness}"
         
+        # 4. Top Hook-Header (Video-Titel oben)
+        if hook_header:
+            if resolution == "1080p":
+                vf_filter += f",drawbox=x=0:y=0:w=iw:h=120:color=0x0B192C@0.8:t=fill"
+                vf_filter += f",drawbox=x=0:y=120:w=iw:h=6:color={primary_color}:t=fill"
+                vf_filter += f",drawtext=text='{hook_header}':fontcolor=white:fontsize=36:font='{ass_font}':x=(w-text_w)/2:y=(120-text_h)/2"
+            else:
+                vf_filter += f",drawbox=x=0:y=0:w=iw:h=80:color=0x0B192C@0.8:t=fill"
+                vf_filter += f",drawbox=x=0:y=80:w=iw:h=4:color={primary_color}:t=fill"
+                vf_filter += f",drawtext=text='{hook_header}':fontcolor=white:fontsize=24:font='{ass_font}':x=(w-text_w)/2:y=(80-text_h)/2"
+        
     vf_filter += f",subtitles='{escaped_srt_path}':fontsdir='{escaped_fonts_dir}':force_style='{style}'"
     
     # Watermark
     watermark_text = config.get("watermark_text", "mimaros.eu").replace("'", "\\'")
     if watermark_text:
-        # Watermark at the top of the screen like the preview
-        vf_filter += f",drawbox=x=(iw-300)/2:y=150:w=300:h=50:color=black@0.6:t=fill"
-        vf_filter += f",drawtext=text='{watermark_text}':fontcolor=white:fontsize=22:font='{ass_font}':x=(w-text_w)/2:y=165"
+        # Watermark position shifted if hook_header is present
+        if hook_header:
+            watermark_y = 120 + 30 if resolution == "1080p" else 80 + 20
+        else:
+            watermark_y = 30 if resolution == "1080p" else 20
+            
+        vf_filter += f",drawbox=x=(iw-300)/2:y={watermark_y}:w=300:h=50:color=black@0.6:t=fill"
+        vf_filter += f",drawtext=text='{watermark_text}':fontcolor=white:fontsize=22:font='{ass_font}':x=(w-text_w)/2:y={watermark_y+15}"
         
     vf_filter += "[v_base]"
     filter_complex = vf_filter
@@ -223,16 +245,35 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
             inputs.append(cta_img_path)
             cta_input_index = len(inputs) - 1
             
-            # Setup fade timing (CTA visible in last 3s)
+            # Setup dynamic intervals
             dur_val = float(duration) if duration else 0.0
-            if dur_val > 3.0:
-                start_cta = dur_val - 3.0
-                enable_str = f":enable='between(t,{start_cta},{dur_val})'"
-            else:
-                enable_str = ""
+            intervals = []
+            if dur_val > 0.0:
+                half_time = dur_val / 2.0
+                # Trigger 1: at 50% for 4 seconds
+                intervals.append((half_time, min(half_time + 4.0, dur_val)))
                 
-            filter_complex += f";{current_v}[{cta_input_index}:v]overlay=x=(W-w)/2:y=H-{cta_offset_y}{enable_str}[v_cta]"
-            current_v = "[v_cta]"
+                # Intervall-Option: if video > 45s, show every 30s for 4s
+                if dur_val > 45.0:
+                    t = 30.0
+                    while t < dur_val:
+                        # avoid overlaps with Trigger 1
+                        if not (t >= half_time - 4.0 and t <= half_time + 4.0):
+                            intervals.append((t, min(t + 4.0, dur_val)))
+                        t += 30.0
+            
+            if intervals:
+                enable_expr = "+".join([f"between(t,{start},{end})" for start, end in intervals])
+                
+                # Build fade chain for looped stream
+                fade_chain = f"[{cta_input_index}:v]loop=loop=-1:size=1:start=0,setpts=PTS-STARTPTS"
+                for start, end in intervals:
+                    # Fade in for 0.5s, fade out for 0.5s
+                    fade_chain += f",fade=t=in:st={start}:d=0.5:alpha=1,fade=t=out:st={end-0.5}:d=0.5:alpha=1"
+                fade_chain += "[cta_faded]"
+                
+                filter_complex += f";{fade_chain};{current_v}[cta_faded]overlay=x=(W-w)/2:y=H-{cta_offset_y}:enable='{enable_expr}'[v_cta]"
+                current_v = "[v_cta]"
         except Exception as e:
             print(f"Error generating CTA image button: {e}")
             
@@ -276,7 +317,7 @@ def generate_srt(segments: list, start_time: float, end_time: float, srt_path: s
     """
     if config is None:
         config = {}
-    highlight_color = config.get("highlightColor", "#C89B31")
+    highlight_color = config.get("highlightColor", "#D4AF37")
     
     def format_time(seconds: float) -> str:
         hours = int(seconds // 3600)
@@ -392,7 +433,7 @@ def generate_preview(video_path: str, output_path: str, config: dict):
     os.makedirs(base_dir, exist_ok=True)
     dummy_srt_path = os.path.join(base_dir, f"dummy_{os.path.basename(output_path)}.srt")
     
-    highlight = config.get("highlightColor", "#C89B31")
+    highlight = config.get("highlightColor", "#D4AF37")
     with open(dummy_srt_path, "w", encoding="utf-8") as f:
         f.write(f"1\n00:00:00,000 --> 00:00:01,000\n<font color=\"{highlight}\">DEIN</font> UNTERTITEL VORSCHAU\n\n")
         f.write(f"2\n00:00:01,000 --> 00:00:02,000\nDEIN <font color=\"{highlight}\">UNTERTITEL</font> VORSCHAU\n\n")

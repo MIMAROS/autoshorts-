@@ -36,7 +36,7 @@ export default function Page() {
   const [useMasterCi, setUseMasterCi] = useState(true);
   const [primaryColor, setPrimaryColor] = useState('#14AEEA');
   const [textColor, setTextColor] = useState('#ffffff');
-  const [highlightColor, setHighlightColor] = useState('#C89B31');
+  const [highlightColor, setHighlightColor] = useState('#D4AF37');
   const [fontName, setFontName] = useState('Work Sans');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPosition, setLogoPosition] = useState('top-left');
@@ -44,6 +44,7 @@ export default function Page() {
   const [logoPath, setLogoPath] = useState<string>('');
   const [logoUploading, setLogoUploading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [hookHeader, setHookHeader] = useState('');
   const [globalPreviewUrl, setGlobalPreviewUrl] = useState('');
   const [isGlobalPreviewing, setIsGlobalPreviewing] = useState(false);
 
@@ -220,7 +221,8 @@ export default function Page() {
               logoPosition,
               logoPath: logoPath || null,
               design: globalSubtitleConfig.design || 'minimalist',
-              resolution
+              resolution,
+              hookHeader
           };
 
           const res = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/preview-clip`, {
@@ -246,7 +248,7 @@ export default function Page() {
       }, 1000); // 1000ms debounce
       
       return () => clearTimeout(delayDebounce);
-  }, [globalSubtitleConfig, useMasterCi, primaryColor, textColor, highlightColor, fontName, logoPosition, logoPath, resolution]);
+  }, [globalSubtitleConfig, useMasterCi, primaryColor, textColor, highlightColor, fontName, logoPosition, logoPath, resolution, hookHeader]);
 
   const handleProcess = async () => {
     if (!isSequenceMode && !youtubeUrl && !localFile) return;
@@ -265,7 +267,8 @@ export default function Page() {
           fontName,
           logoPosition,
           logoPath: logoPath || null,
-          useMasterCi
+          useMasterCi,
+          hookHeader
       };
       
       let jobId = '';
@@ -819,16 +822,28 @@ export default function Page() {
                                         </div>
                                     </div>
 
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Watermark Text</label>
-                                        <input 
-                                            type="text" 
-                                            value={globalSubtitleConfig.watermark_text}
-                                            onChange={(e) => setGlobalSubtitleConfig({...globalSubtitleConfig, watermark_text: e.target.value})}
-                                            className="w-full bg-background/50 border border-borderGlass rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-mimaros-blue/50 transition-colors"
-                                            placeholder="z.B. @deinkanal"
-                                        />
-                                    </div>
+                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                         <div>
+                                             <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Watermark Text</label>
+                                             <input 
+                                                 type="text" 
+                                                 value={globalSubtitleConfig.watermark_text}
+                                                 onChange={(e) => setGlobalSubtitleConfig({...globalSubtitleConfig, watermark_text: e.target.value})}
+                                                 className="w-full bg-background/50 border border-borderGlass rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-mimaros-blue/50 transition-colors"
+                                                 placeholder="z.B. @deinkanal"
+                                             />
+                                         </div>
+                                         <div>
+                                             <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Video-Titel / Hook-Header (Optional)</label>
+                                             <input 
+                                                 type="text" 
+                                                 value={hookHeader}
+                                                 onChange={(e) => setHookHeader(e.target.value)}
+                                                 className="w-full bg-background/50 border border-borderGlass rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-mimaros-blue/50 transition-colors"
+                                                 placeholder="z.B. DIE 3 BESTEN TRICKS"
+                                             />
+                                         </div>
+                                     </div>
 
                                     <div className="grid grid-cols-3 gap-4">
                                         <div>
@@ -899,25 +914,30 @@ export default function Page() {
                                 <video src={globalPreviewUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-20" />
                             ) : useMasterCi ? (
                                 <>
-                                    {logoPreview && (
-                                        <div className="absolute w-10 h-10 rounded bg-white/10 backdrop-blur-sm z-10" style={{
-                                            top: logoPosition.includes('top') ? '16px' : 'auto',
-                                            bottom: logoPosition.includes('bottom') ? '16px' : 'auto',
-                                            left: logoPosition.includes('left') ? '16px' : 'auto',
-                                            right: logoPosition.includes('right') ? '16px' : 'auto',
-                                            backgroundImage: `url(${logoPreview})`,
-                                            backgroundSize: 'contain',
-                                            backgroundPosition: 'center',
-                                            backgroundRepeat: 'no-repeat'
-                                        }}></div>
-                                    )}
-                                    <div className="absolute top-16 left-0 right-0 flex justify-center z-10">
-                                        <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 flex items-center gap-2">
-                                            <span className="text-white text-[10px] font-medium tracking-wide">
-                                                {globalSubtitleConfig.watermark_text || "mimaros.eu"}
-                                            </span>
-                                        </div>
-                                    </div>
+                                     {hookHeader && (
+                                         <div className="absolute top-0 left-0 right-0 z-15 bg-[#0b192c]/85 border-b border-mimaros-blue/40 px-2 py-1.5 text-center text-white text-[8px] font-heading font-bold uppercase tracking-wider">
+                                             {hookHeader}
+                                         </div>
+                                     )}
+                                     {logoPreview && (
+                                         <div className="absolute w-10 h-10 rounded bg-white/10 backdrop-blur-sm z-10" style={{
+                                             top: logoPosition.includes('top') ? (hookHeader ? '28px' : '16px') : 'auto',
+                                             bottom: logoPosition.includes('bottom') ? '16px' : 'auto',
+                                             left: logoPosition.includes('left') ? '16px' : 'auto',
+                                             right: logoPosition.includes('right') ? '16px' : 'auto',
+                                             backgroundImage: `url(${logoPreview})`,
+                                             backgroundSize: 'contain',
+                                             backgroundPosition: 'center',
+                                             backgroundRepeat: 'no-repeat'
+                                         }}></div>
+                                     )}
+                                     <div className={`absolute left-0 right-0 flex justify-center z-10 ${hookHeader ? 'top-20' : 'top-16'}`}>
+                                         <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 flex items-center gap-2">
+                                             <span className="text-white text-[10px] font-medium tracking-wide">
+                                                 {globalSubtitleConfig.watermark_text || "mimaros.eu"}
+                                             </span>
+                                         </div>
+                                     </div>
                                     <div className="absolute bottom-16 left-0 right-0 text-center font-bold text-[10px] bg-black/60 mx-2 p-2 rounded-lg border-l-4 z-10" style={{ borderColor: primaryColor, color: textColor, fontFamily: fontName }}>
                                         DYNAMISCHE <span style={{ color: highlightColor }}>UNTERTITEL</span>
                                         <br/><span className="text-[8px] font-normal opacity-80" style={{ fontFamily: fontName }}>Beispieltext</span>
