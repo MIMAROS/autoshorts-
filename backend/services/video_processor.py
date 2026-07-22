@@ -29,15 +29,15 @@ def generate_cta_button_image(text: str, bg_color_hex: str, text_color_hex: str,
     
     # Setup dimensions based on resolution
     if resolution == "1080p":
-        height = 100
-        font_size = 38
-        padding_x = 50
-        radius = 25
+        height = 130
+        font_size = 52
+        padding_x = 75
+        radius = 35
     else:
-        height = 70
-        font_size = 26
-        padding_x = 35
-        radius = 18
+        height = 90
+        font_size = 36
+        padding_x = 55
+        radius = 24
         
     # Get the font
     fonts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "fonts")
@@ -117,17 +117,17 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         
     if not use_master_ci:
         # Fallback to Mimaros Minimalist
-        style = f"FontName={ass_font},FontSize=16,PrimaryColour=&H00FFFFFF,BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=40"
+        style = f"FontName={ass_font},FontSize=14,PrimaryColour=&H00FFFFFF,BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=40"
         primary_color = "#14AEEA"
         logo_path = None
     else:
         design = config.get("design", "minimalist")
         if design == "minimalist":
-            style = f"FontName={ass_font},FontSize=22,PrimaryColour={ass_text_color},BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=60"
+            style = f"FontName={ass_font},FontSize=18,PrimaryColour={ass_text_color},BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=60"
         elif design == "neon":
-            style = f"FontName={ass_font},FontSize=24,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=3,Shadow=3,MarginV=60"
+            style = f"FontName={ass_font},FontSize=20,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=3,Shadow=3,MarginV=60"
         else: # hormozi
-            style = f"FontName={ass_font},FontSize=28,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=5,Shadow=0,MarginV=60"
+            style = f"FontName={ass_font},FontSize=24,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=5,Shadow=0,MarginV=60"
             
     resolution = config.get("resolution", "720p")
     if resolution == "1080p":
@@ -135,13 +135,13 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         border_thickness = 10
         logo_width = 180
         margin_x, margin_y = 60, 60
-        cta_offset_y = 220
+        cta_offset_y = 250
     else:
         vf_scale = "scale='if(gt(a,9/16),-1,720)':'if(gt(a,9/16),1280,-1)',crop=720:1280"
         border_thickness = 6
         logo_width = 120
         margin_x, margin_y = 40, 40
-        cta_offset_y = 150
+        cta_offset_y = 180
 
     # Start building filtergraph for video stream 0
     vf_filter = f"[0:v]{vf_scale}"

@@ -918,13 +918,13 @@ export default function Page() {
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="absolute bottom-16 left-0 right-0 text-center font-bold text-sm bg-black/60 mx-2 p-2 rounded-lg border-l-4 z-10" style={{ borderColor: primaryColor, color: textColor, fontFamily: fontName }}>
+                                    <div className="absolute bottom-16 left-0 right-0 text-center font-bold text-xs bg-black/60 mx-2 p-2 rounded-lg border-l-4 z-10" style={{ borderColor: primaryColor, color: textColor, fontFamily: fontName }}>
                                         DYNAMISCHE <span style={{ color: highlightColor }}>UNTERTITEL</span>
                                         <br/><span className="text-[10px] font-normal opacity-80" style={{ fontFamily: fontName }}>Beispieltext</span>
                                     </div>
                                     <div className="absolute bottom-4 left-0 right-0 flex justify-center z-10">
                                         {globalSubtitleConfig.cta !== 'none' && (
-                                            <button className="text-white text-[10px] font-bold px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] uppercase" style={{ backgroundColor: primaryColor, fontFamily: fontName }}>
+                                            <button className="text-white text-[12px] font-bold px-6 py-2.5 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] uppercase" style={{ backgroundColor: primaryColor, fontFamily: fontName }}>
                                                 {globalSubtitleConfig.cta === 'follow' ? 'FOLGEN FÜR MEHR' : globalSubtitleConfig.cta === 'subscribe' ? 'JETZT ABONNIEREN' : globalSubtitleConfig.cta === 'more' ? 'MEHR VIDEOS' : 'CTA TEXT'}
                                             </button>
                                         )}
