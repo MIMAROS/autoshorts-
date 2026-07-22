@@ -360,15 +360,28 @@ async def upload_logo(file: UploadFile = File(...)):
     temp_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp")
     os.makedirs(temp_dir, exist_ok=True)
     
-    # Save file
-    file_path = os.path.join(temp_dir, f"logo_{uuid.uuid4().hex[:8]}_{file.filename}")
-    with open(file_path, "wb") as f:
-        f.write(await file.read())
+    from PIL import Image
+    import io
+    
+    try:
+        contents = await file.read()
+        image = Image.open(io.BytesIO(contents))
         
-    return {
-        "status": "success",
-        "logo_path": file_path
-    }
+        # Scale to max 500px to keep it lightweight
+        max_size = 500
+        if image.width > max_size or image.height > max_size:
+            image.thumbnail((max_size, max_size), Image.Resampling.LANCZOS)
+            
+        # Save as PNG to preserve transparency
+        file_path = os.path.join(temp_dir, f"logo_{uuid.uuid4().hex[:8]}.png")
+        image.save(file_path, "PNG")
+        
+        return {
+            "status": "success",
+            "logo_path": file_path
+        }
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Logo-Verarbeitung fehlgeschlagen: {str(e)}")
 
 @app.post("/api/upload-video")
 async def upload_video(

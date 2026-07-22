@@ -36,6 +36,8 @@ export default function Page() {
   const [useMasterCi, setUseMasterCi] = useState(true);
   const [primaryColor, setPrimaryColor] = useState('#14AEEA');
   const [textColor, setTextColor] = useState('#ffffff');
+  const [highlightColor, setHighlightColor] = useState('#FFC72C');
+  const [fontName, setFontName] = useState('Work Sans');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPosition, setLogoPosition] = useState('top-left');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -213,6 +215,8 @@ export default function Page() {
               use_master_ci: useMasterCi,
               primaryColor,
               textColor,
+              highlightColor,
+              fontName,
               logoPosition,
               logoPath: logoPath || null,
               design: globalSubtitleConfig.design || 'minimalist',
@@ -242,7 +246,7 @@ export default function Page() {
       }, 1000); // 1000ms debounce
       
       return () => clearTimeout(delayDebounce);
-  }, [globalSubtitleConfig, useMasterCi, primaryColor, textColor, logoPosition, logoPath, resolution]);
+  }, [globalSubtitleConfig, useMasterCi, primaryColor, textColor, highlightColor, fontName, logoPosition, logoPath, resolution]);
 
   const handleProcess = async () => {
     if (!isSequenceMode && !youtubeUrl && !localFile) return;
@@ -257,6 +261,8 @@ export default function Page() {
           ...globalSubtitleConfig,
           primaryColor,
           textColor,
+          highlightColor,
+          fontName,
           logoPosition,
           logoPath: logoPath || null,
           useMasterCi
@@ -730,7 +736,7 @@ export default function Page() {
                             
                             {useMasterCi ? (
                                 <div className="space-y-6">
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-3 gap-4">
                                         <div>
                                             <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">CI Hauptfarbe (Rahmen & Akzente)</label>
                                             <div className="flex items-center gap-3 bg-background/50 border border-borderGlass rounded-xl p-2">
@@ -761,6 +767,23 @@ export default function Page() {
                                                     type="text"
                                                     value={textColor}
                                                     onChange={(e) => setTextColor(e.target.value)}
+                                                    className="bg-transparent text-white text-sm w-full focus:outline-none uppercase"
+                                                />
+                                            </div>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Highlight-Farbe (Aktuelles Wort)</label>
+                                            <div className="flex items-center gap-3 bg-background/50 border border-borderGlass rounded-xl p-2">
+                                                <input 
+                                                    type="color" 
+                                                    value={highlightColor}
+                                                    onChange={(e) => setHighlightColor(e.target.value)}
+                                                    className="w-8 h-8 rounded cursor-pointer bg-transparent border-0"
+                                                />
+                                                <input 
+                                                    type="text"
+                                                    value={highlightColor}
+                                                    onChange={(e) => setHighlightColor(e.target.value)}
                                                     className="bg-transparent text-white text-sm w-full focus:outline-none uppercase"
                                                 />
                                             </div>
@@ -807,7 +830,7 @@ export default function Page() {
                                         />
                                     </div>
 
-                                    <div className="grid grid-cols-2 gap-4">
+                                    <div className="grid grid-cols-3 gap-4">
                                         <div>
                                             <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Untertitel Design</label>
                                             <select 
@@ -818,6 +841,19 @@ export default function Page() {
                                                 <option value="hormozi">Hormozi (Impact)</option>
                                                 <option value="neon">Neon (Courier)</option>
                                                 <option value="minimalist">Minimalistisch (Arial)</option>
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Typografie (Schriftart)</label>
+                                            <select 
+                                                value={fontName}
+                                                onChange={(e) => setFontName(e.target.value)}
+                                                className="w-full bg-background/50 border border-borderGlass rounded-xl px-3 h-12 text-sm text-white focus:outline-none focus:border-mimaros-blue/50"
+                                            >
+                                                <option value="Work Sans">Work Sans (Modern)</option>
+                                                <option value="Lato">Lato (Sleek)</option>
+                                                <option value="Montserrat">Montserrat (Extra Bold)</option>
+                                                <option value="Impact">Impact (Classic)</option>
                                             </select>
                                         </div>
                                         <div>
@@ -882,20 +918,20 @@ export default function Page() {
                                             </span>
                                         </div>
                                     </div>
-                                    <div className="absolute bottom-16 left-0 right-0 text-center font-sans font-bold text-sm bg-black/60 mx-2 p-2 rounded-lg border-l-4 z-10" style={{ borderColor: primaryColor, color: textColor }}>
-                                        DYNAMISCHE UNTERTITEL
-                                        <br/><span className="text-[10px] font-normal opacity-80">Beispieltext</span>
+                                    <div className="absolute bottom-16 left-0 right-0 text-center font-bold text-sm bg-black/60 mx-2 p-2 rounded-lg border-l-4 z-10" style={{ borderColor: primaryColor, color: textColor, fontFamily: fontName }}>
+                                        DYNAMISCHE <span style={{ color: highlightColor }}>UNTERTITEL</span>
+                                        <br/><span className="text-[10px] font-normal opacity-80" style={{ fontFamily: fontName }}>Beispieltext</span>
                                     </div>
                                     <div className="absolute bottom-4 left-0 right-0 flex justify-center z-10">
                                         {globalSubtitleConfig.cta !== 'none' && (
-                                            <button className="text-white text-[10px] font-bold px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] uppercase" style={{ backgroundColor: primaryColor }}>
+                                            <button className="text-white text-[10px] font-bold px-4 py-1.5 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] uppercase" style={{ backgroundColor: primaryColor, fontFamily: fontName }}>
                                                 {globalSubtitleConfig.cta === 'follow' ? 'FOLGEN FÜR MEHR' : globalSubtitleConfig.cta === 'subscribe' ? 'JETZT ABONNIEREN' : globalSubtitleConfig.cta === 'more' ? 'MEHR VIDEOS' : 'CTA TEXT'}
                                             </button>
                                         )}
                                     </div>
                                 </>
                             ) : (
-                                <div className="absolute bottom-12 left-0 right-0 text-center text-white font-sans font-bold text-xs bg-black/50 mx-4 p-1 z-10">
+                                <div className="absolute bottom-12 left-0 right-0 text-center text-white font-bold text-xs bg-black/50 mx-4 p-1 z-10" style={{ fontFamily: fontName }}>
                                     STANDARD UNTERTITEL
                                 </div>
                             )}
