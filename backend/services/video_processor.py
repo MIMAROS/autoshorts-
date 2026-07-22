@@ -29,15 +29,15 @@ def generate_cta_button_image(text: str, bg_color_hex: str, text_color_hex: str,
     
     # Setup dimensions based on resolution
     if resolution == "1080p":
-        height = 130
-        font_size = 52
-        padding_x = 75
-        radius = 35
-    else:
-        height = 90
-        font_size = 36
-        padding_x = 55
-        radius = 24
+        font_size = 64
+        padding_x = 90
+        padding_y = 35
+        radius = 45
+    else: # 720p / preview
+        font_size = 42
+        padding_x = 60
+        padding_y = 25
+        radius = 30
         
     # Get the font
     fonts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "fonts")
@@ -51,13 +51,17 @@ def generate_cta_button_image(text: str, bg_color_hex: str, text_color_hex: str,
     except:
         font = ImageFont.load_default()
         
-    # Estimate text width
+    # Measure text precisely
     try:
-        text_width = int(font.getlength(text))
+        left, top, right, bottom = font.getbbox(text)
+        text_width = right - left
+        text_height = bottom - top
     except:
-        text_width = len(text) * (font_size // 2)
+        text_width = len(text) * int(font_size * 0.6)
+        text_height = font_size
         
     width = text_width + (padding_x * 2)
+    height = text_height + (padding_y * 2)
     
     # Create transparent image
     image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
@@ -70,11 +74,11 @@ def generate_cta_button_image(text: str, bg_color_hex: str, text_color_hex: str,
         fill=bg_color_hex
     )
     
-    # Draw text centered
+    # Draw text centered precisely
     try:
         draw.text((width / 2, height / 2), text, fill=text_color_hex, font=font, anchor="mm")
     except:
-        draw.text((padding_x, (height - font_size) / 2 - 2), text, fill=text_color_hex, font=font)
+        draw.text((padding_x, padding_y), text, fill=text_color_hex, font=font)
         
     # Save to path
     image.save(output_path, "PNG")
@@ -117,17 +121,17 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         
     if not use_master_ci:
         # Fallback to Mimaros Minimalist
-        style = f"FontName={ass_font},FontSize=14,PrimaryColour=&H00FFFFFF,BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=40"
+        style = f"FontName={ass_font},FontSize=12,PrimaryColour=&H00FFFFFF,BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=40"
         primary_color = "#14AEEA"
         logo_path = None
     else:
         design = config.get("design", "minimalist")
         if design == "minimalist":
-            style = f"FontName={ass_font},FontSize=18,PrimaryColour={ass_text_color},BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=60"
+            style = f"FontName={ass_font},FontSize=15,PrimaryColour={ass_text_color},BackColour=&H80000000,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginV=60"
         elif design == "neon":
-            style = f"FontName={ass_font},FontSize=20,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=3,Shadow=3,MarginV=60"
+            style = f"FontName={ass_font},FontSize=17,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=3,Shadow=3,MarginV=60"
         else: # hormozi
-            style = f"FontName={ass_font},FontSize=24,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=5,Shadow=0,MarginV=60"
+            style = f"FontName={ass_font},FontSize=20,PrimaryColour={ass_text_color},Alignment=2,Bold=-1,BorderStyle=1,Outline=5,Shadow=0,MarginV=60"
             
     resolution = config.get("resolution", "720p")
     if resolution == "1080p":
@@ -135,13 +139,13 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         border_thickness = 10
         logo_width = 180
         margin_x, margin_y = 60, 60
-        cta_offset_y = 250
+        cta_offset_y = 280
     else:
         vf_scale = "scale='if(gt(a,9/16),-1,720)':'if(gt(a,9/16),1280,-1)',crop=720:1280"
         border_thickness = 6
         logo_width = 120
         margin_x, margin_y = 40, 40
-        cta_offset_y = 180
+        cta_offset_y = 200
 
     # Start building filtergraph for video stream 0
     vf_filter = f"[0:v]{vf_scale}"
