@@ -938,13 +938,13 @@ export default function Page() {
                                              </span>
                                          </div>
                                      </div>
-                                    <div className="absolute bottom-28 left-0 right-0 text-center font-bold text-[10px] bg-[#0B192C]/70 max-w-[80%] mx-auto p-2 rounded-lg shadow-lg z-10" style={{ color: textColor, fontFamily: fontName }}>
+                                    <div className="absolute bottom-32 left-0 right-0 text-center font-bold text-[10px] bg-[#0B192C]/80 max-w-[80%] mx-auto p-2 rounded-lg shadow-lg z-10" style={{ color: textColor, fontFamily: fontName }}>
                                         DYNAMISCHE <span style={{ color: highlightColor }}>UNTERTITEL</span>
                                         <br/><span className="text-[8px] font-normal opacity-80" style={{ fontFamily: fontName }}>Beispieltext</span>
                                     </div>
-                                    <div className="absolute bottom-4 left-0 right-0 flex justify-center z-10">
+                                    <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                                         {globalSubtitleConfig.cta !== 'none' && (
-                                            <button className="text-white text-[14px] font-bold px-8 py-3.5 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] uppercase" style={{ backgroundColor: primaryColor, fontFamily: fontName }}>
+                                            <button className="text-white text-[14px] font-bold px-8 py-3.5 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] uppercase pointer-events-auto" style={{ backgroundColor: primaryColor, fontFamily: fontName }}>
                                                 {globalSubtitleConfig.cta === 'follow' ? 'FOLGEN FÜR MEHR' : globalSubtitleConfig.cta === 'subscribe' ? 'JETZT ABONNIEREN' : globalSubtitleConfig.cta === 'more' ? 'MEHR VIDEOS' : 'CTA TEXT'}
                                             </button>
                                         )}

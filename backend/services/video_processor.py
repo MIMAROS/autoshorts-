@@ -130,7 +130,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     
     resolution = config.get("resolution", "720p")
     if resolution == "1080p":
-        ass_margin_v = 200
+        ass_margin_v = 640
         ass_margin_lr = 120
         vf_scale = "scale='if(gt(a,9/16),-1,1080)':'if(gt(a,9/16),1920,-1)',crop=1080:1920"
         border_thickness = 10
@@ -139,7 +139,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         margin_y = 150 if hook_header else 30
         cta_offset_y = 170
     else:
-        ass_margin_v = 133
+        ass_margin_v = 427
         ass_margin_lr = 80
         vf_scale = "scale='if(gt(a,9/16),-1,720)':'if(gt(a,9/16),1280,-1)',crop=720:1280"
         border_thickness = 6
@@ -158,17 +158,17 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         # 4. Top Hook-Header Background & Accent Line (text is handled by ASS subtitles)
         if hook_header:
             if resolution == "1080p":
-                vf_filter += f",drawbox=x=0:y=0:w=iw:h=120:color=0x0B192C@0.8:t=fill"
+                vf_filter += f",drawbox=x=0:y=0:w=iw:h=120:color=0x0B192C@0.7:t=fill"
                 vf_filter += f",drawbox=x=0:y=120:w=iw:h=6:color={primary_color}:t=fill"
             else:
-                vf_filter += f",drawbox=x=0:y=0:w=iw:h=80:color=0x0B192C@0.8:t=fill"
+                vf_filter += f",drawbox=x=0:y=0:w=iw:h=80:color=0x0B192C@0.7:t=fill"
                 vf_filter += f",drawbox=x=0:y=80:w=iw:h=4:color={primary_color}:t=fill"
                 
-        # 5. Full-Width Subtitle Backdrop Banner (Covers existing subtitles behind)
+        # 5. Full-Width Subtitle Backdrop Banner (Covers existing subtitles behind, positioned higher to align with subtitles)
         if resolution == "1080p":
-            vf_filter += f",drawbox=x=0:y=1550:w=iw:h=240:color=0x0B192C@0.6:t=fill"
+            vf_filter += f",drawbox=x=0:y=1130:w=iw:h=240:color=0x0B192C@0.7:t=fill"
         else:
-            vf_filter += f",drawbox=x=0:y=1030:w=iw:h=160:color=0x0B192C@0.6:t=fill"
+            vf_filter += f",drawbox=x=0:y=750:w=iw:h=160:color=0x0B192C@0.7:t=fill"
         
     vf_filter += f",subtitles='{escaped_srt_path}':fontsdir='{escaped_fonts_dir}'"
     
@@ -264,7 +264,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
                     fade_chain += f",fade=t=in:st={start}:d=0.5:alpha=1,fade=t=out:st={end-0.5}:d=0.5:alpha=1"
                 fade_chain += "[cta_faded]"
                 
-                filter_complex += f";{fade_chain};{current_v}[cta_faded]overlay=x=(W-w)/2:y=H-{cta_offset_y}:enable='{enable_expr}'[v_cta]"
+                filter_complex += f";{fade_chain};{current_v}[cta_faded]overlay=x=(W-w)/2:y=(H-h)/2:enable='{enable_expr}'[v_cta]"
                 current_v = "[v_cta]"
         except Exception as e:
             print(f"Error generating CTA image button: {e}")
@@ -340,16 +340,16 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
     # Margin settings based on resolution
     resolution = config.get("resolution", "720p")
     if resolution == "1080p":
-        ass_margin_v = 200
+        ass_margin_v = 640
         ass_margin_lr = 120
-        font_size = 64
-        title_font_size = 72
+        font_size = 72
+        title_font_size = 80
         title_margin_v = 40
     else:
-        ass_margin_v = 133
+        ass_margin_v = 427
         ass_margin_lr = 80
-        font_size = 42
-        title_font_size = 48
+        font_size = 48
+        title_font_size = 54
         title_margin_v = 25
         
     def format_ass_time(seconds: float) -> str:
