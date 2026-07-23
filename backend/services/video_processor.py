@@ -163,6 +163,12 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
             else:
                 vf_filter += f",drawbox=x=0:y=0:w=iw:h=80:color=0x0B192C@0.8:t=fill"
                 vf_filter += f",drawbox=x=0:y=80:w=iw:h=4:color={primary_color}:t=fill"
+                
+        # 5. Full-Width Subtitle Backdrop Banner (Covers existing subtitles behind)
+        if resolution == "1080p":
+            vf_filter += f",drawbox=x=0:y=1550:w=iw:h=240:color=0x0B192C@0.6:t=fill"
+        else:
+            vf_filter += f",drawbox=x=0:y=1030:w=iw:h=160:color=0x0B192C@0.6:t=fill"
         
     vf_filter += f",subtitles='{escaped_srt_path}':fontsdir='{escaped_fonts_dir}'"
     
@@ -334,16 +340,16 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
     # Margin settings based on resolution
     resolution = config.get("resolution", "720p")
     if resolution == "1080p":
-        ass_margin_v = 300
+        ass_margin_v = 200
         ass_margin_lr = 120
-        font_size = 32
-        title_font_size = 38
+        font_size = 64
+        title_font_size = 72
         title_margin_v = 40
     else:
-        ass_margin_v = 200
+        ass_margin_v = 133
         ass_margin_lr = 80
-        font_size = 22
-        title_font_size = 26
+        font_size = 42
+        title_font_size = 48
         title_margin_v = 25
         
     def format_ass_time(seconds: float) -> str:
@@ -367,12 +373,11 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
             f.write("ScaledBorderAndShadow: yes\n\n")
             
             # 2. Write Styles
-            # Backdrop box is activated by BorderStyle=3. BackColour=&H662C190B is 60% opacity Mimaros Deep Blue.
+            # Subtitles default style (Centered bottom, Alignment=2, BorderStyle=1 (Outline), Outline=3)
             f.write("[V4+ Styles]\n")
             f.write("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n")
             
-            # Subtitles default style (Centered bottom, Alignment=2)
-            f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,&H662C190B,-1,0,0,0,100,100,0,0,3,0,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+            f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,&H00000000&,-1,0,0,0,100,100,0,0,1,3,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             
             # Top title style (Centered top, Alignment=8)
             f.write(f"Style: TopTitle,{ass_font},{title_font_size},&H00FFFFFF&,&H000000FF,&H00000000,&H00000000&,-1,0,0,0,100,100,0,0,1,1,0,8,40,40,{title_margin_v},1\n\n")
