@@ -130,39 +130,23 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     
     resolution = config.get("resolution", "720p")
     if resolution == "1080p":
-        ass_margin_v = 640
+        ass_margin_v = 200
         ass_margin_lr = 120
         vf_scale = "scale='if(gt(a,9/16),-1,1080)':'if(gt(a,9/16),1920,-1)',crop=1080:1920"
         border_thickness = 10
         logo_width = 180
         margin_x = 60
         margin_y = 150 if hook_header else 30
-        cta_offset_y = 280
+        cta_offset_y = 170
     else:
-        ass_margin_v = 420
+        ass_margin_v = 133
         ass_margin_lr = 80
         vf_scale = "scale='if(gt(a,9/16),-1,720)':'if(gt(a,9/16),1280,-1)',crop=720:1280"
         border_thickness = 6
         logo_width = 120
         margin_x = 40
         margin_y = 100 if hook_header else 20
-        cta_offset_y = 200
-
-    if not use_master_ci:
-        # Fallback to Mimaros Minimalist
-        style = f"FontName={ass_font},FontSize=12,PrimaryColour=&H00FFFFFF,BackColour=&H662C190B,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginL={ass_margin_lr},MarginR={ass_margin_lr},MarginV={ass_margin_v}"
-        primary_color = "#14AEEA"
-        logo_path = None
-    else:
-        design = config.get("design", "minimalist")
-        # Subtitle-Backdrop Layer: 60% opacity Mimaros Deep Blue (#0B192C) -> &H662C190B.
-        # Every style gets BorderStyle=3 (backdrop box banner)
-        if design == "minimalist":
-            style = f"FontName={ass_font},FontSize=15,PrimaryColour={ass_text_color},BackColour=&H662C190B,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginL={ass_margin_lr},MarginR={ass_margin_lr},MarginV={ass_margin_v}"
-        elif design == "neon":
-            style = f"FontName={ass_font},FontSize=17,PrimaryColour={ass_text_color},BackColour=&H662C190B,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginL={ass_margin_lr},MarginR={ass_margin_lr},MarginV={ass_margin_v}"
-        else: # hormozi
-            style = f"FontName={ass_font},FontSize=20,PrimaryColour={ass_text_color},BackColour=&H662C190B,Alignment=2,Bold=-1,BorderStyle=3,Outline=0,Shadow=0,MarginL={ass_margin_lr},MarginR={ass_margin_lr},MarginV={ass_margin_v}"
+        cta_offset_y = 113
 
     # Start building filtergraph for video stream 0
     vf_filter = f"[0:v]{vf_scale}"
@@ -171,18 +155,16 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         # Add primaryColor Border
         vf_filter += f",drawbox=x=0:y=0:w=iw:h=ih:color={primary_color}:thickness={border_thickness}"
         
-        # 4. Top Hook-Header (Video-Titel oben)
+        # 4. Top Hook-Header Background & Accent Line (text is handled by ASS subtitles)
         if hook_header:
             if resolution == "1080p":
                 vf_filter += f",drawbox=x=0:y=0:w=iw:h=120:color=0x0B192C@0.8:t=fill"
                 vf_filter += f",drawbox=x=0:y=120:w=iw:h=6:color={primary_color}:t=fill"
-                vf_filter += f",drawtext=text='{hook_header}':fontcolor=white:fontsize=36:font='{ass_font}':x=(w-text_w)/2:y=(120-text_h)/2"
             else:
                 vf_filter += f",drawbox=x=0:y=0:w=iw:h=80:color=0x0B192C@0.8:t=fill"
                 vf_filter += f",drawbox=x=0:y=80:w=iw:h=4:color={primary_color}:t=fill"
-                vf_filter += f",drawtext=text='{hook_header}':fontcolor=white:fontsize=24:font='{ass_font}':x=(w-text_w)/2:y=(80-text_h)/2"
         
-    vf_filter += f",subtitles='{escaped_srt_path}':fontsdir='{escaped_fonts_dir}':force_style='{style}'"
+    vf_filter += f",subtitles='{escaped_srt_path}':fontsdir='{escaped_fonts_dir}'"
     
     # Watermark
     watermark_text = config.get("watermark_text", "mimaros.eu").replace("'", "\\'")
@@ -315,87 +297,160 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     
     return cmd
 
-def generate_srt(segments: list, start_time: float, end_time: float, srt_path: str, config: dict = None):
+def generate_ass(segments: list, start_time: float, end_time: float, ass_path: str, config: dict = None):
     """
-    Generiert eine .srt Datei für den spezifischen Zeitbereich (Hook) mit Karaoke-Word-Highlighting.
+    Generiert eine .ass Datei für den spezifischen Zeitbereich (Hook) mit Karaoke-Word-Highlighting,
+    Subtitle-Backdrop, Spacing-Optionen und optionalem Hook-Header (Top Title).
     """
     if config is None:
         config = {}
-    highlight_color = config.get("highlightColor", "#D4AF37")
     
-    def format_time(seconds: float) -> str:
+    # Read styling parameters
+    highlight_color_hex = config.get("highlightColor", "#D4AF37").lstrip('#')
+    text_color_hex = config.get("textColor", "#ffffff").lstrip('#')
+    
+    # Convert hex colors to ASS format (AABBGGRR)
+    if len(highlight_color_hex) == 6:
+        h_r, h_g, h_b = highlight_color_hex[0:2], highlight_color_hex[2:4], highlight_color_hex[4:6]
+        highlight_color_ass = f"&H00{h_b}{h_g}{h_r}&"
+    else:
+        highlight_color_ass = "&H0037AFD4&" # fallback gold (#D4AF37)
+        
+    if len(text_color_hex) == 6:
+        t_r, t_g, t_b = text_color_hex[0:2], text_color_hex[2:4], text_color_hex[4:6]
+        text_color_ass = f"&H00{t_b}{t_g}{t_r}&"
+    else:
+        text_color_ass = "&H00FFFFFF&"
+        
+    font_name = config.get("fontName", "Work Sans")
+    ass_font = "Work Sans"
+    if font_name == "Lato":
+        ass_font = "Lato"
+    elif font_name == "Montserrat":
+        ass_font = "Montserrat"
+    elif font_name == "Impact":
+        ass_font = "Impact"
+        
+    # Margin settings based on resolution
+    resolution = config.get("resolution", "720p")
+    if resolution == "1080p":
+        ass_margin_v = 300
+        ass_margin_lr = 120
+        font_size = 32
+        title_font_size = 38
+        title_margin_v = 40
+    else:
+        ass_margin_v = 200
+        ass_margin_lr = 80
+        font_size = 22
+        title_font_size = 26
+        title_margin_v = 25
+        
+    def format_ass_time(seconds: float) -> str:
         hours = int(seconds // 3600)
         minutes = int((seconds % 3600) // 60)
         secs = int(seconds % 60)
-        millis = int((seconds % 1) * 1000)
-        return f"{hours:02d}:{minutes:02d}:{secs:02d},{millis:03d}"
+        centis = int(round((seconds % 1) * 100))
+        if centis >= 100:
+            secs += 1
+            centis = 0
+        return f"{hours}:{minutes:02d}:{secs:02d}.{centis:02d}"
 
-    index = 1
-    with open(srt_path, 'w', encoding='utf-8') as f:
-        for segment in segments:
-            if "words" in segment and segment["words"]:
-                # Filter words that fall in the clip range
-                words_in_range = []
-                for word in segment["words"]:
-                    w_start = word["start"]
-                    w_end = word["end"]
-                    w_text = word["word"].strip()
-                    if w_start >= start_time and w_end <= end_time:
-                        words_in_range.append({"text": w_text, "start": w_start, "end": w_end})
+    print(f"Generating ASS subtitles to path: {ass_path}")
+    try:
+        with open(ass_path, 'w', encoding='utf-8') as f:
+            # 1. Write ASS Header
+            f.write("[Script Info]\n")
+            f.write("ScriptType: v4.00+\n")
+            f.write("PlayResX: 1080\n" if resolution == "1080p" else "PlayResX: 720\n")
+            f.write("PlayResY: 1920\n" if resolution == "1080p" else "PlayResY: 1280\n")
+            f.write("ScaledBorderAndShadow: yes\n\n")
+            
+            # 2. Write Styles
+            # Backdrop box is activated by BorderStyle=3. BackColour=&H662C190B is 60% opacity Mimaros Deep Blue.
+            f.write("[V4+ Styles]\n")
+            f.write("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n")
+            
+            # Subtitles default style (Centered bottom, Alignment=2)
+            f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,&H662C190B,-1,0,0,0,100,100,0,0,3,0,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+            
+            # Top title style (Centered top, Alignment=8)
+            f.write(f"Style: TopTitle,{ass_font},{title_font_size},&H00FFFFFF&,&H000000FF,&H00000000,&H00000000&,-1,0,0,0,100,100,0,0,1,1,0,8,40,40,{title_margin_v},1\n\n")
+            
+            # 3. Write Events
+            f.write("[Events]\n")
+            f.write("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
+            
+            # Write Top Title if present
+            hook_header = config.get("hookHeader", "").strip()
+            if hook_header:
+                clip_duration = end_time - start_time
+                f.write(f"Dialogue: 1,0:00:00.00,{format_ass_time(clip_duration)},TopTitle,,0,0,0,,{hook_header.upper()}\n")
                 
-                if not words_in_range:
-                    continue
-                
-                # Group words in chunks of 3 (or 2-4 words)
-                chunk_size = 3
-                for chunk_idx in range(0, len(words_in_range), chunk_size):
-                    chunk = words_in_range[chunk_idx : chunk_idx + chunk_size]
-                    if not chunk:
+            # Write Subtitle segments
+            index = 1
+            for segment in segments:
+                if "words" in segment and segment["words"]:
+                    # Filter words that fall in the clip range
+                    words_in_range = []
+                    for word in segment["words"]:
+                        w_start = word["start"]
+                        w_end = word["end"]
+                        w_text = word["word"].strip()
+                        if w_start >= start_time and w_end <= end_time:
+                            words_in_range.append({"text": w_text, "start": w_start, "end": w_end})
+                    
+                    if not words_in_range:
                         continue
                     
-                    chunk_start = chunk[0]["start"] - start_time
-                    chunk_end = chunk[-1]["end"] - start_time
-                    
-                    # Write an event for each word in the chunk, highlighting it
-                    for i, active_word in enumerate(chunk):
-                        # Determine event start and end times to avoid gaps
-                        if i == 0:
-                            event_start = chunk_start
-                        else:
-                            event_start = chunk[i]["start"] - start_time
-                            
-                        if i == len(chunk) - 1:
-                            event_end = chunk_end
-                        else:
-                            event_end = chunk[i+1]["start"] - start_time
-                            
-                        # Build text with highlighted active word
-                        formatted_words = []
-                        for j, w in enumerate(chunk):
-                            w_text = w["text"].upper()
-                            if j == i:
-                                formatted_words.append(f'<font color="{highlight_color}">{w_text}</font>')
-                            else:
-                                formatted_words.append(w_text)
-                                
-                        chunk_text = " ".join(formatted_words)
+                    # Group words in chunks of 3
+                    chunk_size = 3
+                    for chunk_idx in range(0, len(words_in_range), chunk_size):
+                        chunk = words_in_range[chunk_idx : chunk_idx + chunk_size]
+                        if not chunk:
+                            continue
                         
-                        # Write SRT block
-                        f.write(f"{index}\n")
-                        f.write(f"{format_time(event_start)} --> {format_time(event_end)}\n")
-                        f.write(f"{chunk_text}\n\n")
+                        chunk_start = chunk[0]["start"] - start_time
+                        chunk_end = chunk[-1]["end"] - start_time
+                        
+                        # Write an event for each word in the chunk, highlighting it
+                        for i, active_word in enumerate(chunk):
+                            # Determine event start and end times to avoid gaps
+                            if i == 0:
+                                event_start = chunk_start
+                            else:
+                                event_start = chunk[i]["start"] - start_time
+                                
+                            if i == len(chunk) - 1:
+                                event_end = chunk_end
+                            else:
+                                event_end = chunk[i+1]["start"] - start_time
+                                
+                            # Build text with highlighted active word using ASS tags: {\c[color]}word{\c}
+                            formatted_words = []
+                            for j, w in enumerate(chunk):
+                                w_text = w["text"].upper()
+                                if j == i:
+                                    formatted_words.append(f"{{\\c{highlight_color_ass}}}{w_text}{{\\c}}")
+                                else:
+                                    formatted_words.append(w_text)
+                                    
+                            chunk_text = " ".join(formatted_words)
+                            
+                            f.write(f"Dialogue: 0,{format_ass_time(event_start)},{format_ass_time(event_end)},Default,,0,0,0,,{chunk_text}\n")
+                            index += 1
+                else:
+                    s_start = segment["start"]
+                    s_end = segment["end"]
+                    if s_start >= start_time and s_end <= end_time:
+                        rel_start = s_start - start_time
+                        rel_end = s_end - start_time
+                        f.write(f"Dialogue: 0,{format_ass_time(rel_start)},{format_ass_time(rel_end)},Default,,0,0,0,,{segment['text'].strip().upper()}\n")
                         index += 1
-            else:
-                s_start = segment["start"]
-                s_end = segment["end"]
-                if s_start >= start_time and s_end <= end_time:
-                    rel_start = s_start - start_time
-                    rel_end = s_end - start_time
-                    f.write(f"{index}\n")
-                    f.write(f"{format_time(rel_start)} --> {format_time(rel_end)}\n")
-                    f.write(f"{segment['text'].strip().upper()}\n\n")
-                    index += 1
-
+        print(f"ASS subtitles successfully created at {ass_path}")
+    except Exception as e:
+        print(f"Failed to generate ASS file: {e}")
+        raise e
 
 def process_clip(video_path: str, transcript_data: dict, start_time: float, end_time: float, output_path: str, resolution: str = "720p", subtitle_config: dict = None):
     if subtitle_config is None:
@@ -405,12 +460,12 @@ def process_clip(video_path: str, transcript_data: dict, start_time: float, end_
     base_dir = os.path.dirname(output_path)
     os.makedirs(base_dir, exist_ok=True)
         
-    srt_path = os.path.join(base_dir, f"subtitles_{os.path.basename(output_path)}.srt")
-    generate_srt(transcript_data.get("segments", []), start_time, end_time, srt_path, subtitle_config)
-    escaped_srt_path = srt_path.replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
+    ass_path = os.path.join(base_dir, f"subtitles_{os.path.basename(output_path)}.ass")
+    generate_ass(transcript_data.get("segments", []), start_time, end_time, ass_path, subtitle_config)
+    escaped_ass_path = ass_path.replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
     
     clip_duration = end_time - start_time
-    command = build_ffmpeg_command_args(video_path, escaped_srt_path, subtitle_config, output_path, start_time=str(start_time), duration=str(clip_duration))
+    command = build_ffmpeg_command_args(video_path, escaped_ass_path, subtitle_config, output_path, start_time=str(start_time), duration=str(clip_duration))
     
     print(f"Führe FFmpeg aus: {' '.join(command)}")
     try:
@@ -422,31 +477,38 @@ def process_clip(video_path: str, transcript_data: dict, start_time: float, end_
     except subprocess.TimeoutExpired:
         raise RuntimeError("FFmpeg hat zu lange gebraucht (Timeout).")
     finally:
-        if os.path.exists(srt_path):
-            try: os.remove(srt_path)
+        if os.path.exists(ass_path):
+            try: os.remove(ass_path)
             except: pass
         cta_img_path = os.path.join(os.path.dirname(output_path), f"cta_{os.path.basename(output_path)}.png")
         if os.path.exists(cta_img_path):
             try: os.remove(cta_img_path)
             except: pass
-    
-    return output_path
 
 def generate_preview(video_path: str, output_path: str, config: dict):
     base_dir = os.path.dirname(output_path)
     os.makedirs(base_dir, exist_ok=True)
-    dummy_srt_path = os.path.join(base_dir, f"dummy_{os.path.basename(output_path)}.srt")
+    dummy_ass_path = os.path.join(base_dir, f"dummy_{os.path.basename(output_path)}.ass")
     
-    highlight = config.get("highlightColor", "#D4AF37")
-    with open(dummy_srt_path, "w", encoding="utf-8") as f:
-        f.write(f"1\n00:00:00,000 --> 00:00:01,000\n<font color=\"{highlight}\">DEIN</font> UNTERTITEL VORSCHAU\n\n")
-        f.write(f"2\n00:00:01,000 --> 00:00:02,000\nDEIN <font color=\"{highlight}\">UNTERTITEL</font> VORSCHAU\n\n")
-        f.write(f"3\n00:00:02,000 --> 00:00:03,000\nDEIN UNTERTITEL <font color=\"{highlight}\">VORSCHAU</font>\n\n")
-        
-    escaped_srt_path = dummy_srt_path.replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
+    # Mock segment with word timestamps for full preview emulation
+    mock_segments = [
+        {
+            "start": 0.0,
+            "end": 3.0,
+            "text": "DEIN UNTERTITEL VORSCHAU",
+            "words": [
+                {"word": "DEIN", "start": 0.0, "end": 1.0},
+                {"word": "UNTERTITEL", "start": 1.0, "end": 2.0},
+                {"word": "VORSCHAU", "start": 2.0, "end": 3.0}
+            ]
+        }
+    ]
+    
+    generate_ass(mock_segments, 0.0, 3.0, dummy_ass_path, config)
+    escaped_ass_path = dummy_ass_path.replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
     config["resolution"] = "720p"
     
-    command = build_ffmpeg_command_args(video_path, escaped_srt_path, config, output_path, start_time="0", duration="3")
+    command = build_ffmpeg_command_args(video_path, escaped_ass_path, config, output_path, start_time="0", duration="3")
     
     try:
         result = subprocess.run(command, capture_output=True, text=True, timeout=60)
@@ -454,8 +516,8 @@ def generate_preview(video_path: str, output_path: str, config: dict):
             error_msg = result.stderr[-1000:] if result.stderr and len(result.stderr) > 1000 else result.stderr
             raise RuntimeError(f"FFmpeg Error: {error_msg}")
     finally:
-        if os.path.exists(dummy_srt_path):
-            try: os.remove(dummy_srt_path)
+        if os.path.exists(dummy_ass_path):
+            try: os.remove(dummy_ass_path)
             except: pass
         cta_img_path = os.path.join(os.path.dirname(output_path), f"cta_{os.path.basename(output_path)}.png")
         if os.path.exists(cta_img_path):
@@ -573,11 +635,11 @@ def stitch_clips(clip_paths: list, output_path: str):
 
 def apply_branding_and_subs(stitched_path: str, transcript_data: dict, output_path: str, subtitle_config: dict):
     base_dir = os.path.dirname(output_path)
-    srt_path = os.path.join(base_dir, f"subtitles_sequence.srt")
-    generate_srt(transcript_data.get("segments", []), 0.0, 9999.0, srt_path, subtitle_config)
-    escaped_srt_path = srt_path.replace('\\', '/').replace(':', '\\:').replace("'", "\\")
+    ass_path = os.path.join(base_dir, f"subtitles_sequence.ass")
+    generate_ass(transcript_data.get("segments", []), 0.0, 9999.0, ass_path, subtitle_config)
+    escaped_ass_path = ass_path.replace('\\', '/').replace(':', '\\:').replace("'", "\\")
     
-    command = build_ffmpeg_command_args(stitched_path, escaped_srt_path, subtitle_config, output_path)
+    command = build_ffmpeg_command_args(stitched_path, escaped_ass_path, subtitle_config, output_path)
     
     print(f"Führe FFmpeg (Branding) aus: {' '.join(command)}")
     try:
@@ -587,8 +649,8 @@ def apply_branding_and_subs(stitched_path: str, transcript_data: dict, output_pa
             print(f"FFmpeg Fehler: {error_msg}")
             raise RuntimeError(f"FFmpeg Fehler: {error_msg}")
     finally:
-        if os.path.exists(srt_path):
-            try: os.remove(srt_path)
+        if os.path.exists(ass_path):
+            try: os.remove(ass_path)
             except: pass
         cta_img_path = os.path.join(os.path.dirname(output_path), f"cta_{os.path.basename(output_path)}.png")
         if os.path.exists(cta_img_path):
