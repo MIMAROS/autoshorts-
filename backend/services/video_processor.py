@@ -11,7 +11,9 @@ def ensure_fonts():
     fonts = {
         "WorkSans-Bold.ttf": "https://fonts.gstatic.com/s/worksans/v24/QGY_z_wNahGAdqQ43RhVcIgYT2Xz5u32K67QBi8Jow.ttf",
         "Lato-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/lato/Lato-Bold.ttf",
-        "Montserrat-Black.ttf": "https://fonts.gstatic.com/s/montserrat/v31/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCvC73w5aX8.ttf"
+        "Montserrat-Black.ttf": "https://fonts.gstatic.com/s/montserrat/v31/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCvC73w5aX8.ttf",
+        "Oswald-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/oswald/Oswald-Bold.ttf",
+        "Anton-Regular.ttf": "https://github.com/google/fonts/raw/main/ofl/anton/Anton-Regular.ttf"
     }
     
     for font_name, url in fonts.items():
@@ -45,6 +47,10 @@ def generate_cta_button_image(text: str, bg_color_hex: str, text_color_hex: str,
         font_file = "WorkSans-Bold.ttf"
     elif font_name == "Montserrat":
         font_file = "Montserrat-Black.ttf"
+    elif font_name == "Oswald":
+        font_file = "Oswald-Bold.ttf"
+    elif font_name == "Anton":
+        font_file = "Anton-Regular.ttf"
     else:
         font_file = "Lato-Bold.ttf"
     font_path = os.path.join(fonts_dir, font_file)
@@ -99,8 +105,29 @@ def hex_to_ass_color(hex_color: str) -> str:
         return f"&H00{b}{g}{r}"
     return "&H00FFFFFF"
 
+def get_font_file_path(font_name: str, fonts_dir: str) -> str:
+    if font_name == "Work Sans":
+        return os.path.join(fonts_dir, "WorkSans-Bold.ttf")
+    elif font_name == "Montserrat":
+        return os.path.join(fonts_dir, "Montserrat-Black.ttf")
+    elif font_name == "Oswald":
+        return os.path.join(fonts_dir, "Oswald-Bold.ttf")
+    elif font_name == "Anton":
+        return os.path.join(fonts_dir, "Anton-Regular.ttf")
+    elif font_name == "Lato":
+        return os.path.join(fonts_dir, "Lato-Bold.ttf")
+    elif font_name == "Impact":
+        return os.path.join(fonts_dir, "Impact-Regular.ttf")
+    return os.path.join(fonts_dir, "WorkSans-Bold.ttf")
+
 def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: dict, output_path: str, start_time: str = None, duration: str = None) -> list:
     use_master_ci = config.get("use_master_ci", True)
+    
+    # Read Visibility Toggles (default to True)
+    show_title = config.get("showTitle", True)
+    show_logo = config.get("showLogo", True)
+    show_subtitles = config.get("showSubtitles", True)
+    show_cta = config.get("showCTA", True)
     
     # Fonts download & path
     fonts_dir = ensure_fonts()
@@ -127,6 +154,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         ass_font = "Impact"
         
     hook_header = config.get("hookHeader", "").strip().replace("'", "\\'")
+    has_title = bool(hook_header and show_title)
     
     resolution = config.get("resolution", "720p")
     if resolution == "1080p":
@@ -136,7 +164,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         border_thickness = 10
         logo_width = 180
         margin_x = 60
-        margin_y = 150 if hook_header else 30
+        margin_y = 30 # Logo is at the very top
         cta_offset_y = 170
     else:
         ass_margin_v = 320
@@ -145,7 +173,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         border_thickness = 6
         logo_width = 120
         margin_x = 40
-        margin_y = 100 if hook_header else 20
+        margin_y = 20 # Logo is at the very top
         cta_offset_y = 113
 
     # Start building filtergraph for video stream 0
@@ -155,29 +183,42 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         # Add primaryColor Border
         vf_filter += f",drawbox=x=0:y=0:w=iw:h=ih:color={primary_color}:thickness={border_thickness}"
         
-        # 4. Top Hook-Header Background & Accent Line (text is handled by ASS subtitles)
-        if hook_header:
-            if resolution == "1080p":
-                vf_filter += f",drawbox=x=0:y=0:w=iw:h=120:color=0x0B192C@0.7:t=fill"
-                vf_filter += f",drawbox=x=0:y=120:w=iw:h=6:color={primary_color}:t=fill"
+        # 4. Top Video Title (styled with bounding box backdrop exactly like subtitles, placed below logo)
+        if has_title:
+            font_path = get_font_file_path(font_name, fonts_dir).replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
+            has_top_logo = show_logo and logo_path and os.path.exists(logo_path) and ("top" in logo_pos)
+            
+            if has_top_logo:
+                title_y = 240 if resolution == "1080p" else 160
             else:
-                vf_filter += f",drawbox=x=0:y=0:w=iw:h=80:color=0x0B192C@0.7:t=fill"
-                vf_filter += f",drawbox=x=0:y=80:w=iw:h=4:color={primary_color}:t=fill"
+                title_y = 50 if resolution == "1080p" else 30
                 
-        # 5. Full-Width Subtitle Backdrop Banner (Covers existing subtitles behind, extends all the way to the bottom border)
-        if resolution == "1080p":
-            vf_filter += f",drawbox=x=0:y=1320:w=iw:h=ih-1320:color=0x0B192C@0.7:t=fill"
-        else:
-            vf_filter += f",drawbox=x=0:y=880:w=iw:h=ih-880:color=0x0B192C@0.7:t=fill"
+            if resolution == "1080p":
+                title_font_size = 80
+                box_border_w = 20
+            else:
+                title_font_size = 54
+                box_border_w = 12
+                
+            # Draw title with 70% opacity Deep Blue backdrop box using box border padding
+            vf_filter += f",drawtext=text='{hook_header.upper()}':fontfile='{font_path}':fontsize={title_font_size}:fontcolor=white:box=1:boxcolor=0x0B192C@0.7:boxborderw={box_border_w}:x=(w-text_w)/2:y={title_y}"
+            
+        # 5. Full-Width Subtitle Backdrop Banner (extends all the way to the bottom border)
+        if show_subtitles:
+            if resolution == "1080p":
+                vf_filter += f",drawbox=x=0:y=1320:w=iw:h=ih-1320:color=0x0B192C@0.7:t=fill"
+            else:
+                vf_filter += f",drawbox=x=0:y=880:w=iw:h=ih-880:color=0x0B192C@0.7:t=fill"
         
-    vf_filter += f",subtitles='{escaped_srt_path}':fontsdir='{escaped_fonts_dir}'"
+    if show_subtitles:
+        vf_filter += f",subtitles='{escaped_srt_path}':fontsdir='{escaped_fonts_dir}'"
     
     # Watermark
     watermark_text = config.get("watermark_text", "mimaros.eu").replace("'", "\\'")
     if watermark_text:
-        # Watermark position shifted if hook_header is present
-        if hook_header:
-            watermark_y = 120 + 30 if resolution == "1080p" else 80 + 20
+        # Watermark position shifted if top title is present to avoid overlay
+        if has_title:
+            watermark_y = 380 if resolution == "1080p" else 250
         else:
             watermark_y = 30 if resolution == "1080p" else 20
             
@@ -192,7 +233,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     
     # 1. Overlay Logo
     logo_input_index = -1
-    if logo_path and os.path.exists(logo_path) and use_master_ci:
+    if logo_path and os.path.exists(logo_path) and use_master_ci and show_logo:
         inputs.append(logo_path)
         logo_input_index = len(inputs) - 1
         
@@ -229,7 +270,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         cta_text = "MEHR VIDEOS"
         
     cta_input_index = -1
-    if cta_text and use_master_ci:
+    if cta_text and use_master_ci and show_cta:
         # Generate rounded button image dynamically
         cta_img_path = os.path.join(os.path.dirname(output_path), f"cta_{os.path.basename(output_path)}.png")
         try:
@@ -382,19 +423,11 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
             
             # Subtitles default style (Centered bottom, Alignment=2, BorderStyle=1, Outline=3)
             f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,3,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
-            
-            # Top title style (Centered top, Alignment=8, BorderStyle=1, Outline=0)
-            f.write(f"Style: TopTitle,{ass_font},{title_font_size},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,0,0,8,40,40,{title_margin_v},1\n\n")
+            f.write("\n")
             
             # 3. Write Events
             f.write("[Events]\n")
             f.write("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
-            
-            # Write Top Title if present
-            hook_header = config.get("hookHeader", "").strip()
-            if hook_header:
-                clip_duration = end_time - start_time
-                f.write(f"Dialogue: 0,0:00:00.00,{format_ass_time(clip_duration)},TopTitle,,0,0,0,,{hook_header.upper()}\n")
                 
             # Write Subtitle segments
             index = 1

@@ -45,6 +45,11 @@ export default function Page() {
   const [logoUploading, setLogoUploading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const [hookHeader, setHookHeader] = useState('');
+  const [showTitle, setShowTitle] = useState(true);
+  const [showLogo, setShowLogo] = useState(true);
+  const [showSubtitles, setShowSubtitles] = useState(true);
+  const [showCTA, setShowCTA] = useState(true);
+  const [activeAccordion, setActiveAccordion] = useState<string | null>('basic');
   const [globalPreviewUrl, setGlobalPreviewUrl] = useState('');
   const [isGlobalPreviewing, setIsGlobalPreviewing] = useState(false);
 
@@ -222,7 +227,11 @@ export default function Page() {
               logoPath: logoPath || null,
               design: globalSubtitleConfig.design || 'minimalist',
               resolution,
-              hookHeader
+              hookHeader,
+              showTitle,
+              showLogo,
+              showSubtitles,
+              showCTA
           };
 
           const res = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/preview-clip`, {
@@ -248,7 +257,7 @@ export default function Page() {
       }, 1000); // 1000ms debounce
       
       return () => clearTimeout(delayDebounce);
-  }, [globalSubtitleConfig, useMasterCi, primaryColor, textColor, highlightColor, fontName, logoPosition, logoPath, resolution, hookHeader]);
+  }, [globalSubtitleConfig, useMasterCi, primaryColor, textColor, highlightColor, fontName, logoPosition, logoPath, resolution, hookHeader, showTitle, showLogo, showSubtitles, showCTA]);
 
   const handleProcess = async () => {
     if (!isSequenceMode && !youtubeUrl && !localFile) return;
@@ -268,7 +277,11 @@ export default function Page() {
           logoPosition,
           logoPath: logoPath || null,
           useMasterCi,
-          hookHeader
+          hookHeader,
+          showTitle,
+          showLogo,
+          showSubtitles,
+          showCTA
       };
       
       let jobId = '';
@@ -723,170 +736,341 @@ export default function Page() {
                             </div>
                         </div>
 
-                        <div className="border-t border-borderGlass pt-6">
-                            <div className="flex items-center justify-between mb-4">
-                                <h3 className="font-bold text-white flex items-center gap-2"><Subtitles className="w-4 h-4 text-mimaros-blue"/> Master CI-Template</h3>
-                                <label className="flex items-center gap-2 cursor-pointer text-xs font-bold text-textDim">
-                                    <input 
-                                        type="checkbox" 
-                                        checked={useMasterCi} 
-                                        onChange={(e) => setUseMasterCi(e.target.checked)}
-                                        className="rounded border-borderGlass bg-panel text-mimaros-blue focus:ring-mimaros-blue"
-                                    />
-                                    Aktiviert
-                                </label>
+                        <div className="space-y-4">
+                            {/* Accordion 1: Basis-Einstellungen */}
+                            <div className="border border-borderGlass rounded-2xl overflow-hidden bg-panel/20 backdrop-blur-md">
+                                <button 
+                                    type="button"
+                                    onClick={() => setActiveAccordion(activeAccordion === 'basic' ? null : 'basic')}
+                                    className="w-full px-6 py-4 flex items-center justify-between text-left font-bold text-white bg-panel/30 hover:bg-panel/50 transition-all focus:outline-none"
+                                >
+                                    <span className="flex items-center gap-2">
+                                        <Settings className="w-4 h-4 text-mimaros-blue" />
+                                        Basis-Einstellungen
+                                    </span>
+                                    <ChevronDown className={`w-4 h-4 text-textDim transition-transform duration-300 ${activeAccordion === 'basic' ? 'rotate-180' : ''}`} />
+                                </button>
+                                {activeAccordion === 'basic' && (
+                                    <div className="p-6 bg-background/10 space-y-4 border-t border-borderGlass/50">
+                                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-1">Video Sprache</label>
+                                                <select value={videoLang} onChange={(e) => setVideoLang(e.target.value)} className="w-full bg-panel border border-borderGlass p-2 rounded-lg text-sm text-white outline-none focus:border-mimaros-blue">
+                                                    <option value="auto">Auto Erkennung</option>
+                                                    <option value="de">Deutsch</option>
+                                                    <option value="en">Englisch</option>
+                                                    <option value="es">Spanisch</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-1">Untertitel Übersetzung</label>
+                                                <select value={subtitleLang} onChange={(e) => setSubtitleLang(e.target.value)} className="w-full bg-panel border border-borderGlass p-2 rounded-lg text-sm text-white outline-none focus:border-mimaros-blue">
+                                                    <option value="auto">Wie Video</option>
+                                                    <option value="de">Deutsch</option>
+                                                    <option value="en">Englisch</option>
+                                                    <option value="es">Spanisch</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-1">Clip Länge</label>
+                                                <select value={clipLength} onChange={(e) => setClipLength(e.target.value)} className="w-full bg-panel border border-borderGlass p-2 rounded-lg text-sm text-white outline-none focus:border-mimaros-blue">
+                                                    <option value="auto">Auto (30-60s)</option>
+                                                    <option value="short">Viral Hook (&lt;30s)</option>
+                                                    <option value="standard">Standard (30-60s)</option>
+                                                    <option value="extended">Extended (60-90s)</option>
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-1">Auflösung</label>
+                                                <select value={resolution} onChange={(e) => setResolution(e.target.value)} className="w-full bg-panel border border-borderGlass p-2 rounded-lg text-sm text-white outline-none focus:border-mimaros-blue">
+                                                    <option value="720p">720p (Schnell)</option>
+                                                    <option value="1080p">1080p (HQ)</option>
+                                                </select>
+                                            </div>
+                                        </div>
+                                        <div className="flex items-center justify-between pt-2 border-t border-borderGlass/20">
+                                            <span className="text-xs font-bold text-textDim font-sans">Master CI-Template anwenden</span>
+                                            <button 
+                                                type="button"
+                                                onClick={() => setUseMasterCi(!useMasterCi)}
+                                                className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${useMasterCi ? 'bg-mimaros-blue shadow-blue-glow' : 'bg-background/80 border border-borderGlass'}`}
+                                            >
+                                                <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${useMasterCi ? 'translate-x-5' : 'translate-x-0'}`} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                )}
                             </div>
-                            
-                            {useMasterCi ? (
-                                <div className="space-y-6">
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">CI Hauptfarbe (Rahmen & Akzente)</label>
-                                            <div className="flex items-center gap-3 bg-background/50 border border-borderGlass rounded-xl p-2">
-                                                <input 
-                                                    type="color" 
-                                                    value={primaryColor}
-                                                    onChange={(e) => setPrimaryColor(e.target.value)}
-                                                    className="w-8 h-8 rounded cursor-pointer bg-transparent border-0"
-                                                />
-                                                <input 
-                                                    type="text"
-                                                    value={primaryColor}
-                                                    onChange={(e) => setPrimaryColor(e.target.value)}
-                                                    className="bg-transparent text-white text-sm w-full focus:outline-none uppercase"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">CI Textfarbe (Untertitel)</label>
-                                            <div className="flex items-center gap-3 bg-background/50 border border-borderGlass rounded-xl p-2">
-                                                <input 
-                                                    type="color" 
-                                                    value={textColor}
-                                                    onChange={(e) => setTextColor(e.target.value)}
-                                                    className="w-8 h-8 rounded cursor-pointer bg-transparent border-0"
-                                                />
-                                                <input 
-                                                    type="text"
-                                                    value={textColor}
-                                                    onChange={(e) => setTextColor(e.target.value)}
-                                                    className="bg-transparent text-white text-sm w-full focus:outline-none uppercase"
-                                                />
-                                            </div>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Highlight-Farbe (Aktuelles Wort)</label>
-                                            <div className="flex items-center gap-3 bg-background/50 border border-borderGlass rounded-xl p-2">
-                                                <input 
-                                                    type="color" 
-                                                    value={highlightColor}
-                                                    onChange={(e) => setHighlightColor(e.target.value)}
-                                                    className="w-8 h-8 rounded cursor-pointer bg-transparent border-0"
-                                                />
-                                                <input 
-                                                    type="text"
-                                                    value={highlightColor}
-                                                    onChange={(e) => setHighlightColor(e.target.value)}
-                                                    className="bg-transparent text-white text-sm w-full focus:outline-none uppercase"
-                                                />
-                                            </div>
-                                        </div>
-                                    </div>
 
-                                    <div>
-                                        <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Logo Upload & Position</label>
-                                        <div className="flex flex-col sm:flex-row gap-4">
-                                            <div className="flex-1">
-                                                <label className="flex items-center justify-center w-full h-12 px-4 transition bg-background/50 border-2 border-borderGlass border-dashed rounded-xl appearance-none cursor-pointer hover:border-mimaros-blue/50 focus:outline-none">
-                                                    <span className="flex items-center space-x-2">
-                                                        <svg xmlns="http://www.w3.org/2000/svg" className="w-5 h-5 text-textDim" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth="2">
-                                                            <path strokeLinecap="round" strokeLinejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
-                                                        </svg>
-                                                        <span className="font-medium text-sm text-textDim truncate max-w-[150px]">
-                                                            {logoUploading ? 'Lade hoch...' : (logoFile ? logoFile.name : 'Logo (.png)')}
+                            {/* Accordion 2: Sichtbarkeit & CI-Design */}
+                            {useMasterCi && (
+                                <div className="border border-borderGlass rounded-2xl overflow-hidden bg-panel/20 backdrop-blur-md">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setActiveAccordion(activeAccordion === 'ci' ? null : 'ci')}
+                                        className="w-full px-6 py-4 flex items-center justify-between text-left font-bold text-white bg-panel/30 hover:bg-panel/50 transition-all focus:outline-none"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <Layout className="w-4 h-4 text-mimaros-blue" />
+                                            Sichtbarkeit & CI-Design
+                                        </span>
+                                        <ChevronDown className={`w-4 h-4 text-textDim transition-transform duration-300 ${activeAccordion === 'ci' ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {activeAccordion === 'ci' && (
+                                        <div className="p-6 bg-background/10 space-y-6 border-t border-borderGlass/50">
+                                            {/* Modular Visibility Toggles */}
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-3">Sichtbare Elemente</label>
+                                                <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+                                                    <div className="flex items-center justify-between p-3 bg-background/30 border border-borderGlass rounded-xl">
+                                                        <span className="text-xs font-bold text-white">Titel</span>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => setShowTitle(!showTitle)}
+                                                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${showTitle ? 'bg-mimaros-blue shadow-blue-glow' : 'bg-background/50 border border-borderGlass'}`}
+                                                        >
+                                                            <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${showTitle ? 'translate-x-4' : 'translate-x-0'}`} />
+                                                        </button>
+                                                    </div>
+                                                    <div className="flex items-center justify-between p-3 bg-background/30 border border-borderGlass rounded-xl">
+                                                        <span className="text-xs font-bold text-white">Logo</span>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => setShowLogo(!showLogo)}
+                                                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${showLogo ? 'bg-mimaros-blue shadow-blue-glow' : 'bg-background/50 border border-borderGlass'}`}
+                                                        >
+                                                            <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${showLogo ? 'translate-x-4' : 'translate-x-0'}`} />
+                                                        </button>
+                                                    </div>
+                                                    <div className="flex items-center justify-between p-3 bg-background/30 border border-borderGlass rounded-xl">
+                                                        <span className="text-xs font-bold text-white">Untertitel</span>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => setShowSubtitles(!showSubtitles)}
+                                                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${showSubtitles ? 'bg-mimaros-blue shadow-blue-glow' : 'bg-background/50 border border-borderGlass'}`}
+                                                        >
+                                                            <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${showSubtitles ? 'translate-x-4' : 'translate-x-0'}`} />
+                                                        </button>
+                                                    </div>
+                                                    <div className="flex items-center justify-between p-3 bg-background/30 border border-borderGlass rounded-xl">
+                                                        <span className="text-xs font-bold text-white">Follow CTA</span>
+                                                        <button 
+                                                            type="button"
+                                                            onClick={() => setShowCTA(!showCTA)}
+                                                            className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${showCTA ? 'bg-mimaros-blue shadow-blue-glow' : 'bg-background/50 border border-borderGlass'}`}
+                                                        >
+                                                            <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${showCTA ? 'translate-x-4' : 'translate-x-0'}`} />
+                                                        </button>
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Colors */}
+                                            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">CI Hauptfarbe (Rahmen & Akzente)</label>
+                                                    <div className="flex items-center gap-3 bg-background/50 border border-borderGlass rounded-xl p-2">
+                                                        <input 
+                                                            type="color" 
+                                                            value={primaryColor}
+                                                            onChange={(e) => setPrimaryColor(e.target.value)}
+                                                            className="w-8 h-8 rounded cursor-pointer bg-transparent border-0"
+                                                        />
+                                                        <input 
+                                                            type="text" 
+                                                            value={primaryColor}
+                                                            onChange={(e) => setPrimaryColor(e.target.value)}
+                                                            className="bg-transparent text-white text-sm w-full focus:outline-none uppercase"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">CI Textfarbe (Untertitel)</label>
+                                                    <div className="flex items-center gap-3 bg-background/50 border border-borderGlass rounded-xl p-2">
+                                                        <input 
+                                                            type="color" 
+                                                            value={textColor}
+                                                            onChange={(e) => setTextColor(e.target.value)}
+                                                            className="w-8 h-8 rounded cursor-pointer bg-transparent border-0"
+                                                        />
+                                                        <input 
+                                                            type="text" 
+                                                            value={textColor}
+                                                            onChange={(e) => setTextColor(e.target.value)}
+                                                            className="bg-transparent text-white text-sm w-full focus:outline-none uppercase"
+                                                        />
+                                                    </div>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Highlight-Farbe (Aktuelles Wort)</label>
+                                                    <div className="flex items-center gap-3 bg-background/50 border border-borderGlass rounded-xl p-2">
+                                                        <input 
+                                                            type="color" 
+                                                            value={highlightColor}
+                                                            onChange={(e) => setHighlightColor(e.target.value)}
+                                                            className="w-8 h-8 rounded cursor-pointer bg-transparent border-0"
+                                                        />
+                                                        <input 
+                                                            type="text" 
+                                                            value={highlightColor}
+                                                            onChange={(e) => setHighlightColor(e.target.value)}
+                                                            className="bg-transparent text-white text-sm w-full focus:outline-none uppercase"
+                                                        />
+                                                    </div>
+                                                </div>
+                                            </div>
+
+                                            {/* Logo Upload & position */}
+                                            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Logo Upload</label>
+                                                    <label className="flex items-center justify-center w-full h-12 px-4 transition bg-background/50 border-2 border-borderGlass border-dashed rounded-xl appearance-none cursor-pointer hover:border-mimaros-blue/50 focus:outline-none">
+                                                        <span className="flex items-center space-x-2">
+                                                            <UploadCloud className="w-5 h-5 text-textDim" />
+                                                            <span className="font-medium text-sm text-textDim truncate max-w-[180px]">
+                                                                {logoUploading ? 'Lade hoch...' : (logoFile ? logoFile.name : 'Logo (.png)')}
+                                                            </span>
                                                         </span>
-                                                    </span>
-                                                    <input type="file" name="file_upload" className="hidden" accept=".png,.jpg,.jpeg" onChange={handleLogoUpload} />
-                                                </label>
+                                                        <input type="file" name="file_upload" className="hidden" accept=".png,.jpg,.jpeg" onChange={handleLogoUpload} />
+                                                    </label>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Logo Position</label>
+                                                    <select 
+                                                        value={logoPosition}
+                                                        onChange={(e) => setLogoPosition(e.target.value)}
+                                                        className="w-full bg-background/50 border border-borderGlass rounded-xl px-4 h-12 text-sm text-white focus:outline-none focus:border-mimaros-blue/50"
+                                                    >
+                                                        <option value="top-left">Oben Links</option>
+                                                        <option value="top-right">Oben Rechts</option>
+                                                        <option value="top-center">Oben Zentriert</option>
+                                                        <option value="bottom-left">Unten Links</option>
+                                                        <option value="bottom-right">Unten Rechts</option>
+                                                    </select>
+                                                </div>
                                             </div>
-                                            <select 
-                                                value={logoPosition}
-                                                onChange={(e) => setLogoPosition(e.target.value)}
-                                                className="bg-background/50 border border-borderGlass rounded-xl px-4 h-12 text-sm text-white focus:outline-none focus:border-mimaros-blue/50"
-                                            >
-                                                <option value="top-left">Oben Links</option>
-                                                <option value="top-right">Oben Rechts</option>
-                                                <option value="bottom-left">Unten Links</option>
-                                                <option value="bottom-right">Unten Rechts</option>
-                                            </select>
-                                        </div>
-                                    </div>
 
-                                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                         <div>
-                                             <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Watermark Text</label>
-                                             <input 
-                                                 type="text" 
-                                                 value={globalSubtitleConfig.watermark_text}
-                                                 onChange={(e) => setGlobalSubtitleConfig({...globalSubtitleConfig, watermark_text: e.target.value})}
-                                                 className="w-full bg-background/50 border border-borderGlass rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-mimaros-blue/50 transition-colors"
-                                                 placeholder="z.B. @deinkanal"
-                                             />
-                                         </div>
-                                         <div>
-                                             <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Video-Titel / Hook-Header (Optional)</label>
-                                             <input 
-                                                 type="text" 
-                                                 value={hookHeader}
-                                                 onChange={(e) => setHookHeader(e.target.value)}
-                                                 className="w-full bg-background/50 border border-borderGlass rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-mimaros-blue/50 transition-colors"
-                                                 placeholder="z.B. DIE 3 BESTEN TRICKS"
-                                             />
-                                         </div>
-                                     </div>
-
-                                    <div className="grid grid-cols-3 gap-4">
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Untertitel Design</label>
-                                            <select 
-                                                value={globalSubtitleConfig.design}
-                                                onChange={(e) => setGlobalSubtitleConfig({...globalSubtitleConfig, design: e.target.value})}
-                                                className="w-full bg-background/50 border border-borderGlass rounded-xl px-3 h-12 text-sm text-white focus:outline-none focus:border-mimaros-blue/50"
-                                            >
-                                                <option value="hormozi">Hormozi (Impact)</option>
-                                                <option value="neon">Neon (Courier)</option>
-                                                <option value="minimalist">Minimalistisch (Arial)</option>
-                                            </select>
+                                            {/* Watermark & Hook Header */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Watermark Text</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={globalSubtitleConfig.watermark_text}
+                                                        onChange={(e) => setGlobalSubtitleConfig({...globalSubtitleConfig, watermark_text: e.target.value})}
+                                                        className="w-full bg-background/50 border border-borderGlass rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-mimaros-blue/50 transition-colors"
+                                                        placeholder="z.B. @deinkanal"
+                                                    />
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Video-Titel / Hook-Header (Optional)</label>
+                                                    <input 
+                                                        type="text" 
+                                                        value={hookHeader}
+                                                        onChange={(e) => setHookHeader(e.target.value)}
+                                                        className="w-full bg-background/50 border border-borderGlass rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-mimaros-blue/50 transition-colors"
+                                                        placeholder="z.B. DIE 3 BESTEN TRICKS"
+                                                    />
+                                                </div>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Typografie (Schriftart)</label>
-                                            <select 
-                                                value={fontName}
-                                                onChange={(e) => setFontName(e.target.value)}
-                                                className="w-full bg-background/50 border border-borderGlass rounded-xl px-3 h-12 text-sm text-white focus:outline-none focus:border-mimaros-blue/50"
-                                            >
-                                                <option value="Work Sans">Work Sans (Modern)</option>
-                                                <option value="Lato">Lato (Sleek)</option>
-                                                <option value="Montserrat">Montserrat (Extra Bold)</option>
-                                                <option value="Impact">Impact (Classic)</option>
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Call-to-Action (CTA)</label>
-                                            <select 
-                                                value={globalSubtitleConfig.cta}
-                                                onChange={(e) => setGlobalSubtitleConfig({...globalSubtitleConfig, cta: e.target.value})}
-                                                className="w-full bg-background/50 border border-borderGlass rounded-xl px-3 h-12 text-sm text-white focus:outline-none focus:border-mimaros-blue/50"
-                                            >
-                                                <option value="none">Kein CTA</option>
-                                                <option value="follow">Folgen für mehr</option>
-                                                <option value="subscribe">Jetzt abonnieren</option>
-                                                <option value="more">Mehr Videos</option>
-                                            </select>
-                                        </div>
-                                    </div>
+                                    )}
                                 </div>
-                            ) : (
+                            )}
+
+                            {/* Accordion 3: Untertitel Design-Stile */}
+                            {useMasterCi && (
+                                <div className="border border-borderGlass rounded-2xl overflow-hidden bg-panel/20 backdrop-blur-md">
+                                    <button 
+                                        type="button"
+                                        onClick={() => setActiveAccordion(activeAccordion === 'design' ? null : 'design')}
+                                        className="w-full px-6 py-4 flex items-center justify-between text-left font-bold text-white bg-panel/30 hover:bg-panel/50 transition-all focus:outline-none"
+                                    >
+                                        <span className="flex items-center gap-2">
+                                            <Subtitles className="w-4 h-4 text-mimaros-blue" />
+                                            Untertitel Design-Stile
+                                        </span>
+                                        <ChevronDown className={`w-4 h-4 text-textDim transition-transform duration-300 ${activeAccordion === 'design' ? 'rotate-180' : ''}`} />
+                                    </button>
+                                    {activeAccordion === 'design' && (
+                                        <div className="p-6 bg-background/10 space-y-6 border-t border-borderGlass/50">
+                                            {/* Horizontal Templates Slider (CapCut/TikTok style) */}
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-3">Untertitel Vorlagen</label>
+                                                <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-mimaros-blue/20">
+                                                    {[
+                                                        { 
+                                                            id: 'minimalist', 
+                                                            name: 'Standard', 
+                                                            desc: 'Cleane Outlines', 
+                                                            videoUrl: 'https://player.vimeo.com/external/371433846.sd.mp4?s=236da2f3c054ba208d9c00a29939c21b2efdaab1&profile_id=139&oauth2_token_id=57447761' 
+                                                        },
+                                                        { 
+                                                            id: 'neon', 
+                                                            name: 'Karaoke', 
+                                                            desc: 'Pop-Up Highlight', 
+                                                            videoUrl: 'https://player.vimeo.com/external/517602120.sd.mp4?s=0eb0832367d3b2ebf8df67eb1c28c89b70b55570&profile_id=165&oauth2_token_id=57447761' 
+                                                        },
+                                                        { 
+                                                            id: 'hormozi', 
+                                                            name: 'Box', 
+                                                            desc: 'Kontrast-Kasten', 
+                                                            videoUrl: 'https://player.vimeo.com/external/554832566.sd.mp4?s=40445a497045b8813fa25032d8fe15629c1fb238&profile_id=165&oauth2_token_id=57447761' 
+                                                        }
+                                                    ].map(tpl => (
+                                                        <button 
+                                                            key={tpl.id}
+                                                            type="button"
+                                                            onClick={() => setGlobalSubtitleConfig({...globalSubtitleConfig, design: tpl.id})}
+                                                            className={`relative min-w-[130px] w-[130px] aspect-[9/16] rounded-xl overflow-hidden border-2 transition-all shrink-0 ${globalSubtitleConfig.design === tpl.id ? 'border-mimaros-blue shadow-blue-glow scale-[0.98]' : 'border-borderGlass opacity-60 hover:opacity-100'}`}
+                                                        >
+                                                            <video src={tpl.videoUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover" />
+                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent flex flex-col justify-end p-2.5 text-left">
+                                                                <span className="text-xs font-bold text-white">{tpl.name}</span>
+                                                                <span className="text-[8px] text-textDim truncate">{tpl.desc}</span>
+                                                            </div>
+                                                        </button>
+                                                    ))}
+                                                </div>
+                                            </div>
+
+                                            {/* Fonts & CTA options */}
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Typografie (Schriftart)</label>
+                                                    <select 
+                                                        value={fontName}
+                                                        onChange={(e) => setFontName(e.target.value)}
+                                                        className="w-full bg-background/50 border border-borderGlass rounded-xl px-3 h-12 text-sm text-white focus:outline-none focus:border-mimaros-blue/50"
+                                                    >
+                                                        <option value="Work Sans">Work Sans (Modern)</option>
+                                                        <option value="Lato">Lato (Sleek)</option>
+                                                        <option value="Montserrat">Montserrat Black (Thick CI)</option>
+                                                        <option value="Oswald">Oswald (Compact Bold)</option>
+                                                        <option value="Anton">Anton (Extra Bold & Heavy)</option>
+                                                        <option value="Impact">Impact (Classic)</option>
+                                                    </select>
+                                                </div>
+                                                <div>
+                                                    <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Call-to-Action (CTA)</label>
+                                                    <select 
+                                                        value={globalSubtitleConfig.cta}
+                                                        onChange={(e) => setGlobalSubtitleConfig({...globalSubtitleConfig, cta: e.target.value})}
+                                                        className="w-full bg-background/50 border border-borderGlass rounded-xl px-3 h-12 text-sm text-white focus:outline-none focus:border-mimaros-blue/50"
+                                                    >
+                                                        <option value="none">Kein CTA</option>
+                                                        <option value="follow">Folgen für mehr</option>
+                                                        <option value="subscribe">Jetzt abonnieren</option>
+                                                        <option value="more">Mehr Videos</option>
+                                                    </select>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {!useMasterCi && (
                                 <div className="p-4 bg-background/50 border border-borderGlass rounded-xl">
                                     <p className="text-sm text-textDim">Das Master CI-Template ist deaktiviert. Es wird ein absolutes Basis-Design für Untertitel angewendet (ohne Call-to-Action und ohne Branding).</p>
                                 </div>
@@ -914,14 +1098,14 @@ export default function Page() {
                                 <video src={globalPreviewUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-20" />
                             ) : useMasterCi ? (
                                 <>
-                                     {hookHeader && (
+                                     {hookHeader && showTitle && (
                                          <div className="absolute top-0 left-0 right-0 z-15 bg-[#0b192c]/90 border-b border-mimaros-blue/40 px-2 py-1.5 text-center text-white text-[8px] font-heading font-bold uppercase tracking-wider">
                                              {hookHeader}
                                          </div>
                                      )}
-                                     {logoPreview && (
+                                     {logoPreview && showLogo && (
                                          <div className="absolute w-10 h-10 rounded bg-white/10 backdrop-blur-sm z-10" style={{
-                                             top: logoPosition.includes('top') ? (hookHeader ? '28px' : '16px') : 'auto',
+                                             top: logoPosition.includes('top') ? (hookHeader && showTitle ? '28px' : '16px') : 'auto',
                                              bottom: logoPosition.includes('bottom') ? '16px' : 'auto',
                                              left: logoPosition.includes('left') ? '16px' : 'auto',
                                              right: logoPosition.includes('right') ? '16px' : 'auto',
@@ -931,22 +1115,28 @@ export default function Page() {
                                              backgroundRepeat: 'no-repeat'
                                          }}></div>
                                      )}
-                                     <div className={`absolute left-0 right-0 flex justify-center z-10 ${hookHeader ? 'top-20' : 'top-16'}`}>
+                                     <div className={`absolute left-0 right-0 flex justify-center z-10 ${(hookHeader && showTitle) ? 'top-20' : 'top-16'}`}>
                                          <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 flex items-center gap-2">
                                              <span className="text-white text-[10px] font-medium tracking-wide">
                                                  {globalSubtitleConfig.watermark_text || "mimaros.eu"}
                                              </span>
                                          </div>
                                      </div>
-                                     {/* Full-width bottom backdrop banner */}
-                                     <div className="absolute bottom-0 left-0 right-0 top-[270px] bg-[#0b192c]/90 z-5 border-t border-white/5"></div>
                                      
-                                     <div className="absolute bottom-12 left-0 right-0 text-center font-bold text-[10px] z-10" style={{ color: textColor, fontFamily: fontName }}>
-                                         DYNAMISCHE <span style={{ color: highlightColor, fontSize: '12px' }}>UNTERTITEL</span>
-                                         <br/><span className="text-[8px] font-normal opacity-80" style={{ fontFamily: fontName }}>Beispieltext</span>
-                                     </div>
+                                     {showSubtitles && (
+                                         <>
+                                             {/* Full-width bottom backdrop banner */}
+                                             <div className="absolute bottom-0 left-0 right-0 top-[270px] bg-[#0b192c]/90 z-5 border-t border-white/5"></div>
+                                             
+                                             <div className="absolute bottom-12 left-0 right-0 text-center font-bold text-[10px] z-10" style={{ color: textColor, fontFamily: fontName }}>
+                                                 DYNAMISCHE <span style={{ color: highlightColor, fontSize: '12px' }}>UNTERTITEL</span>
+                                                 <br/><span className="text-[8px] font-normal opacity-80" style={{ fontFamily: fontName }}>Beispieltext</span>
+                                             </div>
+                                         </>
+                                     )}
+                                     
                                     <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
-                                        {globalSubtitleConfig.cta !== 'none' && (
+                                        {globalSubtitleConfig.cta !== 'none' && showCTA && (
                                             <button className="text-white text-[14px] font-bold px-8 py-3.5 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] uppercase pointer-events-auto" style={{ backgroundColor: primaryColor, fontFamily: fontName }}>
                                                 {globalSubtitleConfig.cta === 'follow' ? 'FOLGEN FÜR MEHR' : globalSubtitleConfig.cta === 'subscribe' ? 'JETZT ABONNIEREN' : globalSubtitleConfig.cta === 'more' ? 'MEHR VIDEOS' : 'CTA TEXT'}
                                             </button>
