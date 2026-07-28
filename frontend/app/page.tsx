@@ -915,7 +915,7 @@ export default function Page() {
                             ) : useMasterCi ? (
                                 <>
                                      {hookHeader && (
-                                         <div className="absolute top-0 left-0 right-0 z-15 bg-[#0b192c]/85 border-b border-mimaros-blue/40 px-2 py-1.5 text-center text-white text-[8px] font-heading font-bold uppercase tracking-wider">
+                                         <div className="absolute top-0 left-0 right-0 z-15 bg-[#0b192c]/90 border-b border-mimaros-blue/40 px-2 py-1.5 text-center text-white text-[8px] font-heading font-bold uppercase tracking-wider">
                                              {hookHeader}
                                          </div>
                                      )}
@@ -938,10 +938,13 @@ export default function Page() {
                                              </span>
                                          </div>
                                      </div>
-                                    <div className="absolute bottom-32 left-0 right-0 text-center font-bold text-[10px] bg-[#0B192C]/80 max-w-[80%] mx-auto p-2 rounded-lg shadow-lg z-10" style={{ color: textColor, fontFamily: fontName }}>
-                                        DYNAMISCHE <span style={{ color: highlightColor }}>UNTERTITEL</span>
-                                        <br/><span className="text-[8px] font-normal opacity-80" style={{ fontFamily: fontName }}>Beispieltext</span>
-                                    </div>
+                                     {/* Full-width bottom backdrop banner */}
+                                     <div className="absolute bottom-0 left-0 right-0 top-[270px] bg-[#0b192c]/90 z-5 border-t border-white/5"></div>
+                                     
+                                     <div className="absolute bottom-12 left-0 right-0 text-center font-bold text-[10px] z-10" style={{ color: textColor, fontFamily: fontName }}>
+                                         DYNAMISCHE <span style={{ color: highlightColor, fontSize: '12px' }}>UNTERTITEL</span>
+                                         <br/><span className="text-[8px] font-normal opacity-80" style={{ fontFamily: fontName }}>Beispieltext</span>
+                                     </div>
                                     <div className="absolute inset-0 flex items-center justify-center z-10 pointer-events-none">
                                         {globalSubtitleConfig.cta !== 'none' && (
                                             <button className="text-white text-[14px] font-bold px-8 py-3.5 rounded-full shadow-[0_0_15px_rgba(0,0,0,0.5)] uppercase pointer-events-auto" style={{ backgroundColor: primaryColor, fontFamily: fontName }}>

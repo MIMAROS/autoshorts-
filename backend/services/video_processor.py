@@ -130,7 +130,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     
     resolution = config.get("resolution", "720p")
     if resolution == "1080p":
-        ass_margin_v = 640
+        ass_margin_v = 480
         ass_margin_lr = 120
         vf_scale = "scale='if(gt(a,9/16),-1,1080)':'if(gt(a,9/16),1920,-1)',crop=1080:1920"
         border_thickness = 10
@@ -139,7 +139,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         margin_y = 150 if hook_header else 30
         cta_offset_y = 170
     else:
-        ass_margin_v = 427
+        ass_margin_v = 320
         ass_margin_lr = 80
         vf_scale = "scale='if(gt(a,9/16),-1,720)':'if(gt(a,9/16),1280,-1)',crop=720:1280"
         border_thickness = 6
@@ -164,11 +164,11 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
                 vf_filter += f",drawbox=x=0:y=0:w=iw:h=80:color=0x0B192C@0.7:t=fill"
                 vf_filter += f",drawbox=x=0:y=80:w=iw:h=4:color={primary_color}:t=fill"
                 
-        # 5. Full-Width Subtitle Backdrop Banner (Covers existing subtitles behind, positioned higher to align with subtitles)
+        # 5. Full-Width Subtitle Backdrop Banner (Covers existing subtitles behind, extends all the way to the bottom border)
         if resolution == "1080p":
-            vf_filter += f",drawbox=x=0:y=1130:w=iw:h=240:color=0x0B192C@0.7:t=fill"
+            vf_filter += f",drawbox=x=0:y=1320:w=iw:h=ih-1320:color=0x0B192C@0.7:t=fill"
         else:
-            vf_filter += f",drawbox=x=0:y=750:w=iw:h=160:color=0x0B192C@0.7:t=fill"
+            vf_filter += f",drawbox=x=0:y=880:w=iw:h=ih-880:color=0x0B192C@0.7:t=fill"
         
     vf_filter += f",subtitles='{escaped_srt_path}':fontsdir='{escaped_fonts_dir}'"
     
@@ -318,15 +318,17 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
     # Convert hex colors to ASS format (AABBGGRR)
     if len(highlight_color_hex) == 6:
         h_r, h_g, h_b = highlight_color_hex[0:2], highlight_color_hex[2:4], highlight_color_hex[4:6]
-        highlight_color_ass = f"&H00{h_b}{h_g}{h_r}&"
+        highlight_color_ass = f"&H00{h_b}{h_g}{h_r}&" # inline tag
+        highlight_color_style = f"&H00{h_b}{h_g}{h_r}" # style line
     else:
-        highlight_color_ass = "&H0037AFD4&" # fallback gold (#D4AF37)
+        highlight_color_ass = "&H0037AFD4&"
+        highlight_color_style = "&H0037AFD4"
         
     if len(text_color_hex) == 6:
         t_r, t_g, t_b = text_color_hex[0:2], text_color_hex[2:4], text_color_hex[4:6]
-        text_color_ass = f"&H00{t_b}{t_g}{t_r}&"
+        text_color_ass = f"&H00{t_b}{t_g}{t_r}"
     else:
-        text_color_ass = "&H00FFFFFF&"
+        text_color_ass = "&H00FFFFFF"
         
     font_name = config.get("fontName", "Work Sans")
     ass_font = "Work Sans"
@@ -340,15 +342,17 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
     # Margin settings based on resolution
     resolution = config.get("resolution", "720p")
     if resolution == "1080p":
-        ass_margin_v = 640
+        ass_margin_v = 480
         ass_margin_lr = 120
-        font_size = 72
+        font_size = 76
+        active_font_size = 86
         title_font_size = 80
         title_margin_v = 40
     else:
-        ass_margin_v = 427
+        ass_margin_v = 320
         ass_margin_lr = 80
-        font_size = 48
+        font_size = 50
+        active_font_size = 56
         title_font_size = 54
         title_margin_v = 25
         
@@ -373,14 +377,14 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
             f.write("ScaledBorderAndShadow: yes\n\n")
             
             # 2. Write Styles
-            # Subtitles default style (Centered bottom, Alignment=2, BorderStyle=1 (Outline), Outline=3)
             f.write("[V4+ Styles]\n")
             f.write("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n")
             
-            f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,&H00000000&,-1,0,0,0,100,100,0,0,1,3,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+            # Subtitles default style (Centered bottom, Alignment=2, BorderStyle=1, Outline=3)
+            f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,3,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             
-            # Top title style (Centered top, Alignment=8)
-            f.write(f"Style: TopTitle,{ass_font},{title_font_size},&H00FFFFFF&,&H000000FF,&H00000000,&H00000000&,-1,0,0,0,100,100,0,0,1,1,0,8,40,40,{title_margin_v},1\n\n")
+            # Top title style (Centered top, Alignment=8, BorderStyle=1, Outline=0)
+            f.write(f"Style: TopTitle,{ass_font},{title_font_size},&H00FFFFFF,&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,0,0,8,40,40,{title_margin_v},1\n\n")
             
             # 3. Write Events
             f.write("[Events]\n")
@@ -390,7 +394,7 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
             hook_header = config.get("hookHeader", "").strip()
             if hook_header:
                 clip_duration = end_time - start_time
-                f.write(f"Dialogue: 1,0:00:00.00,{format_ass_time(clip_duration)},TopTitle,,0,0,0,,{hook_header.upper()}\n")
+                f.write(f"Dialogue: 0,0:00:00.00,{format_ass_time(clip_duration)},TopTitle,,0,0,0,,{hook_header.upper()}\n")
                 
             # Write Subtitle segments
             index = 1
@@ -431,12 +435,12 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
                             else:
                                 event_end = chunk[i+1]["start"] - start_time
                                 
-                            # Build text with highlighted active word using ASS tags: {\c[color]}word{\c}
+                            # Build text with highlighted active word using ASS tags: {\c[color]\fs[size]}word{\rDefault}
                             formatted_words = []
                             for j, w in enumerate(chunk):
                                 w_text = w["text"].upper()
                                 if j == i:
-                                    formatted_words.append(f"{{\\c{highlight_color_ass}}}{w_text}{{\\c}}")
+                                    formatted_words.append(f"{{\\c{highlight_color_ass}\\fs{active_font_size}}}{w_text}{{\\rDefault}}")
                                 else:
                                     formatted_words.append(w_text)
                                     
