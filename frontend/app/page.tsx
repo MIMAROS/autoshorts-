@@ -5,36 +5,34 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import { useState, useRef, useEffect } from 'react';
 import { Play, Scissors, Subtitles, UploadCloud, Loader2, Sparkles, Calendar, Check, Settings, X, Clock, Video, Home, Menu, Share2, Download, Edit2, TrendingUp, Flame, Type, MonitorPlay, ChevronUp, ChevronDown, Layout } from 'lucide-react';
 
-const LogoIcon = ({ className = "max-w-[36px] max-h-[36px] w-9 h-9 shrink-0" }: { className?: string }) => (
-  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={`max-w-[36px] max-h-[36px] w-9 h-9 shrink-0 ${className}`}>
+const LogoIcon = ({ className = "w-10 h-10 md:w-12 md:h-12 shrink-0" }: { className?: string }) => (
+  <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={`w-10 h-10 md:w-12 md:h-12 shrink-0 max-w-[48px] max-h-[48px] ${className}`}>
     <defs>
-      <linearGradient id="logo-cyan-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+      <linearGradient id="mimaros-auto-grad" x1="50%" y1="0%" x2="50%" y2="100%">
         <stop offset="0%" stopColor="#14AEEA" />
-        <stop offset="100%" stopColor="#0066FF" />
+        <stop offset="50%" stopColor="#0083B0" />
+        <stop offset="100%" stopColor="#E65100" />
       </linearGradient>
-      <linearGradient id="logo-gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#FFF099" />
-        <stop offset="100%" stopColor="#D4AF37" />
-      </linearGradient>
-      <filter id="logo-glow" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="2.5" result="blur" />
+      <filter id="mimaros-glow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="1.5" result="blur" />
         <feComposite in="SourceGraphic" in2="blur" operator="over" />
       </filter>
     </defs>
-    {/* Dark Tile Background */}
-    <rect x="2" y="2" width="44" height="44" rx="12" fill="#0B192C" stroke="url(#logo-cyan-grad)" strokeWidth="2.5" />
+    {/* 1. Äußerer feiner Kreis */}
+    <circle cx="32" cy="32" r="28" stroke="url(#mimaros-auto-grad)" strokeWidth="2.5" filter="url(#mimaros-glow)" />
     
-    {/* Left Stem of M */}
-    <path d="M10 36V12H16V36H10Z" fill="url(#logo-cyan-grad)" filter="url(#logo-glow)" />
+    {/* 2. Vertikale Mittel-Linie von oben nach unten */}
+    <line x1="32" y1="4" x2="32" y2="60" stroke="url(#mimaros-auto-grad)" strokeWidth="2.5" strokeLinecap="round" />
     
-    {/* Center V Chevron */}
-    <path d="M16 12L24 24L32 12H27L24 17.5L21 12H16Z" fill="url(#logo-gold-grad)" />
+    {/* 3. Diagonale Linien (spitzes A) */}
+    <line x1="32" y1="4" x2="10" y2="52" stroke="url(#mimaros-auto-grad)" strokeWidth="2.5" strokeLinecap="round" />
+    <line x1="32" y1="4" x2="54" y2="52" stroke="url(#mimaros-auto-grad)" strokeWidth="2.5" strokeLinecap="round" />
     
-    {/* Right Stem of M */}
-    <path d="M32 12H38V36H32V12Z" fill="url(#logo-cyan-grad)" filter="url(#logo-glow)" />
+    {/* 4. Quersteg */}
+    <line x1="20" y1="36" x2="44" y2="36" stroke="url(#mimaros-auto-grad)" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
     
-    {/* Embedded Sharp Play Triangle */}
-    <path d="M21 24L32 30.5L21 37V24Z" fill="#FFFFFF" filter="url(#logo-glow)" />
+    {/* 5. Play-Button im Zentrum */}
+    <path d="M30 26L38 32L30 38V26Z" fill="url(#mimaros-auto-grad)" filter="url(#mimaros-glow)" />
   </svg>
 );
 
