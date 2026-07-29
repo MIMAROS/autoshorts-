@@ -2,9 +2,16 @@
 import dynamic from 'next/dynamic';
 const FullCalendar = dynamic(() => import('@fullcalendar/react'), { ssr: false });
 import dayGridPlugin from '@fullcalendar/daygrid';
-
 import { useState, useRef, useEffect } from 'react';
 import { Play, Scissors, Subtitles, UploadCloud, Loader2, Sparkles, Calendar, Check, Settings, X, Clock, Video, Home, Menu, Share2, Download, Edit2, TrendingUp, Flame, Type, MonitorPlay, ChevronUp, ChevronDown, Layout } from 'lucide-react';
+
+const LogoIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
+  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <rect x="6" y="2" width="12" height="20" rx="2.5" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+    <path d="M10.5 9.5L15 12L10.5 14.5V9.5Z" fill="#14AEEA" />
+    <path d="M17.5 4L18.1 5.4L19.5 6L18.1 6.6L17.5 8L16.9 6.6L15.5 6L16.9 5.4L17.5 4Z" fill="#D4AF37" />
+  </svg>
+);
 
 export default function Page() {
   // Navigation & Layout
@@ -435,7 +442,7 @@ export default function Page() {
     <div className={`hidden md:flex fixed inset-y-0 left-0 z-40 w-64 bg-panel/80 backdrop-blur-xl border-r border-borderGlass flex-col`}>
         <div className="p-6 flex items-center gap-3 border-b border-borderGlass">
             <div className="w-10 h-10 rounded-full bg-gradient-to-br from-mimaros-blue to-mimaros-blueMid flex items-center justify-center shadow-blue-glow">
-                <Scissors className="text-white w-5 h-5" />
+                <LogoIcon className="text-white w-5 h-5" />
             </div>
             <h1 className="font-heading font-bold text-xl tracking-tight text-white flex gap-1">
                 AutoShorts <span className="text-mimaros-blue">AI</span>
@@ -1396,7 +1403,7 @@ export default function Page() {
           <div className="md:hidden flex items-center justify-between p-4 border-b border-borderGlass bg-panel/80 backdrop-blur-xl sticky top-0 z-30">
              <div className="flex items-center gap-2">
                  <div className="w-8 h-8 rounded-full bg-gradient-to-br from-mimaros-blue to-mimaros-blueMid flex items-center justify-center">
-                    <Scissors className="text-white w-4 h-4" />
+                    <LogoIcon className="text-white w-4 h-4" />
                  </div>
                  <h1 className="font-heading font-bold text-lg text-white">AutoShorts AI</h1>
              </div>

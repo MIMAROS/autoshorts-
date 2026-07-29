@@ -20,7 +20,20 @@ export default function RootLayout({
 }) {
   return (
     <html lang="en">
-      <body className={`${workSans.variable} ${lato.variable} ${josefin.variable} ${poppins.variable} font-sans`}>{children}</body>
+      <body className={`${workSans.variable} ${lato.variable} ${josefin.variable} ${poppins.variable} font-sans`}>
+        {children}
+        <script dangerouslySetInnerHTML={{__html: `
+          if ('serviceWorker' in navigator) {
+            window.addEventListener('load', function() {
+              navigator.serviceWorker.register('/sw.js').then(function(reg) {
+                console.log('ServiceWorker registration successful');
+              }).catch(function(err) {
+                console.log('ServiceWorker registration failed:', err);
+              });
+            });
+          }
+        `}} />
+      </body>
     </html>
   )
 }
