@@ -43,7 +43,7 @@ def analyze_hooks(transcript_segments: list, clip_length: str = "auto") -> list:
             "end_time_approx": float,
             "rationale": "Kurze Erklärung",
             "viral_score": int (0-100),
-            "title": "Titel des Clips",
+            "title": "Ein stark klickbarer, viraler Hook/Titel des Clips (max. 3-5 Wörter in GROSSBUCHSTABEN, z.B. DER GEHEIME TRICK)",
             "social_media_caption": "Virale Beschreibung mit starkem Hook, einer Frage/Call-to-Action und passenden Hashtags."
         }}
     ] Achte darauf, dass 'viral_score' eine Zahl zwischen 0 und 100 ist, die das virale Potenzial einschätzt.

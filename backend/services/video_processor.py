@@ -346,8 +346,8 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
 
 def generate_ass(segments: list, start_time: float, end_time: float, ass_path: str, config: dict = None):
     """
-    Generiert eine .ass Datei für den spezifischen Zeitbereich (Hook) mit Karaoke-Word-Highlighting,
-    Subtitle-Backdrop, Spacing-Optionen und optionalem Hook-Header (Top Title).
+    Generiert eine .ass Datei für den spezifischen Zeitbereich (Hook) mit 5 stark abweichenden
+    Untertitel-Vorlagen (Karaoke, Dynamic Box, Pop-Up Bouncy, Hormozi, mimaros Clean).
     """
     if config is None:
         config = {}
@@ -355,6 +355,7 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
     # Read styling parameters
     highlight_color_hex = config.get("highlightColor", "#D4AF37").lstrip('#')
     text_color_hex = config.get("textColor", "#ffffff").lstrip('#')
+    primary_color_hex = config.get("primaryColor", "#14AEEA").lstrip('#')
     
     # Convert hex colors to ASS format (AABBGGRR)
     if len(highlight_color_hex) == 6:
@@ -371,12 +372,22 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
     else:
         text_color_ass = "&H00FFFFFF"
         
+    if len(primary_color_hex) == 6:
+        p_r, p_g, p_b = primary_color_hex[0:2], primary_color_hex[2:4], primary_color_hex[4:6]
+        primary_color_box_ass = f"&H4C{p_b}{p_g}{p_r}" # 70% opacity Deep Blue/CI Color
+    else:
+        primary_color_box_ass = "&H4C0B192C" # fallback Deep Blue
+        
     font_name = config.get("fontName", "Work Sans")
     ass_font = "Work Sans"
     if font_name == "Lato":
         ass_font = "Lato"
     elif font_name == "Montserrat":
         ass_font = "Montserrat"
+    elif font_name == "Oswald":
+        ass_font = "Oswald"
+    elif font_name == "Anton":
+        ass_font = "Anton"
     elif font_name == "Impact":
         ass_font = "Impact"
         
@@ -407,7 +418,8 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
             centis = 0
         return f"{hours}:{minutes:02d}:{secs:02d}.{centis:02d}"
 
-    print(f"Generating ASS subtitles to path: {ass_path}")
+    design = config.get("design", "karaoke")
+    print(f"Generating ASS subtitles with template: {design} to path: {ass_path}")
     try:
         with open(ass_path, 'w', encoding='utf-8') as f:
             # 1. Write ASS Header
@@ -421,14 +433,28 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
             f.write("[V4+ Styles]\n")
             f.write("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n")
             
-            # Subtitles default style (Centered bottom, Alignment=2, BorderStyle=1, Outline=3)
-            f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,3,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+            # Apply individual style parameters based on template choice
+            if design == "dynamic_box":
+                # Outline is 0, Box border is drawn using BorderStyle=3 with 70% opacity CI primary color box
+                f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,{primary_color_box_ass},-1,0,0,0,100,100,0,0,3,0,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+            elif design == "popup_bouncy":
+                # Centered exactly in the middle of the screen (Alignment=5)
+                f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,3,0,5,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+            elif design == "hormozi":
+                # Ultra thick Anton font by default, bold outline
+                f.write(f"Style: Default,Anton,{font_size + 6},{text_color_ass},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,4,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+            elif design == "mimaros_clean":
+                # Thin, elegant Montserrat/Work Sans, smaller, alignment bottom center
+                f.write(f"Style: Default,{ass_font},{font_size - 4},{text_color_ass},&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1.5,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+            else: # karaoke highlight (default)
+                f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,3,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+            
             f.write("\n")
             
             # 3. Write Events
             f.write("[Events]\n")
             f.write("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
-                
+            
             # Write Subtitle segments
             index = 1
             for segment in segments:
@@ -445,8 +471,16 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
                     if not words_in_range:
                         continue
                     
-                    # Group words in chunks of 3
-                    chunk_size = 3
+                    # Set chunk size based on template
+                    if design == "popup_bouncy":
+                        chunk_size = 1 # 1 word at a time
+                    elif design == "hormozi":
+                        chunk_size = 2 # max 2 words per line
+                    elif design == "mimaros_clean":
+                        chunk_size = 6 # whole elegant sentences
+                    else: # karaoke / dynamic_box
+                        chunk_size = 3
+                        
                     for chunk_idx in range(0, len(words_in_range), chunk_size):
                         chunk = words_in_range[chunk_idx : chunk_idx + chunk_size]
                         if not chunk:
@@ -457,7 +491,6 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
                         
                         # Write an event for each word in the chunk, highlighting it
                         for i, active_word in enumerate(chunk):
-                            # Determine event start and end times to avoid gaps
                             if i == 0:
                                 event_start = chunk_start
                             else:
@@ -468,17 +501,43 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
                             else:
                                 event_end = chunk[i+1]["start"] - start_time
                                 
-                            # Build text with highlighted active word using ASS tags: {\c[color]\fs[size]}word{\rDefault}
+                            # Build text with custom formatting per design template
                             formatted_words = []
                             for j, w in enumerate(chunk):
                                 w_text = w["text"].upper()
-                                if j == i:
-                                    formatted_words.append(f"{{\\c{highlight_color_ass}\\fs{active_font_size}}}{w_text}{{\\rDefault}}")
-                                else:
+                                
+                                if design == "mimaros_clean":
+                                    # No active highlight, clean sentences fade in gently
                                     formatted_words.append(w_text)
-                                    
+                                elif design == "hormozi":
+                                    # Yellow/Green alternating highlights
+                                    if j == i:
+                                        hormozi_color = "&H0000FFFF&" if i % 2 == 0 else "&H0000FF00&" # yellow or green
+                                        formatted_words.append(f"{{\\c{hormozi_color}\\fs{active_font_size + 4}}}{w_text}{{\\rDefault}}")
+                                    else:
+                                        formatted_words.append(w_text)
+                                elif design == "popup_bouncy":
+                                    # Single bouncy word center
+                                    formatted_words.append(f"{{\\fs{active_font_size + 10}}}{w_text}{{\\rDefault}}")
+                                elif design == "dynamic_box":
+                                    # Bounding box is drawn behind active word or sentence. Text remains white.
+                                    # We can highlight active word color or keep all white inside the box
+                                    if j == i:
+                                        formatted_words.append(f"{{\\c{highlight_color_ass}\\fs{active_font_size}}}{w_text}{{\\rDefault}}")
+                                    else:
+                                        formatted_words.append(w_text)
+                                else: # karaoke highlight
+                                    if j == i:
+                                        formatted_words.append(f"{{\\c{highlight_color_ass}\\fs{active_font_size}}}{w_text}{{\\rDefault}}")
+                                    else:
+                                        formatted_words.append(w_text)
+                                        
                             chunk_text = " ".join(formatted_words)
                             
+                            # Add fade effect to mimaros_clean template
+                            if design == "mimaros_clean" and i == 0:
+                                chunk_text = f"{{\\fad(250,250)}}{chunk_text}"
+                                
                             f.write(f"Dialogue: 0,{format_ass_time(event_start)},{format_ass_time(event_end)},Default,,0,0,0,,{chunk_text}\n")
                             index += 1
                 else:
@@ -487,7 +546,9 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
                     if s_start >= start_time and s_end <= end_time:
                         rel_start = s_start - start_time
                         rel_end = s_end - start_time
-                        f.write(f"Dialogue: 0,{format_ass_time(rel_start)},{format_ass_time(rel_end)},Default,,0,0,0,,{segment['text'].strip().upper()}\n")
+                        # Default fade for B2B template
+                        effect = "{\\fad(250,250)}" if design == "mimaros_clean" else ""
+                        f.write(f"Dialogue: 0,{format_ass_time(rel_start)},{format_ass_time(rel_end)},Default,,0,0,0,,{effect}{segment['text'].strip().upper()}\n")
                         index += 1
         print(f"ASS subtitles successfully created at {ass_path}")
     except Exception as e:

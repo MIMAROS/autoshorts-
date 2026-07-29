@@ -370,6 +370,10 @@ export default function Page() {
             return;
           }
           
+          if (statusData.hooks && statusData.hooks.length > 0 && !hookHeader) {
+            setHookHeader(statusData.hooks[0].title);
+          }
+          
           setStatusMessage(`Status: ${statusData.status} (${statusData.progress}%)`);
           
           if (statusData.status === 'done') {
@@ -1000,22 +1004,34 @@ export default function Page() {
                                                 <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-mimaros-blue/20">
                                                     {[
                                                         { 
-                                                            id: 'minimalist', 
-                                                            name: 'Standard', 
-                                                            desc: 'Cleane Outlines', 
-                                                            videoUrl: 'https://player.vimeo.com/external/371433846.sd.mp4?s=236da2f3c054ba208d9c00a29939c21b2efdaab1&profile_id=139&oauth2_token_id=57447761' 
-                                                        },
-                                                        { 
-                                                            id: 'neon', 
-                                                            name: 'Karaoke', 
-                                                            desc: 'Pop-Up Highlight', 
+                                                            id: 'karaoke', 
+                                                            name: 'Karaoke Highlight', 
+                                                            desc: 'Wort-Highlight (CI-Farbe)', 
                                                             videoUrl: 'https://player.vimeo.com/external/517602120.sd.mp4?s=0eb0832367d3b2ebf8df67eb1c28c89b70b55570&profile_id=165&oauth2_token_id=57447761' 
                                                         },
                                                         { 
-                                                            id: 'hormozi', 
-                                                            name: 'Box', 
-                                                            desc: 'Kontrast-Kasten', 
+                                                            id: 'dynamic_box', 
+                                                            name: 'Dynamic Box', 
+                                                            desc: 'Mitlaufender Hintergrund', 
+                                                            videoUrl: 'https://player.vimeo.com/external/435674703.sd.mp4?s=6f4776be2d17c768997a445b20757a66fcfd54e4&profile_id=165&oauth2_token_id=57447761' 
+                                                        },
+                                                        { 
+                                                            id: 'popup_bouncy', 
+                                                            name: 'Pop-Up (Bouncy)', 
+                                                            desc: 'Worte einzeln zentriert', 
                                                             videoUrl: 'https://player.vimeo.com/external/554832566.sd.mp4?s=40445a497045b8813fa25032d8fe15629c1fb238&profile_id=165&oauth2_token_id=57447761' 
+                                                        },
+                                                        { 
+                                                            id: 'hormozi', 
+                                                            name: 'Hormozi Style', 
+                                                            desc: 'Fett, Gelb/Grün Mix', 
+                                                            videoUrl: 'https://player.vimeo.com/external/482255747.sd.mp4?s=4fb1cfbb3d072af7d39cf6db2fe22a498064a38d&profile_id=165&oauth2_token_id=57447761' 
+                                                        },
+                                                        { 
+                                                            id: 'mimaros_clean', 
+                                                            name: 'mimaros Clean', 
+                                                            desc: 'Edle Fade-In Sätze', 
+                                                            videoUrl: 'https://player.vimeo.com/external/538965902.sd.mp4?s=c8fa99602e1c95b4528148b11f6c4ff601b0f1fb&profile_id=165&oauth2_token_id=57447761' 
                                                         }
                                                     ].map(tpl => (
                                                         <button 
