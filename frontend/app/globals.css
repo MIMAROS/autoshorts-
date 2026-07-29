@@ -1,15 +1,19 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import "tailwindcss";
+
+@config "../tailwind.config.ts";
 
 :root {
-  --foreground-rgb: 238, 243, 248; /* #EEF3F8 */
-  --background-start-rgb: 11, 17, 26; /* #0B111A */
-  --background-end-rgb: 11, 17, 26; /* #0B111A */
+  --foreground-rgb: 238, 243, 248;
+  --background-start-rgb: 11, 17, 26;
+  --background-end-rgb: 11, 17, 26;
 }
 
 body {
   color: rgb(var(--foreground-rgb));
-  background: rgb(var(--background-start-rgb));
+  background: #0B111A;
+  font-family: var(--font-lato), sans-serif;
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
 }
 

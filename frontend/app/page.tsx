@@ -5,8 +5,8 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import { useState, useRef, useEffect } from 'react';
 import { Play, Scissors, Subtitles, UploadCloud, Loader2, Sparkles, Calendar, Check, Settings, X, Clock, Video, Home, Menu, Share2, Download, Edit2, TrendingUp, Flame, Type, MonitorPlay, ChevronUp, ChevronDown, Layout } from 'lucide-react';
 
-const LogoIcon = ({ className = "w-10 h-10" }: { className?: string }) => (
-  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+const LogoIcon = ({ className = "max-w-[36px] max-h-[36px] w-9 h-9 shrink-0" }: { className?: string }) => (
+  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={`max-w-[36px] max-h-[36px] w-9 h-9 shrink-0 ${className}`}>
     <defs>
       <linearGradient id="logo-cyan-grad" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#14AEEA" />
@@ -80,7 +80,7 @@ export default function Page() {
   const [logoPath, setLogoPath] = useState<string>('');
   const [logoUploading, setLogoUploading] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const [hookHeader, setHookHeader] = useState('');
+  const [hookHeader, setHookHeader] = useState('DAS DARFST DU NICHT VERPASSEN 🔥');
   const [showTitle, setShowTitle] = useState(true);
   const [showLogo, setShowLogo] = useState(true);
   const [showSubtitles, setShowSubtitles] = useState(true);
@@ -113,6 +113,8 @@ export default function Page() {
     fetchSchedules();
     fetchHistory();
     fetchAuthStatus();
+    setHookHeader(prev => prev || 'DAS DARFST DU NICHT VERPASSEN 🔥');
+    generateAutoTitle('VIRALES SHORTS VIDEO HOOK');
   }, []);
 
   const fetchAuthStatus = async () => {

@@ -8,9 +8,14 @@ const josefin = Josefin_Sans({ subsets: ['latin'], variable: '--font-josefin' })
 const poppins = Poppins({ weight: ['400', '600', '700'], subsets: ['latin'], variable: '--font-poppins' })
 
 export const metadata: Metadata = {
-  title: 'AutoShorts AI',
+  title: 'mimaros AutoShorts AI',
   description: 'Convert YouTube videos to viral Shorts',
-  manifest: '/manifest.json'
+  manifest: '/manifest.json?v=2.0.0',
+  icons: {
+    icon: '/icon-192.png?v=2.0.0',
+    shortcut: '/favicon.ico?v=2.0.0',
+    apple: '/icon-192.png?v=2.0.0',
+  }
 }
 
 export default function RootLayout({
@@ -19,8 +24,13 @@ export default function RootLayout({
   children: React.ReactNode
 }) {
   return (
-    <html lang="en">
-      <body className={`${workSans.variable} ${lato.variable} ${josefin.variable} ${poppins.variable} font-sans`}>
+    <html lang="de">
+      <head>
+        <link rel="icon" href="/icon-192.png?v=2.0.0" sizes="192x192" type="image/png" />
+        <link rel="apple-touch-icon" href="/icon-192.png?v=2.0.0" />
+        <link rel="icon" href="/favicon.ico?v=2.0.0" />
+      </head>
+      <body className={`${workSans.variable} ${lato.variable} ${josefin.variable} ${poppins.variable} font-sans bg-[#0B111A] text-[#EEF3F8]`}>
         {children}
         <script dangerouslySetInnerHTML={{__html: `
           if ('serviceWorker' in navigator) {
