@@ -947,9 +947,6 @@ export default function Page() {
                                                     >
                                                         <option value="top-left">Oben Links</option>
                                                         <option value="top-right">Oben Rechts</option>
-                                                        <option value="top-center">Oben Zentriert</option>
-                                                        <option value="bottom-left">Unten Links</option>
-                                                        <option value="bottom-right">Unten Rechts</option>
                                                     </select>
                                                 </div>
                                             </div>
@@ -1114,30 +1111,40 @@ export default function Page() {
                                 <video src={globalPreviewUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover z-20" />
                             ) : useMasterCi ? (
                                 <>
-                                     {hookHeader && showTitle && (
-                                         <div className="absolute top-0 left-0 right-0 z-15 bg-[#0b192c]/90 border-b border-mimaros-blue/40 px-2 py-1.5 text-center text-white text-[8px] font-heading font-bold uppercase tracking-wider">
-                                             {hookHeader}
+                                     {showTitle ? (
+                                         <div className="absolute top-0 left-0 right-0 z-15 bg-[#0b192c]/80 flex flex-col items-center justify-center pt-2 pb-2.5 border-b-2" style={{ borderColor: primaryColor }}>
+                                             {/* Watermark text at the very top (Ebene 1) */}
+                                             <div className="text-[7px] text-white/90 font-medium tracking-wider leading-none mb-1 font-sans">
+                                                 {globalSubtitleConfig.watermark_text || "mimaros.eu"}
+                                             </div>
+                                             {/* Title / Hook (Ebene 2) */}
+                                             <div className="text-[10px] text-white font-heading font-bold uppercase tracking-wider text-center px-8 leading-tight">
+                                                 {hookHeader || "DEIN VIRALER VIDEO TITEL"}
+                                             </div>
                                          </div>
+                                     ) : (
+                                         globalSubtitleConfig.watermark_text && (
+                                             <div className="absolute top-4 left-0 right-0 flex justify-center z-10">
+                                                 <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 flex items-center gap-2">
+                                                     <span className="text-white text-[8px] font-medium tracking-wide font-sans">
+                                                         {globalSubtitleConfig.watermark_text}
+                                                     </span>
+                                                 </div>
+                                             </div>
+                                         )
                                      )}
+                                     {/* Logo position overlays top-left or top-right */}
                                      {logoPreview && showLogo && (
-                                         <div className="absolute w-10 h-10 rounded bg-white/10 backdrop-blur-sm z-10" style={{
-                                             top: logoPosition.includes('top') ? (hookHeader && showTitle ? '28px' : '16px') : 'auto',
-                                             bottom: logoPosition.includes('bottom') ? '16px' : 'auto',
-                                             left: logoPosition.includes('left') ? '16px' : 'auto',
-                                             right: logoPosition.includes('right') ? '16px' : 'auto',
+                                         <div className="absolute w-7 h-7 rounded bg-white/10 backdrop-blur-sm z-20" style={{
+                                             top: showTitle ? '8px' : '16px',
+                                             left: logoPosition === 'top-left' ? '8px' : 'auto',
+                                             right: logoPosition === 'top-right' ? '8px' : 'auto',
                                              backgroundImage: `url(${logoPreview})`,
                                              backgroundSize: 'contain',
                                              backgroundPosition: 'center',
                                              backgroundRepeat: 'no-repeat'
                                          }}></div>
                                      )}
-                                     <div className={`absolute left-0 right-0 flex justify-center z-10 ${(hookHeader && showTitle) ? 'top-20' : 'top-16'}`}>
-                                         <div className="bg-black/60 backdrop-blur-md px-3 py-1 rounded-full border border-white/10 flex items-center gap-2">
-                                             <span className="text-white text-[10px] font-medium tracking-wide">
-                                                 {globalSubtitleConfig.watermark_text || "mimaros.eu"}
-                                             </span>
-                                         </div>
-                                     </div>
                                      
                                      {showSubtitles && (
                                          <>
