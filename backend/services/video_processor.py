@@ -183,15 +183,26 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         # Add primaryColor Border
         vf_filter += f",drawbox=x=0:y=0:w=iw:h=ih:color={primary_color}:thickness={border_thickness}"
         
-        # 4. Top Video Title Background Surface (extending to y=0)
+        # 4. Top Video Title (styled with bounding box backdrop exactly like subtitles, placed below logo)
         if has_title:
-            if resolution == "1080p":
-                vf_filter += f",drawbox=x=0:y=0:w=iw:h=170:color=0x0B192C@0.7:t=fill"
-                vf_filter += f",drawbox=x=0:y=170:w=iw:h=6:color={primary_color}:t=fill" # CI accent line
+            font_path = get_font_file_path(font_name, fonts_dir).replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
+            has_top_logo = show_logo and logo_path and os.path.exists(logo_path) and ("top" in logo_pos)
+            
+            if has_top_logo:
+                title_y = 240 if resolution == "1080p" else 160
             else:
-                vf_filter += f",drawbox=x=0:y=0:w=iw:h=110:color=0x0B192C@0.7:t=fill"
-                vf_filter += f",drawbox=x=0:y=110:w=iw:h=4:color={primary_color}:t=fill" # CI accent line
+                title_y = 50 if resolution == "1080p" else 30
                 
+            if resolution == "1080p":
+                title_font_size = 80
+                box_border_w = 20
+            else:
+                title_font_size = 54
+                box_border_w = 12
+                
+            # Draw title with 70% opacity Deep Blue backdrop box using box border padding
+            vf_filter += f",drawtext=text='{hook_header.upper()}':fontfile='{font_path}':fontsize={title_font_size}:fontcolor=white:box=1:boxcolor=0x0B192C@0.7:boxborderw={box_border_w}:x=(w-text_w)/2:y={title_y}"
+            
         # 5. Full-Width Subtitle Backdrop Banner (extends all the way to the bottom border)
         if show_subtitles:
             if resolution == "1080p":
@@ -199,26 +210,20 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
             else:
                 vf_filter += f",drawbox=x=0:y=880:w=iw:h=ih-880:color=0x0B192C@0.7:t=fill"
         
-    # 6. Render Watermark & Title (Title is Ebenen-basiert below Watermark)
-    watermark_text = config.get("watermark_text", "mimaros.eu").replace("'", "\\'")
-    if watermark_text:
-        if has_title:
-            watermark_y = 20 if resolution == "1080p" else 15
-            # Draw watermark clean without black box inside the top header area
-            vf_filter += f",drawtext=text='{watermark_text}':fontcolor=white:fontsize=22:font='{ass_font}':x=(w-text_w)/2:y={watermark_y}"
-        else:
-            watermark_y = 30 if resolution == "1080p" else 20
-            vf_filter += f",drawbox=x=(iw-300)/2:y={watermark_y}:w=300:h=50:color=black@0.6:t=fill"
-            vf_filter += f",drawtext=text='{watermark_text}':fontcolor=white:fontsize=22:font='{ass_font}':x=(w-text_w)/2:y={watermark_y+15}"
-            
-    if has_title:
-        font_path = get_font_file_path(font_name, fonts_dir).replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
-        title_y = 65 if resolution == "1080p" else 45
-        title_font_size = 80 if resolution == "1080p" else 54
-        vf_filter += f",drawtext=text='{hook_header.upper()}':fontfile='{font_path}':fontsize={title_font_size}:fontcolor=white:x=(w-text_w)/2:y={title_y}"
-        
     if show_subtitles:
         vf_filter += f",subtitles='{escaped_srt_path}':fontsdir='{escaped_fonts_dir}'"
+    
+    # Watermark
+    watermark_text = config.get("watermark_text", "mimaros.eu").replace("'", "\\'")
+    if watermark_text:
+        # Watermark position shifted if top title is present to avoid overlay
+        if has_title:
+            watermark_y = 380 if resolution == "1080p" else 250
+        else:
+            watermark_y = 30 if resolution == "1080p" else 20
+            
+        vf_filter += f",drawbox=x=(iw-300)/2:y={watermark_y}:w=300:h=50:color=black@0.6:t=fill"
+        vf_filter += f",drawtext=text='{watermark_text}':fontcolor=white:fontsize=22:font='{ass_font}':x=(w-text_w)/2:y={watermark_y+15}"
         
     vf_filter += "[v_base]"
     filter_complex = vf_filter

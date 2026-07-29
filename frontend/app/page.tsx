@@ -5,13 +5,42 @@ import dayGridPlugin from '@fullcalendar/daygrid';
 import { useState, useRef, useEffect } from 'react';
 import { Play, Scissors, Subtitles, UploadCloud, Loader2, Sparkles, Calendar, Check, Settings, X, Clock, Video, Home, Menu, Share2, Download, Edit2, TrendingUp, Flame, Type, MonitorPlay, ChevronUp, ChevronDown, Layout } from 'lucide-react';
 
-const LogoIcon = ({ className = "w-5 h-5" }: { className?: string }) => (
-  <svg viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
-    <rect x="6" y="2" width="12" height="20" rx="2.5" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
-    <path d="M10.5 9.5L15 12L10.5 14.5V9.5Z" fill="#14AEEA" />
-    <path d="M17.5 4L18.1 5.4L19.5 6L18.1 6.6L17.5 8L16.9 6.6L15.5 6L16.9 5.4L17.5 4Z" fill="#D4AF37" />
+const LogoIcon = ({ className = "w-10 h-10" }: { className?: string }) => (
+  <svg viewBox="0 0 48 48" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+    <defs>
+      <linearGradient id="logo-cyan-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#14AEEA" />
+        <stop offset="100%" stopColor="#0066FF" />
+      </linearGradient>
+      <linearGradient id="logo-gold-grad" x1="0%" y1="0%" x2="100%" y2="100%">
+        <stop offset="0%" stopColor="#FFF099" />
+        <stop offset="100%" stopColor="#D4AF37" />
+      </linearGradient>
+      <filter id="logo-glow" x="-20%" y="-20%" width="140%" height="140%">
+        <feGaussianBlur stdDeviation="2.5" result="blur" />
+        <feComposite in="SourceGraphic" in2="blur" operator="over" />
+      </filter>
+    </defs>
+    {/* Dark Tile Background */}
+    <rect x="2" y="2" width="44" height="44" rx="12" fill="#0B192C" stroke="url(#logo-cyan-grad)" strokeWidth="2.5" />
+    
+    {/* Left Stem of M */}
+    <path d="M10 36V12H16V36H10Z" fill="url(#logo-cyan-grad)" filter="url(#logo-glow)" />
+    
+    {/* Center V Chevron */}
+    <path d="M16 12L24 24L32 12H27L24 17.5L21 12H16Z" fill="url(#logo-gold-grad)" />
+    
+    {/* Right Stem of M */}
+    <path d="M32 12H38V36H32V12Z" fill="url(#logo-cyan-grad)" filter="url(#logo-glow)" />
+    
+    {/* Embedded Sharp Play Triangle */}
+    <path d="M21 24L32 30.5L21 37V24Z" fill="#FFFFFF" filter="url(#logo-glow)" />
   </svg>
 );
+
+const API_BASE = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL)
+  ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')
+  : '';
 
 export default function Page() {
   // Navigation & Layout
@@ -88,7 +117,7 @@ export default function Page() {
 
   const fetchAuthStatus = async () => {
     try {
-        const res = await fetch('https://autoshorts-backend-3s1b.onrender.com/api/auth/status');
+        const res = await fetch(`${API_BASE}/api/auth/status`);
         const data = await res.json();
         setAuthStatus({ youtube: data.youtube, tiktok: data.tiktok });
     } catch (e) {
@@ -98,7 +127,7 @@ export default function Page() {
 
   const fetchSchedules = async () => {
     try {
-        const res = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/schedules`);
+        const res = await fetch(`${API_BASE}/api/schedules`);
         const data = await res.json();
         setSchedules(data.schedules || []);
     } catch (e) {
@@ -108,7 +137,7 @@ export default function Page() {
 
   const fetchHistory = async () => {
     try {
-        const res = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/history`);
+        const res = await fetch(`${API_BASE}/api/history`);
         const data = await res.json();
         setHistory(data.history || []);
     } catch (e) {
@@ -116,15 +145,36 @@ export default function Page() {
     }
   };
 
-  const handleDrop = (e: React.DragEvent) => {
+  const generateAutoTitle = async (inputText: string) => {
+    if (!inputText) return;
+    try {
+        const res = await fetch(`${API_BASE}/api/generate-viral-title`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ text: inputText })
+        });
+        if (res.ok) {
+            const data = await res.json();
+            if (data.title) {
+                setHookHeader(data.title.toUpperCase());
+            }
+        }
+    } catch (err) {
+        console.error("Fehler bei Auto-Titel-Generierung:", err);
+    }
+  };
+
+   const handleDrop = (e: React.DragEvent) => {
     e.preventDefault();
     if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
       if (isSequenceMode) {
           const file = e.dataTransfer.files[0];
           setSequence(prev => [...prev, { id: Math.random().toString(), type: 'local', content: '', file: file, name: file.name }]);
       } else {
-          setLocalFile(e.dataTransfer.files[0]);
+          const file = e.dataTransfer.files[0];
+          setLocalFile(file);
           setYoutubeUrl('');
+          generateAutoTitle(file.name);
       }
     }
   };
@@ -135,8 +185,10 @@ export default function Page() {
           const file = e.target.files[0];
           setSequence(prev => [...prev, { id: Math.random().toString(), type: 'local', content: '', file: file, name: file.name }]);
       } else {
-          setLocalFile(e.target.files[0]);
+          const file = e.target.files[0];
+          setLocalFile(file);
           setYoutubeUrl(''); 
+          generateAutoTitle(file.name);
       }
     }
   };
@@ -172,7 +224,7 @@ export default function Page() {
       const logoData = new FormData();
       logoData.append('file', file);
       try {
-          const logoRes = await fetch('https://autoshorts-backend-3s1b.onrender.com/api/upload-logo', { method: 'POST', body: logoData });
+          const logoRes = await fetch(`${API_BASE}/api/upload-logo`, { method: 'POST', body: logoData });
           if (logoRes.ok) {
               const parsedLogo = await logoRes.json();
               setLogoPath(parsedLogo.logo_path);
@@ -189,7 +241,7 @@ export default function Page() {
       if (!url) return;
       setIsFetchingMetadata(true);
       try {
-          const res = await fetch('https://autoshorts-backend-3s1b.onrender.com/api/video-info', {
+          const res = await fetch(`${API_BASE}/api/video-info`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ youtube_url: url })
@@ -205,6 +257,7 @@ export default function Page() {
           const data = await res.json();
           if (data.status === 'success') {
               setVideoMetadata(data.info);
+              generateAutoTitle(data.info.title);
               if (data.info.duration > 600) {
                   setTrimStart(0);
                   setTrimEnd(600);
@@ -241,7 +294,7 @@ export default function Page() {
               showCTA
           };
 
-          const res = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/preview-clip`, {
+          const res = await fetch(`${API_BASE}/api/preview-clip`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ clip_path: 'demo', config })
@@ -250,7 +303,7 @@ export default function Page() {
           if (!res.ok) throw new Error("Preview generation failed");
           
           const data = await res.json();
-          setGlobalPreviewUrl(`https://autoshorts-backend-3s1b.onrender.com${data.preview_url}`);
+          setGlobalPreviewUrl(`${API_BASE}${data.preview_url}`);
       } catch (err) {
           console.error(err);
       } finally {
@@ -310,7 +363,7 @@ export default function Page() {
           formData.append('subtitle_lang', subtitleLang);
           formData.append('subtitle_config', JSON.stringify(subConfig));
           
-          const res = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/process-sequence`, {
+          const res = await fetch(`${API_BASE}/api/process-sequence`, {
               method: 'POST',
               body: formData
           });
@@ -328,7 +381,7 @@ export default function Page() {
               if (trimStart !== '') formData.append('trim_start', trimStart.toString());
               if (trimEnd !== '') formData.append('trim_end', trimEnd.toString());
               
-              const res = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/upload-video`, {
+              const res = await fetch(`${API_BASE}/api/upload-video`, {
                   method: 'POST',
                   body: formData
               });
@@ -352,7 +405,7 @@ export default function Page() {
               if (trimStart !== '') payload.trim_start = Number(trimStart);
               if (trimEnd !== '') payload.trim_end = Number(trimEnd);
               
-              const res = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/process-video`, {
+              const res = await fetch(`${API_BASE}/api/process-video`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -367,7 +420,7 @@ export default function Page() {
 
       const interval = setInterval(async () => {
         try {
-          const statusRes = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/status/${jobId}`);
+          const statusRes = await fetch(`${API_BASE}/api/status/${jobId}`);
           const statusData = await statusRes.json();
           
           if (statusData.status === 'error') {
@@ -416,7 +469,7 @@ export default function Page() {
 
   const handleScheduleSubmit = async () => {
     try {
-        await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/schedule`, {
+        await fetch(`${API_BASE}/api/schedule`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -441,12 +494,15 @@ export default function Page() {
     {/* Desktop Sidebar */}
     <div className={`hidden md:flex fixed inset-y-0 left-0 z-40 w-64 bg-panel/80 backdrop-blur-xl border-r border-borderGlass flex-col`}>
         <div className="p-6 flex items-center gap-3 border-b border-borderGlass">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-mimaros-blue to-mimaros-blueMid flex items-center justify-center shadow-blue-glow">
-                <LogoIcon className="text-white w-5 h-5" />
+            <LogoIcon className="w-11 h-11 shrink-0 drop-shadow-[0_0_12px_rgba(20,174,234,0.4)]" />
+            <div>
+                <h1 className="font-heading font-bold text-lg tracking-tight text-white leading-none">
+                    mimaros
+                </h1>
+                <span className="text-[10px] font-bold tracking-widest text-mimaros-blue uppercase block mt-0.5">
+                    AutoShorts AI
+                </span>
             </div>
-            <h1 className="font-heading font-bold text-xl tracking-tight text-white flex gap-1">
-                AutoShorts <span className="text-mimaros-blue">AI</span>
-            </h1>
         </div>
         <nav className="flex-1 p-4 flex flex-col gap-2">
             <button onClick={() => setCurrentView('new')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${currentView === 'new' ? 'bg-mimaros-blue/10 text-mimaros-blue' : 'text-textDim hover:text-white hover:bg-background/50'}`}>
@@ -799,7 +855,17 @@ export default function Page() {
                                                 </select>
                                             </div>
                                         </div>
-                                        <div className="flex items-center justify-between pt-2 border-t border-borderGlass/20">
+                                        <div className="pt-4 border-t border-borderGlass/20 space-y-2">
+                                            <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider">Video-Titel / Hook-Header (Optional)</label>
+                                            <input 
+                                                type="text" 
+                                                value={hookHeader}
+                                                onChange={(e) => setHookHeader(e.target.value)}
+                                                className="w-full bg-background/50 border border-borderGlass rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-mimaros-blue/50 transition-colors"
+                                                placeholder="z.B. DIESEN FEHLER VERMEIDEN"
+                                            />
+                                        </div>
+                                        <div className="flex items-center justify-between pt-4 border-t border-borderGlass/20">
                                             <span className="text-xs font-bold text-textDim font-sans">Master CI-Template anwenden</span>
                                             <button 
                                                 type="button"
@@ -958,28 +1024,16 @@ export default function Page() {
                                                 </div>
                                             </div>
 
-                                            {/* Watermark & Hook Header */}
-                                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                                <div>
-                                                    <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Watermark Text</label>
-                                                    <input 
-                                                        type="text" 
-                                                        value={globalSubtitleConfig.watermark_text}
-                                                        onChange={(e) => setGlobalSubtitleConfig({...globalSubtitleConfig, watermark_text: e.target.value})}
-                                                        className="w-full bg-background/50 border border-borderGlass rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-mimaros-blue/50 transition-colors"
-                                                        placeholder="z.B. @deinkanal"
-                                                    />
-                                                </div>
-                                                <div>
-                                                    <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Video-Titel / Hook-Header (Optional)</label>
-                                                    <input 
-                                                        type="text" 
-                                                        value={hookHeader}
-                                                        onChange={(e) => setHookHeader(e.target.value)}
-                                                        className="w-full bg-background/50 border border-borderGlass rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-mimaros-blue/50 transition-colors"
-                                                        placeholder="z.B. DIE 3 BESTEN TRICKS"
-                                                    />
-                                                </div>
+                                            {/* Watermark */}
+                                            <div>
+                                                <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-2">Watermark Text</label>
+                                                <input 
+                                                    type="text" 
+                                                    value={globalSubtitleConfig.watermark_text}
+                                                    onChange={(e) => setGlobalSubtitleConfig({...globalSubtitleConfig, watermark_text: e.target.value})}
+                                                    className="w-full bg-background/50 border border-borderGlass rounded-xl px-4 py-2.5 text-sm text-white focus:outline-none focus:border-mimaros-blue/50 transition-colors"
+                                                    placeholder="z.B. @deinkanal"
+                                                />
                                             </div>
                                         </div>
                                     )}
@@ -1005,48 +1059,90 @@ export default function Page() {
                                             {/* Horizontal Templates Slider (CapCut/TikTok style) */}
                                             <div>
                                                 <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-3">Untertitel Vorlagen</label>
+                                                <style dangerouslySetInnerHTML={{__html: `
+                                                  @keyframes anim-karaoke-1 { 0%, 100% { color: #ffffff; transform: scale(1); } 33% { color: ${highlightColor}; transform: scale(1.15); filter: drop-shadow(0 0 6px ${highlightColor}); } }
+                                                  @keyframes anim-karaoke-2 { 0%, 33%, 100% { color: #ffffff; transform: scale(1); } 66% { color: ${highlightColor}; transform: scale(1.15); filter: drop-shadow(0 0 6px ${highlightColor}); } }
+                                                  @keyframes anim-karaoke-3 { 0%, 66%, 100% { color: #ffffff; transform: scale(1); } 95% { color: ${highlightColor}; transform: scale(1.15); filter: drop-shadow(0 0 6px ${highlightColor}); } }
+                                                  
+                                                  @keyframes anim-pop-bounce { 0%, 100% { opacity: 0.2; transform: scale(0.4); } 20%, 80% { opacity: 1; transform: scale(1.2); } 40%, 60% { transform: scale(1.0); } }
+                                                  
+                                                  @keyframes anim-box-slide {
+                                                    0%, 100% { transform: translateX(-24px); background-color: ${primaryColor}; opacity: 0.9; }
+                                                    50% { transform: translateX(24px); background-color: ${highlightColor}; opacity: 0.9; }
+                                                  }
+                                                  
+                                                  @keyframes anim-hormozi-pulse { 0%, 100% { transform: translateY(0) scale(1); } 50% { transform: translateY(-3px) scale(1.08); } }
+                                                  
+                                                  @keyframes anim-clean-fade { 0%, 100% { opacity: 0.2; transform: translateY(2px); } 50% { opacity: 1; transform: translateY(0); } }
+                                                  
+                                                  .anim-k-1 { animation: anim-karaoke-1 1.8s infinite inline-block; }
+                                                  .anim-k-2 { animation: anim-karaoke-2 1.8s infinite inline-block; }
+                                                  .anim-k-3 { animation: anim-karaoke-3 1.8s infinite inline-block; }
+                                                  .anim-pop-b { animation: anim-pop-bounce 1.6s infinite ease-out; }
+                                                  .anim-h-pulse { animation: anim-hormozi-pulse 1s infinite ease-in-out; }
+                                                  .anim-c-fade { animation: anim-clean-fade 2s infinite ease-in-out; }
+                                                `}} />
                                                 <div className="flex gap-4 overflow-x-auto pb-4 scrollbar-thin scrollbar-thumb-mimaros-blue/20">
                                                     {[
-                                                        { 
-                                                            id: 'karaoke', 
-                                                            name: 'Karaoke Highlight', 
-                                                            desc: 'Wort-Highlight (CI-Farbe)', 
-                                                            videoUrl: 'https://player.vimeo.com/external/517602120.sd.mp4?s=0eb0832367d3b2ebf8df67eb1c28c89b70b55570&profile_id=165&oauth2_token_id=57447761' 
-                                                        },
-                                                        { 
-                                                            id: 'dynamic_box', 
-                                                            name: 'Dynamic Box', 
-                                                            desc: 'Mitlaufender Hintergrund', 
-                                                            videoUrl: 'https://player.vimeo.com/external/435674703.sd.mp4?s=6f4776be2d17c768997a445b20757a66fcfd54e4&profile_id=165&oauth2_token_id=57447761' 
-                                                        },
-                                                        { 
-                                                            id: 'popup_bouncy', 
-                                                            name: 'Pop-Up (Bouncy)', 
-                                                            desc: 'Worte einzeln zentriert', 
-                                                            videoUrl: 'https://player.vimeo.com/external/554832566.sd.mp4?s=40445a497045b8813fa25032d8fe15629c1fb238&profile_id=165&oauth2_token_id=57447761' 
-                                                        },
-                                                        { 
-                                                            id: 'hormozi', 
-                                                            name: 'Hormozi Style', 
-                                                            desc: 'Fett, Gelb/Grün Mix', 
-                                                            videoUrl: 'https://player.vimeo.com/external/482255747.sd.mp4?s=4fb1cfbb3d072af7d39cf6db2fe22a498064a38d&profile_id=165&oauth2_token_id=57447761' 
-                                                        },
-                                                        { 
-                                                            id: 'mimaros_clean', 
-                                                            name: 'mimaros Clean', 
-                                                            desc: 'Edle Fade-In Sätze', 
-                                                            videoUrl: 'https://player.vimeo.com/external/538965902.sd.mp4?s=c8fa99602e1c95b4528148b11f6c4ff601b0f1fb&profile_id=165&oauth2_token_id=57447761' 
-                                                        }
+                                                        { id: 'karaoke', name: 'Karaoke Highlight', desc: 'Wort-für-Wort Animation' },
+                                                        { id: 'dynamic_box', name: 'Dynamic Box', desc: 'Mitlaufendes Highlight' },
+                                                        { id: 'popup_bouncy', name: 'Pop-Up (Bouncy)', desc: 'Ploppender Fokus-Text' },
+                                                        { id: 'hormozi', name: 'Hormozi Style', desc: 'Fett, Gelb/Grün 3D' },
+                                                        { id: 'mimaros_clean', name: 'mimaros Clean', desc: 'Minimalistischer B2B Stil' }
                                                     ].map(tpl => (
                                                         <button 
                                                             key={tpl.id}
                                                             type="button"
                                                             onClick={() => setGlobalSubtitleConfig({...globalSubtitleConfig, design: tpl.id})}
-                                                            className={`relative min-w-[130px] w-[130px] aspect-[9/16] rounded-xl overflow-hidden border-2 transition-all shrink-0 ${globalSubtitleConfig.design === tpl.id ? 'border-mimaros-blue shadow-blue-glow scale-[0.98]' : 'border-borderGlass opacity-60 hover:opacity-100'}`}
+                                                            className={`relative min-w-[145px] w-[145px] aspect-[9/16] rounded-2xl overflow-hidden border-2 transition-all shrink-0 bg-slate-950 flex flex-col justify-between p-3 select-none ${globalSubtitleConfig.design === tpl.id ? 'border-mimaros-blue shadow-[0_0_20px_rgba(20,174,234,0.4)] scale-[0.98]' : 'border-borderGlass opacity-70 hover:opacity-100 hover:border-white/30'}`}
                                                         >
-                                                            <video src={tpl.videoUrl} autoPlay loop muted playsInline className="absolute inset-0 w-full h-full object-cover" />
-                                                            <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/35 to-transparent flex flex-col justify-end p-2.5 text-left">
-                                                                <span className="text-xs font-bold text-white">{tpl.name}</span>
+                                                            {/* Animated Canvas Backdrop */}
+                                                            <div className="absolute inset-0 bg-gradient-to-b from-indigo-950/60 via-slate-900/90 to-black z-0 pointer-events-none" />
+                                                            <div className="absolute top-2 right-2 flex flex-col gap-1 z-10 opacity-40">
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                                                <div className="w-1.5 h-1.5 rounded-full bg-white" />
+                                                            </div>
+
+                                                            {/* Subtitle Animation Showcase */}
+                                                            <div className="relative z-10 flex-1 flex flex-col items-center justify-center p-1 text-center">
+                                                                {tpl.id === 'karaoke' && (
+                                                                    <div className="text-[11px] font-black text-white tracking-wider leading-snug bg-black/70 px-2 py-1.5 rounded-lg border border-white/10 shadow-xl">
+                                                                        <span className="anim-k-1 mr-1">VIRALER</span>
+                                                                        <span className="anim-k-2 mr-1">HOOK</span>
+                                                                        <span className="anim-k-3">TEXT!</span>
+                                                                    </div>
+                                                                )}
+
+                                                                {tpl.id === 'dynamic_box' && (
+                                                                    <div className="relative text-[11px] font-black text-white tracking-wider px-3 py-1.5 rounded-lg bg-black/70 border border-white/10 shadow-xl overflow-hidden">
+                                                                        <span className="relative z-10">DYNAMISCHE BOX</span>
+                                                                        <div className="absolute inset-0 rounded-lg z-0" style={{ animation: 'anim-box-slide 2s infinite ease-in-out' }} />
+                                                                    </div>
+                                                                )}
+
+                                                                {tpl.id === 'popup_bouncy' && (
+                                                                    <div className="anim-pop-b text-[15px] font-black text-white uppercase tracking-widest drop-shadow-[0_4px_8px_rgba(0,0,0,0.9)] bg-gradient-to-r from-mimaros-blue to-purple-500 px-3 py-1 rounded-xl shadow-2xl">
+                                                                        BOOM!
+                                                                    </div>
+                                                                )}
+
+                                                                {tpl.id === 'hormozi' && (
+                                                                    <div className="anim-h-pulse text-center font-black uppercase leading-none drop-shadow-[0_3px_6px_rgba(0,0,0,0.9)] bg-black/60 p-2 rounded-xl border border-yellow-400/30">
+                                                                        <div className="text-[13px] text-[#FFFF00] tracking-tight">ALEX STYLE</div>
+                                                                        <div className="text-[11px] text-[#00FF00] tracking-widest mt-0.5">MAX IMPACT</div>
+                                                                    </div>
+                                                                )}
+
+                                                                {tpl.id === 'mimaros_clean' && (
+                                                                    <div className="text-[8px] font-medium text-white text-center leading-tight anim-fade px-2 font-sans opacity-95 drop-shadow-[0_1px_2px_rgba(0,0,0,0.6)]">
+                                                                        Seriöse B2B<br/>Botschaft
+                                                                    </div>
+                                                                )}
+                                                            </div>
+                                                            
+                                                            <div className="absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/95 via-black/40 to-transparent flex flex-col justify-end p-2.5 text-left z-20">
+                                                                <span className="text-xs font-bold text-white leading-tight">{tpl.name}</span>
                                                                 <span className="text-[8px] text-textDim truncate">{tpl.desc}</span>
                                                             </div>
                                                         </button>
@@ -1210,7 +1306,7 @@ export default function Page() {
                           
                           <div className="w-full md:w-[240px] shrink-0 relative bg-background rounded-xl overflow-hidden shadow-2xl border border-borderGlass flex items-center justify-center aspect-[9/16]">
                               {clip.videoUrl ? (
-                                  <video src={clip.videoUrl.startsWith('/') ? 'https://autoshorts-backend-3s1b.onrender.com' + clip.videoUrl : clip.videoUrl} controls className="absolute inset-0 w-full h-full object-cover z-20" />
+                                  <video src={clip.videoUrl.startsWith('/') ? '${API_BASE}' + clip.videoUrl : clip.videoUrl} controls className="absolute inset-0 w-full h-full object-cover z-20" />
                               ) : (
                                   <div className="text-textDim text-sm">Video lädt...</div>
                               )}
@@ -1331,7 +1427,7 @@ export default function Page() {
 
   const handleOAuthConnect = async (platform: string) => {
       try {
-          const res = await fetch(`https://autoshorts-backend-3s1b.onrender.com/api/auth/${platform}`, { method: 'POST' });
+          const res = await fetch(`${API_BASE}/api/auth/${platform}`, { method: 'POST' });
           if (res.ok) {
               const data = await res.json();
               if (data.auth_url) {
@@ -1401,11 +1497,12 @@ export default function Page() {
       {/* md:pl-64 shifts main content right on desktop to accommodate the fixed sidebar */}
       <main className="flex-1 flex flex-col relative z-10 overflow-y-auto h-screen md:pl-64">
           <div className="md:hidden flex items-center justify-between p-4 border-b border-borderGlass bg-panel/80 backdrop-blur-xl sticky top-0 z-30">
-             <div className="flex items-center gap-2">
-                 <div className="w-8 h-8 rounded-full bg-gradient-to-br from-mimaros-blue to-mimaros-blueMid flex items-center justify-center">
-                    <LogoIcon className="text-white w-4 h-4" />
+             <div className="flex items-center gap-2.5">
+                 <LogoIcon className="w-9 h-9 shrink-0 drop-shadow-[0_0_10px_rgba(20,174,234,0.4)]" />
+                 <div>
+                     <h1 className="font-heading font-bold text-base tracking-tight text-white leading-none">mimaros</h1>
+                     <span className="text-[9px] font-bold text-mimaros-blue uppercase block mt-0.5">AutoShorts AI</span>
                  </div>
-                 <h1 className="font-heading font-bold text-lg text-white">AutoShorts AI</h1>
              </div>
              <button onClick={() => setIsMobileMenuOpen(true)} className="text-white p-2">
                  <Menu className="w-6 h-6" />
@@ -1432,7 +1529,7 @@ export default function Page() {
                       {selectedProject.clips?.map((clipUrl: string, idx: number) => (
                           <div key={idx} className="flex flex-col gap-4 bg-background/50 rounded-xl p-4 border border-borderGlass">
                               <h3 className="font-bold text-center text-mimaros-gold">Variante {idx + 1}</h3>
-                              <video src={clipUrl.startsWith('/') ? 'https://autoshorts-backend-3s1b.onrender.com' + clipUrl : clipUrl} controls className="w-full aspect-[9/16] bg-black rounded-lg object-contain" />
+                              <video src={clipUrl.startsWith('/') ? '${API_BASE}' + clipUrl : clipUrl} controls className="w-full aspect-[9/16] bg-black rounded-lg object-contain" />
                               <button onClick={() => {
                                   setSchedulingClip({ id: 'hist_'+idx, title: `Variante ${idx+1}`, videoUrl: clipUrl, rationale: '' });
                                   setScheduleForm(prev => ({...prev, platforms: ['YouTube Shorts']}));

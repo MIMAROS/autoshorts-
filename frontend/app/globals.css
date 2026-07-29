@@ -1,3 +1,15 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+:root {
+  --foreground-rgb: 238, 243, 248; /* #EEF3F8 */
+  --background-start-rgb: 11, 17, 26; /* #0B111A */
+  --background-end-rgb: 11, 17, 26; /* #0B111A */
+}
+
+body {
+  color: rgb(var(--foreground-rgb));
+  background: rgb(var(--background-start-rgb));
+}
+

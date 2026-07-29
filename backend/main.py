@@ -106,6 +106,9 @@ class VideoRequest(BaseModel):
 class VideoInfoRequest(BaseModel):
     youtube_url: str
 
+class TitleRequest(BaseModel):
+    text: str
+
 from typing import List
 
 class ScheduleRequest(BaseModel):
@@ -289,6 +292,37 @@ def process_sequence_task(job_id: str, sequence_items: list, resolution: str, su
                 except: pass
         try: os.rmdir(temp_dir)
         except: pass
+
+@app.post("/api/generate-viral-title")
+async def generate_viral_title(request: TitleRequest):
+    import re
+    cleaned_input = re.sub(r'\.[a-zA-Z0-9]+$', '', request.text or '').replace('_', ' ').replace('-', ' ').strip()
+    fallback_title = f"VIRAL: {cleaned_input.upper()}" if cleaned_input else "DAS DARFST DU NICHT VERPASSEN 🔥"
+    
+    try:
+        from services.gemini_analyzer import api_key
+        import google.generativeai as genai
+        if not api_key:
+            return {"title": fallback_title}
+        
+        # Versuche Gemini Flash
+        try:
+            model = genai.GenerativeModel('gemini-2.0-flash')
+        except:
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            
+        prompt = f"""
+        Du bist ein Social-Media-Experte. Generiere aus dem folgenden Titel oder Dateinamen eines Videos einen extrem klickstarken, viralen Hook/Titel (3-5 Wörter in GROSSBUCHSTABEN, z.B. DIESEN FEHLER VERMEIDEN 🔥).
+        Antworte AUSSCHLIESSLICH mit dem nackten Titel-String ohne Anführungszeichen, Markdown oder sonstige Formatierungen.
+        Hier ist der Input:
+        {request.text}
+        """
+        response = model.generate_content(prompt)
+        title = response.text.strip().replace('"', '').replace("'", "")
+        return {"title": title if title else fallback_title}
+    except Exception as e:
+        print(f"Error generating viral title: {e}")
+        return {"title": fallback_title}
 
 @app.post("/api/video-info")
 async def video_info(request: VideoInfoRequest):

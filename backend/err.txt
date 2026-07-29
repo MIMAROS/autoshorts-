@@ -1,0 +1,11 @@
+﻿venv\Scripts\python : Traceback (most recent call last):
+In Zeile:1 Zeichen:1
++ venv\Scripts\python main.py 2>&1 | Out-File -FilePath err.txt -Encodi ...
++ ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Traceback (most recent call last)::String) [], RemoteEx 
+   ception
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+  File "C:\Users\Miguel\Projects\Sociel Meidia Auto Posting App\backend\main.py", line 1, in <module>
+    from fastapi import FastAPI, BackgroundTasks, HTTPException, UploadFile, File, Form
+ModuleNotFoundError: No module named 'fastapi'

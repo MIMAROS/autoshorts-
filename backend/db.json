@@ -1,5 +1,21 @@
 [
     {
+        "job_id": "d3745a25-5d97-482c-8a4e-322a67cf07e2",
+        "title": "Auto: Der KI-Content-Loop: Vom Skript zum Video in 90 Sekunden",
+        "thumbnail": "/videos/AutoShort_d3745a25-5d97-482c-8a4e-322a67cf07e2_Automation.mp4",
+        "clips": [
+            "/videos/AutoShort_d3745a25-5d97-482c-8a4e-322a67cf07e2_Automation.mp4"
+        ]
+    },
+    {
+        "job_id": "b00a495b-b383-4423-948f-866750faf0dd",
+        "title": "Auto: Bento-Grid: Der C-Level-Design-Standard",
+        "thumbnail": "/videos/AutoShort_b00a495b-b383-4423-948f-866750faf0dd_Automation.mp4",
+        "clips": [
+            "/videos/AutoShort_b00a495b-b383-4423-948f-866750faf0dd_Automation.mp4"
+        ]
+    },
+    {
         "job_id": "e0dc0aae-08ab-4ce1-a67d-904a03e47b9a",
         "title": "Verliere ich den Verstand? Wenn das Monster erwacht, RENNT!",
         "thumbnail": "/videos/AutoShort_e0dc0aae-08ab-4ce1-a67d-904a03e47b9a_Hook_1.mp4",
