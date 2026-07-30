@@ -1306,7 +1306,7 @@ export default function Page() {
                           
                           <div className="w-full md:w-[240px] shrink-0 relative bg-background rounded-xl overflow-hidden shadow-2xl border border-borderGlass flex items-center justify-center aspect-[9/16]">
                               {clip.videoUrl ? (
-                                  <video src={clip.videoUrl.startsWith('/') ? '${API_BASE}' + clip.videoUrl : clip.videoUrl} controls className="absolute inset-0 w-full h-full object-cover z-20" />
+                                  <video src={clip.videoUrl.startsWith('/') ? API_BASE + clip.videoUrl : clip.videoUrl} controls className="absolute inset-0 w-full h-full object-cover z-20" />
                               ) : (
                                   <div className="text-textDim text-sm">Video lädt...</div>
                               )}
@@ -1529,7 +1529,7 @@ export default function Page() {
                       {selectedProject.clips?.map((clipUrl: string, idx: number) => (
                           <div key={idx} className="flex flex-col gap-4 bg-background/50 rounded-xl p-4 border border-borderGlass">
                               <h3 className="font-bold text-center text-mimaros-gold">Variante {idx + 1}</h3>
-                              <video src={clipUrl.startsWith('/') ? '${API_BASE}' + clipUrl : clipUrl} controls className="w-full aspect-[9/16] bg-black rounded-lg object-contain" />
+                              <video src={clipUrl.startsWith('/') ? API_BASE + clipUrl : clipUrl} controls className="w-full aspect-[9/16] bg-black rounded-lg object-contain" />
                               <button onClick={() => {
                                   setSchedulingClip({ id: 'hist_'+idx, title: `Variante ${idx+1}`, videoUrl: clipUrl, rationale: '' });
                                   setScheduleForm(prev => ({...prev, platforms: ['YouTube Shorts']}));
