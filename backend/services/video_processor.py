@@ -557,6 +557,47 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
         print(f"Failed to generate ASS file: {e}")
         raise e
 
+def detect_speech_intervals(segments: list, start_time: float, end_time: float, min_silence_pad: float = 0.15) -> list:
+    """
+    Ermittelt anhand der Transkriptions-Segmente und Wörter alle aktiven Sprachintervalle
+    und schneidet Pausen > 0.4 Sekunden heraus.
+    """
+    intervals = []
+    current_start = None
+    current_end = None
+    
+    # Sammle alle Wörter/Segmente im angegebenen Zeitbereich
+    active_blocks = []
+    for seg in segments:
+        words = seg.get("words", [])
+        if words:
+            for w in words:
+                ws, we = float(w["start"]), float(w["end"])
+                if ws >= start_time and we <= end_time:
+                    active_blocks.append((ws, we))
+        else:
+            ss, se = float(seg["start"]), float(seg["end"])
+            if ss >= start_time and se <= end_time:
+                active_blocks.append((ss, se))
+                
+    if not active_blocks:
+        return [(start_time, end_time)]
+        
+    active_blocks.sort(key=lambda x: x[0])
+    
+    # Verschmelze Blöcke mit weniger als 0.4 Sekunden Abstand
+    merged = []
+    cur_s, cur_e = active_blocks[0]
+    for next_s, next_e in active_blocks[1:]:
+        if next_s - cur_e <= 0.4:
+            cur_e = max(cur_e, next_e)
+        else:
+            merged.append((max(start_time, cur_s - min_silence_pad), min(end_time, cur_e + min_silence_pad)))
+            cur_s, cur_e = next_s, next_e
+    merged.append((max(start_time, cur_s - min_silence_pad), min(end_time, cur_e + min_silence_pad)))
+    
+    return merged
+
 def process_clip(video_path: str, transcript_data: dict, start_time: float, end_time: float, output_path: str, resolution: str = "720p", subtitle_config: dict = None):
     if subtitle_config is None:
         subtitle_config = {}

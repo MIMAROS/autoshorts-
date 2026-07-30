@@ -155,9 +155,20 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         jobs[job_id] = {"status": "transcribing", "progress": 40, "hooks": [], "clips": []}
         transcript_data = transcribe_audio(video_path, video_lang, subtitle_lang)
         
-        # 3. KI Analyse mit Gemini
+        # 3. KI Analyse mit Gemini / Custom Range Handling
         jobs[job_id] = {"status": "analyzing", "progress": 70, "hooks": [], "clips": []}
-        hooks = analyze_hooks(transcript_data["segments"], clip_length)
+        
+        hook_title = subtitle_config.get("hookHeader", "VIRALES VIDEO SHORT").upper()
+        if trim_start is not None and trim_end is not None and trim_end > trim_start:
+            hooks = [{
+                "title": hook_title,
+                "start_time_approx": trim_start,
+                "end_time_approx": trim_end,
+                "rationale": "Vom Nutzer definierter Zeitbereich mit Smart Trimming",
+                "viral_score": 95
+            }]
+        else:
+            hooks = analyze_hooks(transcript_data["segments"], clip_length)
         
         # 4. Videoschnitt & Untertitel
         jobs[job_id] = {"status": "editing", "progress": 85, "hooks": hooks, "clips": []}

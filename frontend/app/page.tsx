@@ -8,31 +8,25 @@ import { Play, Scissors, Subtitles, UploadCloud, Loader2, Sparkles, Calendar, Ch
 const LogoIcon = ({ className = "w-10 h-10 md:w-12 md:h-12 shrink-0" }: { className?: string }) => (
   <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={`w-10 h-10 md:w-12 md:h-12 shrink-0 max-w-[48px] max-h-[48px] ${className}`}>
     <defs>
-      <linearGradient id="mimaros-auto-grad" x1="50%" y1="0%" x2="50%" y2="100%">
+      <linearGradient id="mimaros-brand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
         <stop offset="0%" stopColor="#14AEEA" />
-        <stop offset="50%" stopColor="#0083B0" />
-        <stop offset="100%" stopColor="#E65100" />
+        <stop offset="50%" stopColor="#0B7FA8" />
+        <stop offset="100%" stopColor="#C89B31" />
       </linearGradient>
-      <filter id="mimaros-glow" x="-20%" y="-20%" width="140%" height="140%">
+      <filter id="mimaros-glow-eff" x="-20%" y="-20%" width="140%" height="140%">
         <feGaussianBlur stdDeviation="1.5" result="blur" />
         <feComposite in="SourceGraphic" in2="blur" operator="over" />
       </filter>
     </defs>
-    {/* 1. Äußerer feiner Kreis */}
-    <circle cx="32" cy="32" r="28" stroke="url(#mimaros-auto-grad)" strokeWidth="2.5" filter="url(#mimaros-glow)" />
+    {/* 1. Feiner runder Außenkreis */}
+    <circle cx="32" cy="32" r="28" stroke="url(#mimaros-brand-grad)" strokeWidth="2.5" filter="url(#mimaros-glow-eff)" />
     
-    {/* 2. Vertikale Mittel-Linie von oben nach unten */}
-    <line x1="32" y1="4" x2="32" y2="60" stroke="url(#mimaros-auto-grad)" strokeWidth="2.5" strokeLinecap="round" />
+    {/* 2. Zwei vertikale parallele Linien (Smartphone 9:16 Ränder) */}
+    <line x1="22" y1="4" x2="22" y2="60" stroke="url(#mimaros-brand-grad)" strokeWidth="2" opacity="0.85" />
+    <line x1="42" y1="4" x2="42" y2="60" stroke="url(#mimaros-brand-grad)" strokeWidth="2" opacity="0.85" />
     
-    {/* 3. Diagonale Linien (spitzes A) */}
-    <line x1="32" y1="4" x2="10" y2="52" stroke="url(#mimaros-auto-grad)" strokeWidth="2.5" strokeLinecap="round" />
-    <line x1="32" y1="4" x2="54" y2="52" stroke="url(#mimaros-auto-grad)" strokeWidth="2.5" strokeLinecap="round" />
-    
-    {/* 4. Quersteg */}
-    <line x1="20" y1="36" x2="44" y2="36" stroke="url(#mimaros-auto-grad)" strokeWidth="2" strokeLinecap="round" opacity="0.7" />
-    
-    {/* 5. Play-Button im Zentrum */}
-    <path d="M30 26L38 32L30 38V26Z" fill="url(#mimaros-auto-grad)" filter="url(#mimaros-glow)" />
+    {/* 3. Minimalistischer Play-Button exakt in der Mitte */}
+    <path d="M29 25.5L38 32L29 38.5V25.5Z" fill="url(#mimaros-brand-grad)" filter="url(#mimaros-glow-eff)" />
   </svg>
 );
 
@@ -653,54 +647,103 @@ export default function Page() {
                             )}
                         </div>
 
-                        {/* Metadata & Trimming UI */}
-                        {videoMetadata && (
-                            <div className="bg-panel/50 border border-borderGlass rounded-xl p-4 flex flex-col gap-4">
-                                <div className="flex items-center gap-4">
-                                    {videoMetadata.thumbnail && (
-                                        <img src={videoMetadata.thumbnail} alt="Thumbnail" className="w-24 h-auto rounded-lg" />
-                                    )}
+                        {/* Metadata & Interactive Range Trimmer UI */}
+                        {(videoMetadata || localFile) && (
+                            <div className="bg-panel/60 border border-borderGlass rounded-2xl p-5 space-y-4 shadow-glass backdrop-blur-md">
+                                <div className="flex items-center gap-4 border-b border-borderGlass/50 pb-3">
+                                    <Scissors className="w-5 h-5 text-mimaros-blue shrink-0" />
                                     <div className="flex-1">
-                                        <p className="text-white font-bold text-sm line-clamp-2">{videoMetadata.title}</p>
-                                        <p className="text-textDim text-xs mt-1">Dauer: {Math.floor(videoMetadata.duration / 60)}:{String(videoMetadata.duration % 60).padStart(2, '0')} min</p>
+                                        <h4 className="text-white font-bold text-sm">Manueller Video-Trimmer & Smart Jump-Cuts</h4>
+                                        <p className="text-textDim text-xs">Wähle den exakten Zeitbereich, der analysiert & per Silence-Removal verdichtet werden soll.</p>
                                     </div>
+                                    <span className="bg-mimaros-blue/10 text-mimaros-blue text-xs font-bold px-3 py-1 rounded-full border border-mimaros-blue/20">
+                                        {trimStart !== '' && trimEnd !== '' ? `${Math.max(0, Number(trimEnd) - Number(trimStart))}s Bereich` : 'Ganzes Video'}
+                                    </span>
                                 </div>
-                                {videoMetadata.duration > 600 && (
-                                    <div className="bg-red-500/10 border border-red-500/30 rounded-lg p-3">
-                                        <p className="text-red-400 text-xs mb-3 font-bold">⚠️ Video ist länger als 10 Minuten. Bitte wähle den Bereich aus, der verarbeitet werden soll (max. 10 Min):</p>
-                                        <div className="flex gap-4 items-center">
-                                            <div className="flex-1">
-                                                <label className="block text-[10px] text-textDim uppercase mb-1">Start (in Sekunden)</label>
-                                                <input 
-                                                    type="number" 
-                                                    value={trimStart} 
-                                                    onChange={(e) => setTrimStart(parseInt(e.target.value) || 0)}
-                                                    className="w-full bg-background border border-borderGlass rounded-lg p-2 text-white text-sm"
-                                                    min={0}
-                                                    max={videoMetadata.duration}
-                                                />
-                                            </div>
-                                            <div className="flex-1">
-                                                <label className="block text-[10px] text-textDim uppercase mb-1">Ende (in Sekunden)</label>
-                                                <input 
-                                                    type="number" 
-                                                    value={trimEnd} 
-                                                    onChange={(e) => {
-                                                        const val = parseInt(e.target.value) || 0;
-                                                        if (val - Number(trimStart) > 600) {
-                                                            setTrimEnd(Number(trimStart) + 600);
-                                                        } else {
-                                                            setTrimEnd(val);
-                                                        }
-                                                    }}
-                                                    className="w-full bg-background border border-borderGlass rounded-lg p-2 text-white text-sm"
-                                                    min={0}
-                                                    max={videoMetadata.duration}
-                                                />
-                                            </div>
+
+                                {videoMetadata && (
+                                    <div className="flex items-center gap-4 bg-background/40 p-3 rounded-xl border border-borderGlass/30">
+                                        {videoMetadata.thumbnail && (
+                                            <img src={videoMetadata.thumbnail} alt="Thumbnail" className="w-20 h-auto rounded-lg object-cover" />
+                                        )}
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-white font-bold text-sm truncate">{videoMetadata.title}</p>
+                                            <p className="text-textDim text-xs mt-0.5">Gesamtdauer: {Math.floor(videoMetadata.duration / 60)}:{String(Math.floor(videoMetadata.duration % 60)).padStart(2, '0')} min</p>
                                         </div>
                                     </div>
                                 )}
+
+                                {/* Dual Range Slider Controls */}
+                                <div className="space-y-3 bg-background/50 p-4 rounded-xl border border-borderGlass/40">
+                                    <div className="grid grid-cols-2 gap-4">
+                                        <div>
+                                            <div className="flex justify-between text-xs mb-1">
+                                                <span className="font-bold text-textDim uppercase">Startzeit</span>
+                                                <span className="font-mono text-mimaros-blue font-bold">
+                                                    {trimStart !== '' ? `${Math.floor(Number(trimStart) / 60)}:${String(Math.floor(Number(trimStart) % 60)).padStart(2, '0')}` : '0:00'}
+                                                </span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min={0}
+                                                max={videoMetadata ? videoMetadata.duration : 600}
+                                                value={trimStart !== '' ? trimStart : 0} 
+                                                onChange={(e) => {
+                                                    const val = parseInt(e.target.value) || 0;
+                                                    setTrimStart(val);
+                                                    if (trimEnd !== '' && val >= Number(trimEnd)) {
+                                                        setTrimEnd(val + 30);
+                                                    }
+                                                }}
+                                                className="w-full accent-mimaros-blue cursor-pointer h-2 bg-panel rounded-lg"
+                                            />
+                                        </div>
+
+                                        <div>
+                                            <div className="flex justify-between text-xs mb-1">
+                                                <span className="font-bold text-textDim uppercase">Endzeit</span>
+                                                <span className="font-mono text-mimaros-gold font-bold">
+                                                    {trimEnd !== '' ? `${Math.floor(Number(trimEnd) / 60)}:${String(Math.floor(Number(trimEnd) % 60)).padStart(2, '0')}` : (videoMetadata ? `${Math.floor(videoMetadata.duration / 60)}:${String(Math.floor(videoMetadata.duration % 60)).padStart(2, '0')}` : 'Max')}
+                                                </span>
+                                            </div>
+                                            <input 
+                                                type="range" 
+                                                min={0}
+                                                max={videoMetadata ? videoMetadata.duration : 600}
+                                                value={trimEnd !== '' ? trimEnd : (videoMetadata ? videoMetadata.duration : 600)} 
+                                                onChange={(e) => {
+                                                    const val = parseInt(e.target.value) || 0;
+                                                    setTrimEnd(val);
+                                                }}
+                                                className="w-full accent-mimaros-gold cursor-pointer h-2 bg-panel rounded-lg"
+                                            />
+                                        </div>
+                                    </div>
+
+                                    {/* Direct Numeric Inputs */}
+                                    <div className="flex gap-4 pt-2">
+                                        <div className="flex-1">
+                                            <label className="block text-[10px] font-bold text-textDim uppercase mb-1">Start (Sekunden)</label>
+                                            <input 
+                                                type="number" 
+                                                value={trimStart} 
+                                                placeholder="z.B. 15"
+                                                onChange={(e) => setTrimStart(e.target.value ? parseInt(e.target.value) : '')}
+                                                className="w-full bg-panel border border-borderGlass rounded-lg p-2 text-white text-xs font-mono"
+                                            />
+                                        </div>
+                                        <div className="flex-1">
+                                            <label className="block text-[10px] font-bold text-textDim uppercase mb-1">Ende (Sekunden)</label>
+                                            <input 
+                                                type="number" 
+                                                value={trimEnd} 
+                                                placeholder="z.B. 75"
+                                                onChange={(e) => setTrimEnd(e.target.value ? parseInt(e.target.value) : '')}
+                                                className="w-full bg-panel border border-borderGlass rounded-lg p-2 text-white text-xs font-mono"
+                                            />
+                                        </div>
+                                    </div>
+                                </div>
                             </div>
                         )}
                     </>
