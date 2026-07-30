@@ -141,7 +141,7 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
                 trimmed_path = os.path.join("temp", f"{job_id}_trimmed.mp4")
                 duration = trim_end - trim_start
                 try:
-                    subprocess.run(["ffmpeg", "-y", "-i", local_path, "-ss", str(trim_start), "-t", str(duration), "-c", "copy", trimmed_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    subprocess.run(["ffmpeg", "-y", "-i", local_path, "-ss", str(trim_start), "-t", str(duration), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-c:a", "aac", trimmed_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     video_path = trimmed_path
                 except Exception as e:
                     print(f"Fehler beim lokalen Trimming: {e}")
