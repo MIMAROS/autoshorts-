@@ -1331,7 +1331,7 @@ export default function Page() {
                                                  {globalSubtitleConfig.watermark_text || "mimaros.eu"}
                                              </div>
                                              {/* Title / Hook (Ebene 2) */}
-                                             <div className="text-[10px] text-white font-heading font-bold uppercase tracking-wider text-center px-8 leading-tight">
+                                             <div className="text-[10px] text-white font-heading font-bold uppercase tracking-wider text-center px-6 max-w-[90%] break-words whitespace-normal leading-tight">
                                                  {hookHeader || "DEIN VIRALER VIDEO TITEL"}
                                              </div>
                                          </div>

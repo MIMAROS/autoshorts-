@@ -79,3 +79,37 @@ def analyze_hooks(transcript_segments: list, clip_length: str = "auto") -> list:
     except Exception as e:
         print("Fehler beim Parsen der Gemini-Antwort:", response.text)
         raise e
+
+def generate_context_aware_title(transcript_text: str) -> str:
+    """
+    Generiert basierend auf dem echten gesprochenen Inhalt des Videos (Transkript)
+    einen extrem kurzen, viralen Hook-Titel (max. 3-5 Wörter in GROSSBUCHSTABEN).
+    """
+    if not transcript_text or not transcript_text.strip():
+        return "DAS DARFST DU NICHT VERPASSEN 🔥"
+        
+    if not api_key:
+        words = transcript_text.strip().split()[:4]
+        return " ".join(words).upper() + " 🔥" if words else "VIRALES VIDEO SHORT 🔥"
+        
+    try:
+        try:
+            model = genai.GenerativeModel('gemini-2.5-flash')
+        except:
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            
+        prompt = f"""
+        Du bist ein Social-Media-Experte für virale Shorts & TikToks.
+        Hier ist das gesprochene Transkript eines Kurzvideos:
+        "{transcript_text[:1000]}"
+        
+        Generiere basierend auf EXAKT diesem inhaltlichen Kontext einen extrem kurzen, extrem viralen Hook-Titel (max. 3-5 Worte in GROSSBUCHSTABEN, z.B. DIESEN TRICK VERMEIDEN 🔥).
+        Antworte AUSSCHLIESSLICH mit dem nackten Titel-Text ohne Anführungszeichen, ohne Markdown und ohne Erklärung.
+        """
+        response = model.generate_content(prompt)
+        title = response.text.strip().replace('"', '').replace("'", "")
+        return title.upper() if title else "DAS DARFST DU NICHT VERPASSEN 🔥"
+    except Exception as e:
+        print(f"Fehler bei kontextbezogener Titel-Generierung: {e}")
+        words = transcript_text.strip().split()[:4]
+        return " ".join(words).upper() + " 🔥"

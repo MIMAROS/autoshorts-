@@ -174,6 +174,16 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         # 3. KI Analyse mit Gemini / Custom Range Handling
         jobs[job_id] = {"status": "analyzing", "progress": 70, "hooks": [], "clips": []}
         
+        # Kontextbezogenen Titel aus dem echten Transkript generieren
+        full_transcript_text = " ".join([seg.get("text", "") for seg in transcript_data.get("segments", [])[:10]])
+        try:
+            from services.gemini_analyzer import generate_context_aware_title
+            context_title = generate_context_aware_title(full_transcript_text)
+            if not subtitle_config.get("hookHeader") or subtitle_config.get("hookHeader") == "DAS DARFST DU NICHT VERPASSEN 🔥":
+                subtitle_config["hookHeader"] = context_title
+        except Exception as e:
+            print(f"Fehler bei kontextbezogenem Titel: {e}")
+            
         hook_title = subtitle_config.get("hookHeader", "VIRALES VIDEO SHORT").upper()
         if trim_start is not None and trim_end is not None and trim_end > trim_start:
             hooks = [{
