@@ -222,19 +222,19 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
                 title_y = 50 if resolution == "1080p" else 30
                 
             if resolution == "1080p":
-                title_font_size = 72
-                box_border_w = 20
-                max_chars = 20
+                title_font_size = 54
+                box_border_w = 16
+                max_chars = 14
             else:
-                title_font_size = 48
-                box_border_w = 12
-                max_chars = 16
+                title_font_size = 36
+                box_border_w = 10
+                max_chars = 12
                 
             wrapped_title = wrap_text_smart(hook_header.upper(), max_chars_per_line=max_chars)
             escaped_title = wrapped_title.replace("'", "\\'").replace(":", "\\:")
             
             # Draw title with 70% opacity Deep Blue backdrop box using box border padding & line spacing
-            vf_filter += f",drawtext=text='{escaped_title}':fontfile='{font_path}':fontsize={title_font_size}:fontcolor=white:box=1:boxcolor=0x0B192C@0.7:boxborderw={box_border_w}:line_spacing=12:x=(w-text_w)/2:y={title_y}"
+            vf_filter += f",drawtext=text='{escaped_title}':fontfile='{font_path}':fontsize={title_font_size}:fontcolor=white:box=1:boxcolor=0x0B192C@0.7:boxborderw={box_border_w}:line_spacing=10:x=(w-text_w)/2:y={title_y}"
             
         # 5. Full-Width Subtitle Backdrop Banner (extends all the way to the bottom border)
         if show_subtitles:

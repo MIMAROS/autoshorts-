@@ -1326,13 +1326,13 @@ export default function Page() {
                             ) : useMasterCi ? (
                                 <>
                                      {showTitle ? (
-                                         <div className="absolute top-0 left-0 right-0 z-15 bg-[#0b192c]/80 flex flex-col items-center justify-center pt-2 pb-2.5 border-b-2" style={{ borderColor: primaryColor }}>
+                                         <div className="absolute top-0 left-0 right-0 z-15 bg-[#0b192c]/85 flex flex-col items-center justify-center pt-2 pb-2.5 px-6 border-b-2" style={{ borderColor: primaryColor }}>
                                              {/* Watermark text at the very top (Ebene 1) */}
                                              <div className="text-[7px] text-white/90 font-medium tracking-wider leading-none mb-1 font-sans">
                                                  {globalSubtitleConfig.watermark_text || "mimaros.eu"}
                                              </div>
                                              {/* Title / Hook (Ebene 2) */}
-                                             <div className="text-[10px] text-white font-heading font-bold uppercase tracking-wider text-center px-6 max-w-[90%] break-words whitespace-normal leading-tight">
+                                             <div className="text-[9px] text-white font-heading font-bold uppercase tracking-tight text-center px-6 max-w-[85%] w-full mx-auto break-words whitespace-normal leading-tight">
                                                  {hookHeader || "DEIN VIRALER VIDEO TITEL"}
                                              </div>
                                          </div>
