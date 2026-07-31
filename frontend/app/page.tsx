@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic';
 const FullCalendar = dynamic(() => import('@fullcalendar/react'), { ssr: false });
 import dayGridPlugin from '@fullcalendar/daygrid';
 import { useState, useRef, useEffect } from 'react';
-import { Play, Scissors, Subtitles, UploadCloud, Loader2, Sparkles, Calendar, Check, Settings, X, Clock, Video, Home, Menu, Share2, Download, Edit2, TrendingUp, Flame, Type, MonitorPlay, ChevronUp, ChevronDown, Layout } from 'lucide-react';
+import { Play, Scissors, Subtitles, UploadCloud, Loader2, Sparkles, Calendar, Check, Settings, X, Clock, Video, Home, Menu, Share2, Download, Edit2, TrendingUp, Flame, Type, MonitorPlay, ChevronUp, ChevronDown, Layout, Volume2, Mic } from 'lucide-react';
 
 const LogoIcon = ({ className = "w-10 h-10 md:w-12 md:h-12 shrink-0" }: { className?: string }) => (
   <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={`w-10 h-10 md:w-12 md:h-12 shrink-0 max-w-[48px] max-h-[48px] ${className}`}>
@@ -80,6 +80,34 @@ export default function Page() {
   const [activeAccordion, setActiveAccordion] = useState<string | null>('basic');
   const [globalPreviewUrl, setGlobalPreviewUrl] = useState('');
   const [isGlobalPreviewing, setIsGlobalPreviewing] = useState(false);
+
+  // KI Voiceover State
+  const [voiceoverUrl, setVoiceoverUrl] = useState<string>('');
+  const [isGeneratingVoiceover, setIsGeneratingVoiceover] = useState(false);
+  const [selectedVoice, setSelectedVoice] = useState('alloy');
+
+  const handleGenerateVoiceover = async () => {
+    if (!hookHeader || !hookHeader.trim()) {
+      alert("Bitte gib zuerst einen Skript-Text oder Titel ein.");
+      return;
+    }
+    setIsGeneratingVoiceover(true);
+    try {
+      const res = await fetch(`${API_BASE}/api/generate-voiceover`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ text: hookHeader, voice: selectedVoice, lang: videoLang })
+      });
+      if (!res.ok) throw new Error("Voiceover-Generierung fehlgeschlagen.");
+      const data = await res.json();
+      setVoiceoverUrl(data.audio_url.startsWith('/') ? `${API_BASE}${data.audio_url}` : data.audio_url);
+    } catch (err) {
+      console.error(err);
+      alert("Fehler bei der KI-Voiceover-Generierung.");
+    } finally {
+      setIsGeneratingVoiceover(false);
+    }
+  };
 
   // Processing State
   const [isProcessing, setIsProcessing] = useState(false);
@@ -335,7 +363,8 @@ export default function Page() {
           showTitle,
           showLogo,
           showSubtitles,
-          showCTA
+          showCTA,
+          voiceoverUrl: voiceoverUrl || null
       };
       
       let jobId = '';
@@ -898,8 +927,9 @@ export default function Page() {
                                                 </select>
                                             </div>
                                         </div>
-                                        <div className="pt-4 border-t border-borderGlass/20 space-y-2">
-                                            <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider">Video-Titel / Hook-Header (Optional)</label>
+
+                                        <div className="pt-4 border-t border-borderGlass/20 space-y-3">
+                                            <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider">Video-Titel / Skript-Text</label>
                                             <input 
                                                 type="text" 
                                                 value={hookHeader}
@@ -907,6 +937,43 @@ export default function Page() {
                                                 className="w-full bg-background/50 border border-borderGlass rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:border-mimaros-blue/50 transition-colors"
                                                 placeholder="z.B. DIESEN FEHLER VERMEIDEN"
                                             />
+
+                                            {/* KI-Voiceover Panel */}
+                                            <div className="bg-panel/40 border border-borderGlass/40 rounded-xl p-3 space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <Volume2 className="w-4 h-4 text-mimaros-blue" />
+                                                        <span className="text-xs font-bold text-white">KI-Voiceover Sprecherstimme</span>
+                                                    </div>
+                                                    <select 
+                                                        value={selectedVoice} 
+                                                        onChange={(e) => setSelectedVoice(e.target.value)}
+                                                        className="bg-background/80 border border-borderGlass text-xs text-white p-1.5 rounded-lg outline-none"
+                                                    >
+                                                        <option value="alloy">Alloy (Dynamisch)</option>
+                                                        <option value="echo">Echo (Klar & Neutral)</option>
+                                                        <option value="nova">Nova (Weiblich/Sanft)</option>
+                                                        <option value="onyx">Onyx (Tief & Markant)</option>
+                                                    </select>
+                                                </div>
+
+                                                <button
+                                                    type="button"
+                                                    onClick={handleGenerateVoiceover}
+                                                    disabled={isGeneratingVoiceover || !hookHeader}
+                                                    className="w-full py-2.5 px-4 bg-mimaros-blue/20 hover:bg-mimaros-blue/30 border border-mimaros-blue/40 text-mimaros-blue font-bold text-xs rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50"
+                                                >
+                                                    {isGeneratingVoiceover ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
+                                                    {isGeneratingVoiceover ? "Generiere KI-Voiceover..." : "🎙️ Als KI-Voiceover generieren"}
+                                                </button>
+
+                                                {voiceoverUrl && (
+                                                    <div className="pt-2">
+                                                        <p className="text-[10px] text-mimaros-gold font-bold mb-1 font-mono">✅ Vorschau der KI-Audiospur:</p>
+                                                        <audio src={voiceoverUrl} controls className="w-full h-9 rounded-lg bg-background" />
+                                                    </div>
+                                                )}
+                                            </div>
                                         </div>
                                         <div className="flex items-center justify-between pt-4 border-t border-borderGlass/20">
                                             <span className="text-xs font-bold text-textDim font-sans">Master CI-Template anwenden</span>

@@ -155,6 +155,22 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         jobs[job_id] = {"status": "transcribing", "progress": 40, "hooks": [], "clips": []}
         transcript_data = transcribe_audio(video_path, video_lang, subtitle_lang)
         
+        # KI Voiceover Transkription Sync Check
+        voiceover_url = subtitle_config.get("voiceoverUrl")
+        if voiceover_url:
+            v_filename = os.path.basename(voiceover_url)
+            v_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "Fertige_Shorts", v_filename)
+            if not os.path.exists(v_path):
+                v_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Fertige_Shorts", v_filename)
+            if os.path.exists(v_path):
+                subtitle_config["voiceover_path"] = v_path
+                try:
+                    v_transcript = transcribe_audio(v_path, video_lang, subtitle_lang)
+                    if v_transcript and v_transcript.get("segments"):
+                        transcript_data = v_transcript
+                except Exception as e:
+                    print(f"Fehler bei Voiceover Transkription: {e}")
+        
         # 3. KI Analyse mit Gemini / Custom Range Handling
         jobs[job_id] = {"status": "analyzing", "progress": 70, "hooks": [], "clips": []}
         
@@ -303,6 +319,27 @@ def process_sequence_task(job_id: str, sequence_items: list, resolution: str, su
                 except: pass
         try: os.rmdir(temp_dir)
         except: pass
+
+class VoiceoverRequest(BaseModel):
+    text: str
+    voice: Optional[str] = "alloy"
+    lang: Optional[str] = "de"
+
+@app.post("/api/generate-voiceover")
+async def generate_voiceover(req: VoiceoverRequest):
+    if not req.text or not req.text.strip():
+        raise HTTPException(status_code=400, detail="Text darf nicht leer sein.")
+    try:
+        from services.tts_service import generate_voiceover_audio
+        filename = generate_voiceover_audio(req.text.strip(), req.voice or "alloy", req.lang or "de")
+        return {
+            "status": "success",
+            "audio_url": f"/videos/{filename}",
+            "filename": filename
+        }
+    except Exception as e:
+        print(f"Voiceover Fehler: {e}")
+        raise HTTPException(status_code=500, detail=f"Voiceover Generierung fehlgeschlagen: {str(e)}")
 
 @app.post("/api/generate-viral-title")
 async def generate_viral_title(request: TitleRequest):

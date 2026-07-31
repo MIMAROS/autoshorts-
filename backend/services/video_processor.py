@@ -310,7 +310,23 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         except Exception as e:
             print(f"Error generating CTA image button: {e}")
             
+    # KI Voiceover Audio Overlay Handling
+    voiceover_path = config.get("voiceover_path", None)
+    if not voiceover_path and config.get("voiceoverUrl"):
+        # Resolve local file from URL
+        v_url = config.get("voiceoverUrl")
+        v_name = os.path.basename(v_url)
+        v_local = os.path.join(os.path.dirname(output_path), "..", "Fertige_Shorts", v_name)
+        if os.path.exists(v_local):
+            voiceover_path = v_local
+            
+    voiceover_input_index = -1
+    if voiceover_path and os.path.exists(voiceover_path):
+        inputs.append(voiceover_path)
+        voiceover_input_index = len(inputs) - 1
+
     map_v = current_v
+    audio_map = f"{voiceover_input_index}:a" if voiceover_input_index != -1 else "0:a?"
     
     # Build actual ffmpeg command
     cmd = ["ffmpeg", "-y"]
@@ -334,7 +350,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     cmd.extend([
         "-filter_complex", filter_complex,
         "-map", map_v,
-        "-map", "0:a?",
+        "-map", audio_map,
         "-c:a", "aac",
         "-c:v", "libx264",
         "-pix_fmt", "yuv420p",
