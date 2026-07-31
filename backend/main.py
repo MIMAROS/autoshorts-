@@ -351,6 +351,79 @@ async def generate_voiceover(req: VoiceoverRequest):
         print(f"Voiceover Fehler: {e}")
         raise HTTPException(status_code=500, detail=f"Voiceover Generierung fehlgeschlagen: {str(e)}")
 
+@app.post("/api/analyze-trimmed-section")
+async def analyze_trimmed_section(
+    file: Optional[UploadFile] = File(None),
+    youtube_url: Optional[str] = Form(None),
+    trim_start: Optional[float] = Form(0.0),
+    trim_end: Optional[float] = Form(None),
+    video_lang: Optional[str] = Form("auto")
+):
+    """
+    Transkribiert den EXAKTEN ausgewählten Video-Bereich (trim_start bis trim_end)
+    und generiert daraus kontextbezogen den Titel und die Social-Media-Beschreibung.
+    """
+    temp_dir = tempfile.mkdtemp()
+    temp_video = os.path.join(temp_dir, "input.mp4")
+    try:
+        if file:
+            with open(temp_video, "wb") as f:
+                f.write(await file.read())
+        elif youtube_url:
+            loop = asyncio.get_event_loop()
+            await loop.run_in_executor(None, download_youtube_video, youtube_url, temp_video)
+        else:
+            raise HTTPException(status_code=400, detail="Weder Datei noch YouTube URL angegeben.")
+            
+        loop = asyncio.get_event_loop()
+        
+        # Audio für den Zeitbereich extrahieren/transkribieren
+        transcript_segments, lang_detected = await loop.run_in_executor(
+            None, transcribe_video, temp_video, video_lang or "auto"
+        )
+        
+        # Filtere Segmente auf den gewählten Bereich
+        full_text = ""
+        if transcript_segments:
+            relevant_texts = []
+            for seg in transcript_segments:
+                start = seg.get('start', 0.0)
+                end = seg.get('end', 0.0)
+                if trim_end and trim_end > 0:
+                    if end >= (trim_start or 0.0) and start <= trim_end:
+                        relevant_texts.append(seg.get('text', ''))
+                else:
+                    relevant_texts.append(seg.get('text', ''))
+            full_text = " ".join(relevant_texts).strip()
+            
+        if not full_text:
+            full_text = " ".join([s.get('text', '') for s in transcript_segments]).strip() if transcript_segments else ""
+            
+        from services.gemini_analyzer import generate_context_aware_title, generate_social_caption
+        
+        title = await loop.run_in_executor(None, generate_context_aware_title, full_text)
+        caption = await loop.run_in_executor(None, generate_social_caption, full_text)
+        
+        return {
+            "status": "success",
+            "transcript": full_text,
+            "title": title,
+            "caption": caption
+        }
+    except Exception as e:
+        print(f"Fehler in analyze_trimmed_section: {e}")
+        return {
+            "status": "fallback",
+            "title": "VIRALES VIDEO SHORT 🔥",
+            "caption": "🔥 Schau dir dieses virale Short an!\n\n#viral #shorts #mimaros"
+        }
+    finally:
+        if os.path.exists(temp_video):
+            try: os.remove(temp_video)
+            except: pass
+        try: os.rmdir(temp_dir)
+        except: pass
+
 @app.post("/api/generate-viral-title")
 async def generate_viral_title(request: TitleRequest):
     import re

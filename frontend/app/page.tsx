@@ -207,14 +207,58 @@ export default function Page() {
     }
   };
 
-   const processSelectedFile = (file: File) => {
+   const [isAnalyzingSection, setIsAnalyzingSection] = useState(false);
+  const [enableDubbing, setEnableDubbing] = useState(false);
+
+  const processSelectedFile = (file: File) => {
     setLocalFile(file);
     setYoutubeUrl('');
     if (previewObjectUrl) URL.revokeObjectURL(previewObjectUrl);
     const objUrl = URL.createObjectURL(file);
     setPreviewObjectUrl(objUrl);
-    generateAutoTitle(file.name);
+    setHookHeader('');
+    setSocialCaption('');
     setWizardStep(2);
+  };
+
+  const handleConfirmSection = async () => {
+    if (!localFile && !youtubeUrl) {
+      setWizardStep(3);
+      return;
+    }
+    setIsAnalyzingSection(true);
+    try {
+      const formData = new FormData();
+      if (localFile) {
+        formData.append('file', localFile);
+      } else if (youtubeUrl) {
+        formData.append('youtube_url', youtubeUrl);
+      }
+      if (trimStart !== '') formData.append('trim_start', trimStart.toString());
+      if (trimEnd !== '') formData.append('trim_end', trimEnd.toString());
+      formData.append('video_lang', videoLang);
+
+      const res = await fetch(`${API_BASE}/api/analyze-trimmed-section`, {
+        method: 'POST',
+        body: formData
+      });
+
+      if (res.ok) {
+        const data = await res.json();
+        if (data.title) setHookHeader(data.title.toUpperCase());
+        if (data.caption) setSocialCaption(data.caption);
+      } else {
+        setHookHeader("VIRALES VIDEO SHORT 🔥");
+        setSocialCaption("🔥 Schau dir dieses virale Short an!\n\n#viral #shorts");
+      }
+    } catch (err) {
+      console.error("Fehler bei Bereichs-Analyse:", err);
+      setHookHeader("VIRALES VIDEO SHORT 🔥");
+      setSocialCaption("🔥 Schau dir dieses virale Short an!\n\n#viral #shorts");
+    } finally {
+      setIsAnalyzingSection(false);
+      setWizardStep(3);
+    }
   };
 
    const handleDrop = (e: React.DragEvent) => {
@@ -389,7 +433,8 @@ export default function Page() {
           showLogo,
           showSubtitles,
           showCTA,
-          voiceoverUrl: voiceoverUrl || null
+          enable_dubbing: enableDubbing,
+          dubbing_voice: selectedVoice
       };
       
       let jobId = '';
@@ -855,10 +900,18 @@ export default function Page() {
 
                           {/* Einziges Button in Step 2 */}
                           <button 
-                              onClick={() => setWizardStep(3)}
-                              className="w-full py-4 bg-mimaros-blue text-white rounded-xl font-bold shadow-blue-glow hover:bg-mimaros-blue/90 text-lg flex items-center justify-center gap-2 transition-all"
+                              onClick={handleConfirmSection}
+                              disabled={isAnalyzingSection}
+                              className="w-full py-4 bg-mimaros-blue text-white rounded-xl font-bold shadow-blue-glow hover:bg-mimaros-blue/90 text-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50"
                           >
-                              Bereich bestätigen & Weiter zu den Einstellungen →
+                              {isAnalyzingSection ? (
+                                  <>
+                                      <Loader2 className="w-5 h-5 animate-spin" />
+                                      Transkribiere Bereich & generiere Titel...
+                                  </>
+                              ) : (
+                                  <>Bereich bestätigen & Weiter zu den Einstellungen →</>
+                              )}
                           </button>
                       </div>
                   )}
@@ -881,52 +934,86 @@ export default function Page() {
                               </button>
                           </div>
 
-                          {/* Hook Title & KI Voiceover */}
+                          {/* Sprachen & KI Dubbing Panel */}
                           <div className="bg-background/40 p-4 rounded-xl border border-borderGlass space-y-4">
-                              <label className="block text-xs font-bold text-white uppercase tracking-wider">Auto-Titel / Skript-Text (Kontextbezogen)</label>
+                              <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                  <Volume2 className="w-4 h-4 text-mimaros-blue" /> Sprachen & KI Video-Übersetzung (Dubbing)
+                              </h4>
+                              <div className="grid grid-cols-2 gap-4">
+                                  <div>
+                                      <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-1">Audio-Sprache (Original)</label>
+                                      <select value={videoLang} onChange={(e) => setVideoLang(e.target.value)} className="w-full bg-panel border border-borderGlass p-2.5 rounded-xl text-xs text-white outline-none focus:border-mimaros-blue">
+                                          <option value="de">Deutsch</option>
+                                          <option value="en">Englisch</option>
+                                          <option value="es">Spanisch</option>
+                                          <option value="auto">Auto-Erkennen</option>
+                                      </select>
+                                  </div>
+                                  <div>
+                                      <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-1">Untertitel Zielsprache</label>
+                                      <select value={subtitleLang} onChange={(e) => setSubtitleLang(e.target.value)} className="w-full bg-panel border border-borderGlass p-2.5 rounded-xl text-xs text-white outline-none focus:border-mimaros-blue">
+                                          <option value="auto">Wie Video (Keine Übersetzung)</option>
+                                          <option value="de">Deutsch</option>
+                                          <option value="en">Englisch</option>
+                                          <option value="es">Spanisch</option>
+                                      </select>
+                                  </div>
+                              </div>
+
+                              {/* Dubbing Toggle (Erscheint nur wenn Zielsprache sich unterscheidet) */}
+                              {subtitleLang !== 'auto' && subtitleLang !== videoLang && (
+                                  <div className="bg-panel/60 border border-mimaros-blue/40 rounded-xl p-4 space-y-3">
+                                      <div className="flex items-center justify-between">
+                                          <div>
+                                              <p className="text-xs font-bold text-white flex items-center gap-2">
+                                                  <Volume2 className="w-4 h-4 text-mimaros-blue" />
+                                                  Audio ebenfalls übersetzen (KI Dubbing)
+                                              </p>
+                                              <p className="text-[10px] text-textDim mt-0.5">
+                                                  Ersetzt die Originalstimme durch eine KI-Sprecherstimme in der Zielsprache.
+                                              </p>
+                                          </div>
+                                          <button 
+                                              type="button"
+                                              onClick={() => setEnableDubbing(!enableDubbing)}
+                                              className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${enableDubbing ? 'bg-mimaros-blue shadow-blue-glow' : 'bg-background border border-borderGlass'}`}
+                                          >
+                                              <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${enableDubbing ? 'translate-x-5' : 'translate-x-0'}`} />
+                                          </button>
+                                      </div>
+
+                                      {enableDubbing && (
+                                          <div className="pt-2 border-t border-borderGlass/30 flex items-center justify-between">
+                                              <span className="text-xs text-textDim font-bold">Sprecherstimme Zielsprache:</span>
+                                              <select 
+                                                  value={selectedVoice} 
+                                                  onChange={(e) => setSelectedVoice(e.target.value)}
+                                                  className="bg-background border border-borderGlass text-xs text-white p-1.5 rounded-lg outline-none"
+                                              >
+                                                  <option value="alloy">Alloy (Dynamisch)</option>
+                                                  <option value="echo">Echo (Klar & Neutral)</option>
+                                                  <option value="nova">Nova (Weiblich/Sanft)</option>
+                                                  <option value="onyx">Onyx (Tief & Markant)</option>
+                                              </select>
+                                          </div>
+                                      )}
+                                  </div>
+                              )}
+                          </div>
+
+                          {/* Hook Title (Vorausgefüllt & frei editierbar) */}
+                          <div className="bg-background/40 p-4 rounded-xl border border-borderGlass space-y-2">
+                              <div className="flex justify-between items-center">
+                                  <label className="block text-xs font-bold text-white uppercase tracking-wider">Video-Titel / Hook (Frei editierbar)</label>
+                                  <span className="text-[9px] text-mimaros-gold font-mono font-bold">✨ Aus Transkript generiert</span>
+                              </div>
                               <input 
                                   type="text" 
                                   value={hookHeader}
                                   onChange={(e) => setHookHeader(e.target.value)}
+                                  placeholder="Warte auf Transkription..."
                                   className="w-full bg-panel border border-borderGlass rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-mimaros-blue"
                               />
-
-                              {/* KI-Voiceover Panel */}
-                              <div className="bg-panel/60 border border-borderGlass/50 rounded-xl p-4 space-y-3">
-                                  <div className="flex items-center justify-between">
-                                      <div className="flex items-center gap-2">
-                                          <Volume2 className="w-4 h-4 text-mimaros-blue" />
-                                          <span className="text-xs font-bold text-white">KI-Voiceover Sprecherstimme</span>
-                                      </div>
-                                      <select 
-                                          value={selectedVoice} 
-                                          onChange={(e) => setSelectedVoice(e.target.value)}
-                                          className="bg-background border border-borderGlass text-xs text-white p-1.5 rounded-lg outline-none"
-                                      >
-                                          <option value="alloy">Alloy (Dynamisch)</option>
-                                          <option value="echo">Echo (Klar & Neutral)</option>
-                                          <option value="nova">Nova (Weiblich/Sanft)</option>
-                                          <option value="onyx">Onyx (Tief & Markant)</option>
-                                      </select>
-                                  </div>
-
-                                  <button
-                                      type="button"
-                                      onClick={handleGenerateVoiceover}
-                                      disabled={isGeneratingVoiceover || !hookHeader}
-                                      className="w-full py-2.5 px-4 bg-mimaros-blue/20 hover:bg-mimaros-blue/30 border border-mimaros-blue/40 text-mimaros-blue font-bold text-xs rounded-lg flex items-center justify-center gap-2 transition-all disabled:opacity-50"
-                                  >
-                                      {isGeneratingVoiceover ? <Loader2 className="w-4 h-4 animate-spin" /> : <Mic className="w-4 h-4" />}
-                                      {isGeneratingVoiceover ? "Generiere KI-Voiceover..." : "🎙️ Als KI-Voiceover generieren"}
-                                  </button>
-
-                                  {voiceoverUrl && (
-                                      <div className="pt-2">
-                                          <p className="text-[10px] text-mimaros-gold font-bold mb-1 font-mono">✅ Vorschau der KI-Audiospur:</p>
-                                          <audio src={voiceoverUrl} controls className="w-full h-9 rounded-lg bg-background" />
-                                      </div>
-                                  )}
-                              </div>
                           </div>
 
                           {/* Social-Media Beschreibung (Modus 1 & 2) */}

@@ -113,3 +113,40 @@ def generate_context_aware_title(transcript_text: str) -> str:
         print(f"Fehler bei kontextbezogener Titel-Generierung: {e}")
         words = transcript_text.strip().split()[:4]
         return " ".join(words).upper() + " 🔥"
+
+def generate_social_caption(transcript_text: str) -> str:
+    """
+    Generiert basierend auf dem echten gesprochenen Inhalt des Videos (Transkript)
+    eine ansprechende Social-Media-Beschreibung inkl. Hook, Call-to-Action und Hashtags.
+    """
+    if not transcript_text or not transcript_text.strip():
+        return "🔥 Schau dir dieses virale Short an!\n\n#viral #shorts #content"
+        
+    if not api_key:
+        return f"🔥 {transcript_text[:100]}...\n\n#viral #shorts #content"
+        
+    try:
+        try:
+            model = genai.GenerativeModel('gemini-2.5-flash')
+        except:
+            model = genai.GenerativeModel('gemini-1.5-flash')
+            
+        prompt = f"""
+        Du bist ein Social-Media-Manager für TikTok, Instagram Reels und YouTube Shorts.
+        Hier ist das gesprochene Transkript eines Kurzvideos:
+        "{transcript_text[:1000]}"
+        
+        Schreibe eine ansprechende, hoch-konvertierende Social-Media-Beschreibung für diesen Beitrag.
+        Sie sollte enthalten:
+        1. Einen knackigen Hook im ersten Satz.
+        2. 2-3 Sätze Zusammenfassung / Mehrwert.
+        3. Eine Frage / Call-to-Action für Kommentare.
+        4. 3-5 relevante Hashtags.
+        
+        Antworte direkt mit dem fertigen Text.
+        """
+        response = model.generate_content(prompt)
+        return response.text.strip() if response.text else "🔥 Schau dir dieses Video an!\n\n#viral #shorts"
+    except Exception as e:
+        print(f"Fehler bei Social Caption Generierung: {e}")
+        return f"🔥 {transcript_text[:150]}...\n\n#viral #shorts"
