@@ -84,8 +84,10 @@ export default function Page() {
   // Multi-Step Wizard Architecture (Step 1, 2, 3)
   const [wizardStep, setWizardStep] = useState<1 | 2 | 3>(1);
   const [selectedMode, setSelectedMode] = useState<'standard' | 'youtube' | 'reaction' | null>(null);
+  const [modus1Option, setModus1Option] = useState<'one_to_one' | 'auto_highlights'>('one_to_one');
+  const [autoGenerateAIContent, setAutoGenerateAIContent] = useState<boolean>(true);
   const [reactionFile, setReactionFile] = useState<File | null>(null);
-  const [socialCaption, setSocialCaption] = useState<string>('🔥 DAS DARFST DU NICHT VERPASSEN!\n\nIn diesem Video zeigen wir dir die besten Strategien für maximalen Erfolg.\n\n#viral #shorts #mimaros #content');
+  const [socialCaption, setSocialCaption] = useState<string>('');
   const [previewObjectUrl, setPreviewObjectUrl] = useState<string>('');
 
   const handleResetToStep1 = () => {
@@ -226,6 +228,15 @@ export default function Page() {
       setWizardStep(3);
       return;
     }
+
+    if (!autoGenerateAIContent) {
+      // Nutzer möchte KI-Generierung nicht -> Textfelder bleiben manuell/leer
+      setHookHeader('');
+      setSocialCaption('');
+      setWizardStep(3);
+      return;
+    }
+
     setIsAnalyzingSection(true);
     try {
       const formData = new FormData();
@@ -707,31 +718,53 @@ export default function Page() {
 
                   {/* 3 Große Auswahl-Kacheln */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                      {/* Modus 1 */}
-                      <button 
-                          onClick={() => {
-                              setSelectedMode('standard');
-                              setIsSequenceMode(false);
-                              setWizardStep(2);
-                          }}
-                          className="bg-background/50 hover:bg-panel/80 border border-borderGlass hover:border-mimaros-blue p-6 rounded-2xl flex flex-col text-left space-y-4 transition-all duration-300 group shadow-glass hover:shadow-blue-glow transform hover:-translate-y-1"
-                      >
+                      {/* Modus 1 - Option A & B */}
+                      <div className="bg-background/50 border border-borderGlass hover:border-mimaros-blue p-6 rounded-2xl flex flex-col justify-between space-y-4 transition-all duration-300 shadow-glass">
                           <div className="flex items-center justify-between w-full">
-                              <div className="w-12 h-12 rounded-xl bg-mimaros-blue/10 border border-mimaros-blue/30 flex items-center justify-center text-mimaros-blue group-hover:scale-110 transition-transform">
+                              <div className="w-12 h-12 rounded-xl bg-mimaros-blue/10 border border-mimaros-blue/30 flex items-center justify-center text-mimaros-blue">
                                   <UploadCloud className="w-6 h-6" />
                               </div>
                               <span className="bg-mimaros-blue/20 text-mimaros-blue font-bold text-[10px] uppercase px-2.5 py-1 rounded-full border border-mimaros-blue/30">Modus 1</span>
                           </div>
                           <div>
-                              <h3 className="font-heading font-bold text-lg text-white group-hover:text-mimaros-blue transition-colors">Standard Untertitelung</h3>
-                              <p className="text-xs text-textDim mt-2 leading-relaxed">
-                                  Lade ein Video hoch. Das System fügt Design, Untertitel, kontextbezogenen Auto-Titel und Social-Media-Beschreibung hinzu.
+                              <h3 className="font-heading font-bold text-lg text-white">Video Upload & Untertitel</h3>
+                              <p className="text-xs text-textDim mt-1 leading-relaxed">
+                                  Wähle deine bevorzugte Verarbeitungs-Option für dein hochgeladenes Video:
                               </p>
                           </div>
-                          <div className="pt-2 text-xs font-bold text-mimaros-blue flex items-center gap-1 group-hover:translate-x-1 transition-transform">
-                              Video Upload auswählen →
+
+                          <div className="space-y-2 pt-2">
+                              {/* Option A */}
+                              <button
+                                  type="button"
+                                  onClick={() => {
+                                      setSelectedMode('standard');
+                                      setModus1Option('one_to_one');
+                                      setIsSequenceMode(false);
+                                      setWizardStep(2);
+                                  }}
+                                  className="w-full p-3 rounded-xl border border-mimaros-blue/40 bg-mimaros-blue/10 hover:bg-mimaros-blue/20 text-left transition-all group"
+                              >
+                                  <p className="text-xs font-bold text-white group-hover:text-mimaros-blue">Option A: 1:1 Untertitelung</p>
+                                  <p className="text-[10px] text-textDim mt-0.5">Video behält 100% seiner Originallänge. Fügt CI-Design & Untertitel hinzu.</p>
+                              </button>
+
+                              {/* Option B */}
+                              <button
+                                  type="button"
+                                  onClick={() => {
+                                      setSelectedMode('standard');
+                                      setModus1Option('auto_highlights');
+                                      setIsSequenceMode(false);
+                                      setWizardStep(2);
+                                  }}
+                                  className="w-full p-3 rounded-xl border border-borderGlass hover:border-mimaros-gold bg-background/40 hover:bg-mimaros-gold/10 text-left transition-all group"
+                              >
+                                  <p className="text-xs font-bold text-white group-hover:text-mimaros-gold">Option B: Auto-Shorts Highlights</p>
+                                  <p className="text-[10px] text-textDim mt-0.5">KI analysiert den Inhalt & schneidet automatisch die spannendsten Passagen zusammen.</p>
+                              </button>
                           </div>
-                      </button>
+                      </div>
 
                       {/* Modus 2 */}
                       <button 
@@ -896,6 +929,26 @@ export default function Page() {
                                       />
                                   </div>
                               </div>
+                          </div>
+
+                          {/* AI-Content Toggle (Kein API Call bei Klick!) */}
+                          <div className="bg-background/40 p-4 rounded-xl border border-borderGlass/60 flex items-center justify-between">
+                              <div>
+                                  <p className="text-xs font-bold text-white flex items-center gap-2">
+                                      <Sparkles className="w-4 h-4 text-mimaros-gold" />
+                                      Titel & Social-Media-Text per KI generieren
+                                  </p>
+                                  <p className="text-[10px] text-textDim mt-0.5">
+                                      Wird zwingend erst NACH der Transkription aus dem echten Inhalt abgeleitet.
+                                  </p>
+                              </div>
+                              <button 
+                                  type="button"
+                                  onClick={() => setAutoGenerateAIContent(!autoGenerateAIContent)}
+                                  className={`relative inline-flex h-6 w-11 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${autoGenerateAIContent ? 'bg-mimaros-blue shadow-blue-glow' : 'bg-background border border-borderGlass'}`}
+                              >
+                                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${autoGenerateAIContent ? 'translate-x-5' : 'translate-x-0'}`} />
+                              </button>
                           </div>
 
                           {/* Einziges Button in Step 2 */}
