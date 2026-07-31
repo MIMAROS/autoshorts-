@@ -676,19 +676,21 @@ export default function Page() {
                             )}
                         </div>
 
-                        {/* Metadata & Interactive Range Trimmer UI */}
-                        {(videoMetadata || localFile) && (
-                            <div className="bg-panel/60 border border-borderGlass rounded-2xl p-5 space-y-4 shadow-glass backdrop-blur-md">
-                                <div className="flex items-center gap-4 border-b border-borderGlass/50 pb-3">
-                                    <Scissors className="w-5 h-5 text-mimaros-blue shrink-0" />
-                                    <div className="flex-1">
+                        {/* Prominenter Video-Trimmer & Smart Silence Removal (Immer sichtbar) */}
+                        <div className="bg-panel/60 border border-borderGlass rounded-2xl p-5 space-y-4 shadow-glass backdrop-blur-md">
+                            <div className="flex items-center gap-4 border-b border-borderGlass/50 pb-3">
+                                <Scissors className="w-5 h-5 text-mimaros-blue shrink-0" />
+                                <div className="flex-1">
+                                    <div className="flex items-center gap-2">
                                         <h4 className="text-white font-bold text-sm">Manueller Video-Trimmer & Smart Jump-Cuts</h4>
-                                        <p className="text-textDim text-xs">Wähle den exakten Zeitbereich, der analysiert & per Silence-Removal verdichtet werden soll.</p>
+                                        <span className="bg-mimaros-blue/20 text-mimaros-blue text-[10px] font-extrabold px-2 py-0.5 rounded uppercase">NEU</span>
                                     </div>
-                                    <span className="bg-mimaros-blue/10 text-mimaros-blue text-xs font-bold px-3 py-1 rounded-full border border-mimaros-blue/20">
-                                        {trimStart !== '' && trimEnd !== '' ? `${Math.max(0, Number(trimEnd) - Number(trimStart))}s Bereich` : 'Ganzes Video'}
-                                    </span>
+                                    <p className="text-textDim text-xs">Wähle den exakten Bereich (Start- & Endzeit), der per Silence-Removal verdichtet werden soll.</p>
                                 </div>
+                                <span className="bg-mimaros-blue/10 text-mimaros-blue text-xs font-bold px-3 py-1 rounded-full border border-mimaros-blue/20 font-mono">
+                                    {trimStart !== '' && trimEnd !== '' ? `${Math.max(0, Number(trimEnd) - Number(trimStart))}s Bereich` : 'Ganzes Video'}
+                                </span>
+                            </div>
 
                                 {videoMetadata && (
                                     <div className="flex items-center gap-4 bg-background/40 p-3 rounded-xl border border-borderGlass/30">
@@ -774,7 +776,6 @@ export default function Page() {
                                     </div>
                                 </div>
                             </div>
-                        )}
                     </>
                 ) : (
                     <div className="bg-background/40 p-6 rounded-2xl border border-borderGlass space-y-4">
