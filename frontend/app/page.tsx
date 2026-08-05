@@ -594,7 +594,7 @@ export default function Page() {
     {/* Desktop Sidebar */}
     <div className={`hidden md:flex fixed inset-y-0 left-0 z-40 w-64 bg-panel/80 backdrop-blur-xl border-r border-borderGlass flex-col`}>
         <div className="p-6 flex items-center gap-3 border-b border-borderGlass">
-            <LogoIcon className="w-11 h-11 shrink-0 drop-shadow-[0_0_12px_rgba(20,174,234,0.4)]" />
+            <Logo className="w-10 h-10 shrink-0 drop-shadow-[0_0_12px_rgba(86,204,242,0.5)]" />
             <div>
                 <h1 className="font-heading font-bold text-lg tracking-tight text-white leading-none">
                     mimaros
@@ -1103,7 +1103,7 @@ export default function Page() {
                               <div className="absolute top-0 left-0 right-0 z-15 bg-[#0b192c]/85 flex flex-col items-center justify-center pt-2 pb-2.5 px-6 border-b-2" style={{ borderColor: primaryColor }}>
                                   <div className="text-[7px] text-white/90 font-medium tracking-wider leading-none mb-1">mimaros.eu</div>
                                   <div className="text-[9px] text-white font-heading font-bold uppercase text-center px-6 max-w-[85%] w-full mx-auto break-words leading-tight">
-                                      {hookHeader || "DEIN VIRALER VIDEO TITEL"}
+                                      {hookHeader || (videoMetadata?.title ? videoMetadata.title.toUpperCase() : "TITEL WIRD AUS TRANSKRIPT GENERIERT")}
                                   </div>
                               </div>
                           )}

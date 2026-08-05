@@ -199,17 +199,22 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         jobs[job_id]["generated_caption"] = social_caption
         jobs[job_id]["transcript_text"] = full_transcript_text
         
-        # Modus 1 Auswertung (1:1 Untertitelung vs Auto-Highlights)
-        modus1_opt = subtitle_config.get("modus1Option") or subtitle_config.get("modus1_option") or subtitle_config.get("modus") or "one_to_one"
-        selected_mode = subtitle_config.get("selectedMode") or subtitle_config.get("mode") or ""
+        # HARTER 1:1 GUARD AM ANFANG DES SEKTOR-PROZESSING:
+        modus1_opt = str(subtitle_config.get("modus1Option") or subtitle_config.get("modus1_option") or subtitle_config.get("modus") or "").lower().strip()
+        selected_mode = str(subtitle_config.get("selectedMode") or subtitle_config.get("mode") or "").lower().strip()
+        req_clip_len = str(clip_length).lower().strip()
         
-        # RADIKALE STRIKTE IF-BEDINGUNG FÜR MODUS 1 (1:1 Video):
-        # Wenn der Modus 1:1 ist, DEAKTIVIERE JEDE FORM von Chunking, Szene-Erkennung oder Splitting!
-        is_one_to_one = (modus1_opt == "one_to_one" or selected_mode == "standard")
+        # Strikte Auswertung: mode == "1:1" or selected_mode == "single" or modus1_opt == "one_to_one"
+        is_one_to_one = (
+            modus1_opt in ["one_to_one", "1:1", "single", "1-to-1"] or 
+            selected_mode in ["standard", "single", "1:1", "one_to_one"] or 
+            req_clip_len in ["1:1", "single", "full"] or 
+            (modus1_opt != "auto_highlights" and selected_mode != "reaction" and selected_mode != "youtube")
+        )
         
         if is_one_to_one:
-            # 1:1 Video Export: Das Video wird KEINESFALLS in mehrere Teile aufgeteilt.
-            # Es wird als exakt EINE einzige, zusammenhängende Datei exportiert.
+            # HARTER MODUS 1 GUARD: JEDWEDES CLUSTERING, SZENE-SPLITTING ODER VARIANTEN-GENERIERUNG WIRD HART DEAKTIVIERT!
+            # Das Video wird ausschließlich durch das Silence/Filler-Word-Trimming geführt und als exakt EIN einzelnes Video exportiert.
             start_sec = float(trim_start) if trim_start is not None else 0.0
             end_sec = float(trim_end) if (trim_end is not None and trim_end > start_sec) else 0.0
             
@@ -231,7 +236,7 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
                 "title": hook_title,
                 "start_time_approx": start_sec,
                 "end_time_approx": end_sec,
-                "rationale": "Modus 1 - Striktes 1:1 Einzelvideo (Kein Splitting/Chunking)",
+                "rationale": "Modus 1 - Harter 1:1 Einzelvideo Guard (Kein Splitting/Chunking)",
                 "social_media_caption": social_caption,
                 "viral_score": 100
             }]
