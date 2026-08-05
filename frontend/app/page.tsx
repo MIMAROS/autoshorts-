@@ -13,9 +13,8 @@ const LogoIcon = ({ className = "w-10 h-10 md:w-12 md:h-12 shrink-0" }: { classN
         <stop offset="100%" stopColor="#F2994A" />
       </linearGradient>
     </defs>
-    <circle cx="50" cy="50" r="44" fill="none" stroke="url(#mimarosGrad)" strokeWidth="3.5"/>
-    <path d="M 34 10.65 L 34 89.35 M 66 10.65 L 66 89.35" fill="none" stroke="url(#mimarosGrad)" strokeWidth="3.5" strokeLinecap="round"/>
-    <polygon points="44,42 44,58 56,50" fill="url(#mimarosGrad)"/>
+    <circle cx="50" cy="50" r="44" fill="none" stroke="url(#mimarosGrad)" strokeWidth="4"/>
+    <polygon points="42,34 42,66 68,50" fill="url(#mimarosGrad)"/>
   </svg>
 );
 
@@ -49,7 +48,7 @@ export default function Page() {
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
   
   // Global Design & Preview State
-  const [globalSubtitleConfig, setGlobalSubtitleConfig] = useState({ design: 'minimalist', cta: 'follow', text: '', template: 'clean_lower_third', watermark_text: 'mimaros.eu' });
+  const [globalSubtitleConfig, setGlobalSubtitleConfig] = useState({ design: 'mimaros_clean', cta: 'follow', text: '', template: 'clean_lower_third', watermark_text: 'mimaros.eu' });
   const [useMasterCi, setUseMasterCi] = useState(true);
   const [primaryColor, setPrimaryColor] = useState('#14AEEA');
   const [textColor, setTextColor] = useState('#ffffff');
@@ -1144,16 +1143,43 @@ export default function Page() {
                           )}
                           {showSubtitles && (
                               <div className="absolute bottom-10 left-2 right-2 z-15 flex flex-col items-center justify-center text-center">
-                                  <div 
-                                      className="px-2.5 py-1 rounded-md font-bold uppercase text-[9px] tracking-wide shadow-lg border border-white/10 backdrop-blur-sm"
-                                      style={{
-                                          backgroundColor: 'rgba(11,17,26,0.85)',
-                                          color: textColor,
-                                          fontFamily: fontName
-                                      }}
-                                  >
-                                      <span style={{ color: highlightColor }}>DYNAMISCHE</span> UNTERTITEL VORSCHAU
-                                  </div>
+                                  {globalSubtitleConfig.design === 'mimaros_clean' && (
+                                      <div className="px-3 py-1.5 rounded-lg border border-[#C89B31]/50 bg-[#0b111a]/90 text-[9px] font-bold text-white tracking-widest uppercase shadow-xl backdrop-blur-md">
+                                          <span className="text-[#C89B31] font-black">MIMAROS</span> CLEAN STIL
+                                      </div>
+                                  )}
+                                  {globalSubtitleConfig.design === 'karaoke' && (
+                                      <div className="px-2.5 py-1 rounded-md bg-black/80 text-[10px] font-extrabold uppercase tracking-wide border border-white/10" style={{ color: textColor }}>
+                                          <span style={{ color: highlightColor || '#56CCF2' }}>KARAOKE</span> HIGHLIGHT
+                                      </div>
+                                  )}
+                                  {globalSubtitleConfig.design === 'dynamic_box' && (
+                                      <div className="px-3 py-1.5 rounded-lg font-black text-[10px] uppercase shadow-lg tracking-wider text-white" style={{ backgroundColor: primaryColor || '#14AEEA' }}>
+                                          DYNAMIC BOX STIL
+                                      </div>
+                                  )}
+                                  {globalSubtitleConfig.design === 'popup_bouncy' && (
+                                      <div className="text-[13px] font-black uppercase text-white animate-bounce drop-shadow-[0_4px_12px_rgba(242,153,74,0.8)]">
+                                          <span style={{ color: highlightColor || '#F2994A' }}>POP-UP</span> BOUNCY
+                                      </div>
+                                  )}
+                                  {globalSubtitleConfig.design === 'hormozi' && (
+                                      <div className="text-[12px] font-black uppercase tracking-tighter drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] bg-black/50 px-2 py-0.5 rounded border border-yellow-500/30">
+                                          <span className="text-[#FFFF00]">HORMOZI</span> <span className="text-[#00FF00]">STYLE</span>
+                                      </div>
+                                  )}
+                                  {globalSubtitleConfig.design !== 'mimaros_clean' && globalSubtitleConfig.design !== 'karaoke' && globalSubtitleConfig.design !== 'dynamic_box' && globalSubtitleConfig.design !== 'popup_bouncy' && globalSubtitleConfig.design !== 'hormozi' && (
+                                      <div 
+                                          className="px-2.5 py-1 rounded-md font-bold uppercase text-[9px] tracking-wide shadow-lg border border-white/10 backdrop-blur-sm"
+                                          style={{
+                                              backgroundColor: 'rgba(11,17,26,0.85)',
+                                              color: textColor,
+                                              fontFamily: fontName
+                                          }}
+                                      >
+                                          <span style={{ color: highlightColor }}>DYNAMISCHE</span> UNTERTITEL VORSCHAU
+                                      </div>
+                                  )}
                               </div>
                           )}
                       </div>
@@ -1482,18 +1508,28 @@ export default function Page() {
               </div>
           </div>
       )}
-      {/* Splash Screen / Ladebildschirm mit aktualisiertem Logo */}
+      {/* Splash Screen / Ladebildschirm mit neuem minimalistischem Logo & responsivem Ladebalken */}
       {isProcessing && (
-          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-xl p-6">
-              <div className="w-28 h-28 mb-6 animate-pulse drop-shadow-[0_0_25px_rgba(86,204,242,0.6)]">
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 backdrop-blur-2xl p-4 sm:p-6 overflow-hidden max-w-full">
+              <div className="w-24 h-24 sm:w-28 sm:h-28 mb-6 animate-pulse drop-shadow-[0_0_30px_rgba(86,204,242,0.7)]">
                   <LogoIcon className="w-full h-full" />
               </div>
-              <h3 className="text-2xl font-black font-heading text-white tracking-wide mb-2">
+              <h3 className="text-xl sm:text-2xl font-black font-heading text-white tracking-wide mb-2 text-center">
                   Verarbeite Video...
               </h3>
-              <p className="text-textDim text-sm max-w-md text-center">
-                  {statusMessage || "Smart Trimming, 1:1 Untertitelung & Design-Export werden angewendet."}
+              <p className="text-textDim text-xs sm:text-sm max-w-md text-center mb-6 px-4 leading-relaxed">
+                  {statusMessage || "Smart Trimming, Untertitelung & Design-Export werden angewendet."}
               </p>
+
+              {/* Responsiver Ladebalken */}
+              <div className="w-full max-w-xs sm:max-w-md bg-panel border border-borderGlass rounded-full p-1 shadow-2xl relative overflow-hidden">
+                  <div 
+                      className="bg-gradient-to-r from-[#56CCF2] to-[#F2994A] h-3 sm:h-4 rounded-full transition-all duration-500 relative"
+                      style={{ width: `${Math.max(10, Math.min(100, parseInt(statusMessage.match(/\((\d+)%\)/)?.[1] || '45')))}%` }}
+                  >
+                      <div className="absolute inset-0 bg-white/25 animate-pulse rounded-full" />
+                  </div>
+              </div>
           </div>
       )}
     </div>

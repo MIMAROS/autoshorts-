@@ -8,9 +8,8 @@ export const Logo = ({ className = "w-full h-full" }: { className?: string }) =>
         <stop offset="100%" stopColor="#F2994A" />
       </linearGradient>
     </defs>
-    <circle cx="50" cy="50" r="44" fill="none" stroke="url(#mimarosGrad)" strokeWidth="3.5"/>
-    <path d="M 34 10.65 L 34 89.35 M 66 10.65 L 66 89.35" fill="none" stroke="url(#mimarosGrad)" strokeWidth="3.5" strokeLinecap="round"/>
-    <polygon points="44,42 44,58 56,50" fill="url(#mimarosGrad)"/>
+    <circle cx="50" cy="50" r="44" fill="none" stroke="url(#mimarosGrad)" strokeWidth="4"/>
+    <polygon points="42,34 42,66 68,50" fill="url(#mimarosGrad)"/>
   </svg>
 );
 
