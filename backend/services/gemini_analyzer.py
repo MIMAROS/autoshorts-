@@ -83,14 +83,14 @@ def analyze_hooks(transcript_segments: list, clip_length: str = "auto") -> list:
 def generate_context_aware_title(transcript_text: str) -> str:
     """
     Generiert basierend auf dem echten gesprochenen Inhalt des Videos (Transkript)
-    einen extrem kurzen, viralen Hook-Titel (max. 3-5 Wörter in GROSSBUCHSTABEN).
+    einen extrem kurzen, prägnanten Hook-Titel (max. 3-5 Wörter in GROSSBUCHSTABEN).
     """
     if not transcript_text or not transcript_text.strip():
-        return "DAS DARFST DU NICHT VERPASSEN 🔥"
+        return "VIDEO HOOK"
         
     if not api_key:
-        words = transcript_text.strip().split()[:4]
-        return " ".join(words).upper() + " 🔥" if words else "VIRALES VIDEO SHORT 🔥"
+        words = [w for w in transcript_text.strip().split() if len(w) > 2][:4]
+        return " ".join(words).upper() if words else "VIDEO HOOK"
         
     try:
         try:
@@ -99,20 +99,21 @@ def generate_context_aware_title(transcript_text: str) -> str:
             model = genai.GenerativeModel('gemini-1.5-flash')
             
         prompt = f"""
-        Du bist ein Social-Media-Experte für virale Shorts & TikToks.
+        Du bist ein Social-Media-Experte für Kurzvideos (TikTok, Shorts, Reels).
         Hier ist das gesprochene Transkript eines Kurzvideos:
         "{transcript_text[:1000]}"
         
-        Generiere basierend auf EXAKT diesem inhaltlichen Kontext einen extrem kurzen, extrem viralen Hook-Titel (max. 3-5 Worte in GROSSBUCHSTABEN, z.B. DIESEN TRICK VERMEIDEN 🔥).
+        Generiere basierend auf EXAKT diesem inhaltlichen Kontext einen extrem kurzen, prägnanten Hook-Titel (max. 3-5 Worte in GROSSBUCHSTABEN).
+        Der Titel MUSS sich zwingend auf das tatsächliche Thema beziehen. Keinerlei generische Clickbait-Floskeln ("DAS DARFST DU NICHT VERPASSEN", "VIRALES DING").
         Antworte AUSSCHLIESSLICH mit dem nackten Titel-Text ohne Anführungszeichen, ohne Markdown und ohne Erklärung.
         """
         response = model.generate_content(prompt)
         title = response.text.strip().replace('"', '').replace("'", "")
-        return title.upper() if title else "DAS DARFST DU NICHT VERPASSEN 🔥"
+        return title.upper() if title else " ".join(transcript_text.strip().split()[:4]).upper()
     except Exception as e:
         print(f"Fehler bei kontextbezogener Titel-Generierung: {e}")
-        words = transcript_text.strip().split()[:4]
-        return " ".join(words).upper() + " 🔥"
+        words = [w for w in transcript_text.strip().split() if len(w) > 2][:4]
+        return " ".join(words).upper() if words else "VIDEO HOOK"
 
 def generate_social_caption(transcript_text: str) -> str:
     """

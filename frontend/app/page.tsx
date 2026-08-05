@@ -4,18 +4,10 @@ const FullCalendar = dynamic(() => import('@fullcalendar/react'), { ssr: false }
 import dayGridPlugin from '@fullcalendar/daygrid';
 import { useState, useRef, useEffect } from 'react';
 import { Play, Scissors, Subtitles, UploadCloud, Loader2, Sparkles, Calendar, Check, Settings, X, Clock, Video, Home, Menu, Share2, Download, Edit2, TrendingUp, Flame, Type, MonitorPlay, ChevronUp, ChevronDown, Layout, Volume2, Mic } from 'lucide-react';
+import Logo from '../components/Logo';
 
 const LogoIcon = ({ className = "w-10 h-10 md:w-12 md:h-12 shrink-0" }: { className?: string }) => (
-  <svg viewBox="0 0 100 100" className={`shrink-0 ${className}`}>
-    <defs>
-      <linearGradient id="mimarosGrad" x1="0%" y1="0%" x2="0%" y2="100%">
-        <stop offset="0%" stopColor="#56CCF2" />
-        <stop offset="100%" stopColor="#F2994A" />
-      </linearGradient>
-    </defs>
-    <circle cx="50" cy="50" r="44" fill="none" stroke="url(#mimarosGrad)" strokeWidth="4"/>
-    <polygon points="42,34 42,66 68,50" fill="url(#mimarosGrad)"/>
-  </svg>
+  <Logo className={className} />
 );
 
 const API_BASE = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL)
@@ -1059,32 +1051,6 @@ export default function Page() {
                               )}
                           </div>
 
-                          {/* Hook Title (Vorausgefüllt & frei editierbar) */}
-                          <div className="bg-background/40 p-4 rounded-xl border border-borderGlass space-y-2">
-                              <div className="flex justify-between items-center">
-                                  <label className="block text-xs font-bold text-white uppercase tracking-wider">Video-Titel / Hook (Frei editierbar)</label>
-                                  <span className="text-[9px] text-mimaros-gold font-mono font-bold">✨ Aus Transkript generiert</span>
-                              </div>
-                              <input 
-                                  type="text" 
-                                  value={hookHeader}
-                                  onChange={(e) => setHookHeader(e.target.value)}
-                                  placeholder="Warte auf Transkription..."
-                                  className="w-full bg-panel border border-borderGlass rounded-xl px-4 py-3 text-sm text-white outline-none focus:border-mimaros-blue"
-                              />
-                          </div>
-
-                          {/* Social-Media Beschreibung (Modus 1 & 2) */}
-                          <div className="bg-background/40 p-4 rounded-xl border border-borderGlass space-y-2">
-                              <label className="block text-xs font-bold text-white uppercase tracking-wider">Auto-generierte Social-Media-Beschreibung</label>
-                              <textarea 
-                                  rows={4}
-                                  value={socialCaption}
-                                  onChange={(e) => setSocialCaption(e.target.value)}
-                                  className="w-full bg-panel border border-borderGlass rounded-xl p-3 text-xs text-white outline-none focus:border-mimaros-blue"
-                              />
-                          </div>
-
                           {/* Untertitel Vorlagen */}
                           <div className="space-y-3">
                               <label className="block text-xs font-bold text-white uppercase tracking-wider">Untertitel Template auswählen</label>
@@ -1201,32 +1167,63 @@ export default function Page() {
                               )}
                           </div>
 
-                          <div className="flex-1 flex flex-col gap-4">
-                              <div className="flex justify-between items-start">
-                                  <h4 className="font-heading font-bold text-xl text-white">#{idx+1} {clip.title}</h4>
-                                  <div className="flex flex-col items-center bg-mimaros-blue/10 border border-mimaros-blue/30 rounded-xl px-4 py-2">
-                                      <span className="flex items-center gap-1 text-mimaros-gold font-bold text-xs uppercase tracking-wider"><Flame className="w-3 h-3"/> Viral Score</span>
-                                      <span className="text-2xl font-black font-heading text-white">{clip.viralScore}<span className="text-sm text-textDim">/100</span></span>
-                                  </div>
-                              </div>
-                              
-                              <p className="text-sm text-textDim bg-background/50 p-4 rounded-xl border border-borderGlass leading-relaxed">
-                                  {clip.rationale}
-                              </p>
+                           <div className="flex-1 flex flex-col gap-4 w-full">
+                               <div className="flex justify-between items-start flex-wrap gap-2">
+                                   <div>
+                                       <span className="text-[10px] text-mimaros-gold font-bold uppercase tracking-wider flex items-center gap-1">
+                                           <Sparkles className="w-3 h-3 text-mimaros-gold" /> Aus Video-Transkript generiert
+                                       </span>
+                                       <h4 className="font-heading font-bold text-xl text-white mt-0.5">#{idx+1} {clip.title}</h4>
+                                   </div>
+                                   <div className="flex flex-col items-center bg-mimaros-blue/10 border border-mimaros-blue/30 rounded-xl px-4 py-2">
+                                       <span className="flex items-center gap-1 text-mimaros-gold font-bold text-xs uppercase tracking-wider"><Flame className="w-3 h-3"/> Viral Score</span>
+                                       <span className="text-2xl font-black font-heading text-white">{clip.viralScore}<span className="text-sm text-textDim">/100</span></span>
+                                   </div>
+                               </div>
 
-                              <div className="mt-auto pt-4 flex gap-3">
-                                  <button onClick={() => { 
-                                      setSchedulingClip(clip); 
-                                      setScheduleForm(prev => ({...prev, caption: clip.social_media_caption || '', platforms: prev.platforms.length ? prev.platforms : ['YouTube Shorts']}));
-                                      setShowScheduleModal(true); 
-                                  }} className="flex-1 bg-mimaros-blue text-white py-3 rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-[#42c6ff] transition-all shadow-blue-glow text-sm">
-                                      <Calendar className="w-4 h-4"/> Einplanen & Posten
-                                  </button>
-                                  <button className="px-4 bg-background border border-borderGlass hover:border-white text-textDim hover:text-white py-3 rounded-xl font-bold flex justify-center items-center transition-all">
-                                      <Download className="w-4 h-4"/>
-                                  </button>
-                              </div>
-                          </div>
+                               {/* Aus Transkript-Kontext generierter Titel & Social Media Text (Final bearbeitbar) */}
+                               <div className="space-y-3 bg-background/50 p-4 rounded-xl border border-borderGlass">
+                                   <div>
+                                       <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-1">Generierter Video-Titel (Bearbeitbar)</label>
+                                       <input 
+                                           type="text" 
+                                           value={clip.title}
+                                           onChange={(e) => {
+                                               const updated = [...clips];
+                                               updated[idx].title = e.target.value;
+                                               setClips(updated);
+                                           }}
+                                           className="w-full bg-panel border border-borderGlass rounded-lg px-3 py-2 text-xs font-bold text-white outline-none focus:border-mimaros-blue"
+                                       />
+                                   </div>
+                                   <div>
+                                       <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-1">Generierte Social-Media Beschreibung</label>
+                                       <textarea 
+                                           rows={3}
+                                           value={clip.social_media_caption || `🔥 ${clip.title}\n\n#shorts #content`}
+                                           onChange={(e) => {
+                                               const updated = [...clips];
+                                               updated[idx].social_media_caption = e.target.value;
+                                               setClips(updated);
+                                           }}
+                                           className="w-full bg-panel border border-borderGlass rounded-xl p-3 text-xs text-white outline-none focus:border-mimaros-blue leading-relaxed"
+                                       />
+                                   </div>
+                               </div>
+
+                               <div className="mt-auto pt-2 flex gap-3">
+                                   <button onClick={() => { 
+                                       setSchedulingClip(clip); 
+                                       setScheduleForm(prev => ({...prev, caption: clip.social_media_caption || '', platforms: prev.platforms.length ? prev.platforms : ['YouTube Shorts']}));
+                                       setShowScheduleModal(true); 
+                                   }} className="flex-1 bg-mimaros-blue text-white py-3 rounded-xl font-bold flex justify-center items-center gap-2 hover:bg-[#42c6ff] transition-all shadow-blue-glow text-sm">
+                                       <Calendar className="w-4 h-4"/> Einplanen & Posten
+                                   </button>
+                                   <button className="px-4 bg-background border border-borderGlass hover:border-white text-textDim hover:text-white py-3 rounded-xl font-bold flex justify-center items-center transition-all">
+                                       <Download className="w-4 h-4"/>
+                                   </button>
+                               </div>
+                           </div>
                       </div>
                   ))}
               </div>
@@ -1385,18 +1382,24 @@ export default function Page() {
 
       {/* md:pl-64 shifts main content right on desktop to accommodate the fixed sidebar */}
       <main className="flex-1 flex flex-col relative z-10 overflow-y-auto h-screen md:pl-64">
-          <div className="md:hidden flex items-center justify-between p-4 border-b border-borderGlass bg-panel/80 backdrop-blur-xl sticky top-0 z-30">
-             <div className="flex items-center gap-2.5">
-                 <LogoIcon className="w-9 h-9 shrink-0 drop-shadow-[0_0_10px_rgba(20,174,234,0.4)]" />
+          {/* Header/Navbar mit sichtbarem Logo (Desktop & Mobile) */}
+          <header className="w-full border-b border-borderGlass bg-panel/85 backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 py-3.5 flex items-center justify-between shadow-glass">
+             <div className="flex items-center gap-3">
+                 <Logo className="w-10 h-10 shrink-0 drop-shadow-[0_0_12px_rgba(86,204,242,0.5)]" />
                  <div>
-                     <h1 className="font-heading font-bold text-base tracking-tight text-white leading-none">mimaros</h1>
-                     <span className="text-[9px] font-bold text-mimaros-blue uppercase block mt-0.5">AutoShorts AI</span>
+                     <h1 className="font-heading font-bold text-base sm:text-lg tracking-tight text-white leading-none">mimaros</h1>
+                     <span className="text-[9px] sm:text-[10px] font-bold text-mimaros-blue uppercase block mt-0.5 tracking-wider">AutoShorts AI</span>
                  </div>
              </div>
-             <button onClick={() => setIsMobileMenuOpen(true)} className="text-white p-2">
-                 <Menu className="w-6 h-6" />
-             </button>
-          </div>
+             <div className="flex items-center gap-3">
+                 <span className="hidden sm:inline-flex text-[10px] font-mono font-bold text-mimaros-gold bg-mimaros-gold/10 px-3 py-1 rounded-full border border-mimaros-gold/30">
+                     PRO v3.0
+                 </span>
+                 <button onClick={() => setIsMobileMenuOpen(true)} className="md:hidden text-white p-1.5 hover:bg-background/40 rounded-lg">
+                     <Menu className="w-6 h-6" />
+                 </button>
+             </div>
+          </header>
           
           {/* Add pb-24 padding bottom for mobile so the bottom navigation doesn't hide content */}
           <div className="p-4 md:p-8 pb-24 md:pb-8">
