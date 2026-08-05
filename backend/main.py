@@ -151,7 +151,7 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         else:
             video_path = download_video(url, output_path=f"temp/{job_id}", trim_start=trim_start, trim_end=trim_end)
         
-        # 2. Transkribieren
+        # 2. Transkribieren (Whisper)
         jobs[job_id] = {"status": "transcribing", "progress": 40, "hooks": [], "clips": []}
         transcript_data = transcribe_audio(video_path, video_lang, subtitle_lang)
         
@@ -171,26 +171,73 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
                 except Exception as e:
                     print(f"Fehler bei Voiceover Transkription: {e}")
         
-        # 3. KI Analyse mit Gemini / Custom Range Handling
+        # 3. BLOCKIERENDES TIMING für LLM: Aufruf ERST NACHDEM die Whisper-Transkription abgeschlossen ist!
         jobs[job_id] = {"status": "analyzing", "progress": 70, "hooks": [], "clips": []}
         
-        # Kontextbezogenen Titel aus dem echten Transkript generieren
-        full_transcript_text = " ".join([seg.get("text", "") for seg in transcript_data.get("segments", [])[:10]])
+        full_transcript_text = " ".join([seg.get("text", "") for seg in transcript_data.get("segments", [])]).strip()
+        context_title = "VIRALES VIDEO SHORT"
+        social_caption = ""
+        
         try:
-            from services.gemini_analyzer import generate_context_aware_title
-            context_title = generate_context_aware_title(full_transcript_text)
-            if not subtitle_config.get("hookHeader") or subtitle_config.get("hookHeader") == "DAS DARFST DU NICHT VERPASSEN 🔥":
-                subtitle_config["hookHeader"] = context_title
+            from services.gemini_analyzer import generate_context_aware_title, generate_social_caption
+            if full_transcript_text:
+                context_title = generate_context_aware_title(full_transcript_text)
+                social_caption = generate_social_caption(full_transcript_text)
+            else:
+                context_title = "VIRALES VIDEO SHORT 🔥"
+                social_caption = "🔥 Schau dir dieses virale Short an!\n\n#viral #shorts #mimaros"
         except Exception as e:
-            print(f"Fehler bei kontextbezogenem Titel: {e}")
+            print(f"Fehler bei LLM Titel/Caption Generierung aus Transkript: {e}")
+            context_title = subtitle_config.get("hookHeader") or "VIRALES VIDEO SHORT 🔥"
+            social_caption = f"🔥 {context_title}\n\n#viral #mimaros #shorts"
             
-        hook_title = subtitle_config.get("hookHeader", "VIRALES VIDEO SHORT").upper()
-        if trim_start is not None and trim_end is not None and trim_end > trim_start:
+        if not subtitle_config.get("hookHeader") or subtitle_config.get("hookHeader") == "DAS DARFST DU NICHT VERPASSEN 🔥":
+            subtitle_config["hookHeader"] = context_title
+            
+        hook_title = subtitle_config.get("hookHeader", context_title).upper()
+        
+        # Aktualisiere Job-Zustand mit den aus dem Transkript generierten Daten
+        jobs[job_id]["generated_title"] = context_title
+        jobs[job_id]["generated_caption"] = social_caption
+        jobs[job_id]["transcript_text"] = full_transcript_text
+        
+        # Modus 1 Auswertung (1:1 Untertitelung vs Auto-Highlights)
+        modus1_opt = subtitle_config.get("modus1Option") or subtitle_config.get("modus1_option") or "one_to_one"
+        is_one_to_one = (modus1_opt == "one_to_one")
+        
+        if is_one_to_one and (trim_start is None or trim_end is None):
+            # 1:1 Video Export: Das Video wird KEINESFALLS in mehrere Clips oder Shorts aufgeteilt.
+            # Es wird exakt EIN einzelnes finalisiertes Video exportiert.
+            import subprocess
+            video_duration = 0.0
+            try:
+                probe = subprocess.run(
+                    ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", video_path],
+                    capture_output=True, text=True, check=True
+                )
+                video_duration = float(probe.stdout.strip())
+            except Exception as e:
+                print(f"ffprobe duration error: {e}")
+                if transcript_data.get("segments"):
+                    video_duration = float(transcript_data["segments"][-1].get("end", 60.0))
+                else:
+                    video_duration = 60.0
+                
+            hooks = [{
+                "title": hook_title,
+                "start_time_approx": 0.0,
+                "end_time_approx": video_duration,
+                "rationale": "Modus 1 - 1:1 Untertitelung (Vollständiges 1:1 Video)",
+                "social_media_caption": social_caption,
+                "viral_score": 100
+            }]
+        elif trim_start is not None and trim_end is not None and trim_end > trim_start:
             hooks = [{
                 "title": hook_title,
                 "start_time_approx": trim_start,
                 "end_time_approx": trim_end,
                 "rationale": "Vom Nutzer definierter Zeitbereich mit Smart Trimming",
+                "social_media_caption": social_caption,
                 "viral_score": 95
             }]
         else:

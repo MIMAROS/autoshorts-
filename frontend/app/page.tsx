@@ -6,27 +6,16 @@ import { useState, useRef, useEffect } from 'react';
 import { Play, Scissors, Subtitles, UploadCloud, Loader2, Sparkles, Calendar, Check, Settings, X, Clock, Video, Home, Menu, Share2, Download, Edit2, TrendingUp, Flame, Type, MonitorPlay, ChevronUp, ChevronDown, Layout, Volume2, Mic } from 'lucide-react';
 
 const LogoIcon = ({ className = "w-10 h-10 md:w-12 md:h-12 shrink-0" }: { className?: string }) => (
-  <svg viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg" className={`w-10 h-10 md:w-12 md:h-12 shrink-0 max-w-[48px] max-h-[48px] ${className}`}>
+  <svg viewBox="0 0 100 100" className={`shrink-0 ${className}`}>
     <defs>
-      <linearGradient id="mimaros-brand-grad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#14AEEA" />
-        <stop offset="50%" stopColor="#0B7FA8" />
-        <stop offset="100%" stopColor="#C89B31" />
+      <linearGradient id="mimarosGrad" x1="0%" y1="0%" x2="0%" y2="100%">
+        <stop offset="0%" stopColor="#56CCF2" />
+        <stop offset="100%" stopColor="#F2994A" />
       </linearGradient>
-      <filter id="mimaros-glow-eff" x="-20%" y="-20%" width="140%" height="140%">
-        <feGaussianBlur stdDeviation="1.5" result="blur" />
-        <feComposite in="SourceGraphic" in2="blur" operator="over" />
-      </filter>
     </defs>
-    {/* 1. Feiner runder Außenkreis */}
-    <circle cx="32" cy="32" r="28" stroke="url(#mimaros-brand-grad)" strokeWidth="2.5" filter="url(#mimaros-glow-eff)" />
-    
-    {/* 2. Zwei vertikale parallele Linien (Smartphone 9:16 Ränder) */}
-    <line x1="22" y1="4" x2="22" y2="60" stroke="url(#mimaros-brand-grad)" strokeWidth="2" opacity="0.85" />
-    <line x1="42" y1="4" x2="42" y2="60" stroke="url(#mimaros-brand-grad)" strokeWidth="2" opacity="0.85" />
-    
-    {/* 3. Minimalistischer Play-Button exakt in der Mitte */}
-    <path d="M29 25.5L38 32L29 38.5V25.5Z" fill="url(#mimaros-brand-grad)" filter="url(#mimaros-glow-eff)" />
+    <circle cx="50" cy="50" r="44" fill="none" stroke="url(#mimarosGrad)" strokeWidth="3.5"/>
+    <path d="M 34 10.65 L 34 89.35 M 66 10.65 L 66 89.35" fill="none" stroke="url(#mimarosGrad)" strokeWidth="3.5" strokeLinecap="round"/>
+    <polygon points="44,42 44,58 56,50" fill="url(#mimarosGrad)"/>
   </svg>
 );
 
@@ -156,8 +145,6 @@ export default function Page() {
     fetchSchedules();
     fetchHistory();
     fetchAuthStatus();
-    setHookHeader(prev => prev || 'DAS DARFST DU NICHT VERPASSEN 🔥');
-    generateAutoTitle('VIRALES SHORTS VIDEO HOOK');
   }, []);
 
   const fetchAuthStatus = async () => {
@@ -445,7 +432,10 @@ export default function Page() {
           showSubtitles,
           showCTA,
           enable_dubbing: enableDubbing,
-          dubbing_voice: selectedVoice
+          dubbing_voice: selectedVoice,
+          modus1Option: selectedMode === 'standard' || !selectedMode ? modus1Option : (modus1Option || 'one_to_one'),
+          modus1_option: selectedMode === 'standard' || !selectedMode ? modus1Option : (modus1Option || 'one_to_one'),
+          selectedMode: selectedMode || 'standard'
       };
       
       let jobId = '';
@@ -534,11 +524,23 @@ export default function Page() {
             return;
           }
           
-          if (statusData.hooks && statusData.hooks.length > 0 && !hookHeader) {
-            setHookHeader(statusData.hooks[0].title);
+          if (statusData.generated_title) {
+            setHookHeader(statusData.generated_title);
+          }
+          if (statusData.generated_caption) {
+            setSocialCaption(statusData.generated_caption);
+          }
+          if (statusData.hooks && statusData.hooks.length > 0 && statusData.hooks[0].social_media_caption) {
+            setSocialCaption(statusData.hooks[0].social_media_caption);
           }
           
-          setStatusMessage(`Status: ${statusData.status} (${statusData.progress}%)`);
+          let phaseDesc = statusData.status;
+          if (statusData.status === 'downloading') phaseDesc = "Lade Video herunter...";
+          else if (statusData.status === 'transcribing') phaseDesc = "Transkribiere Audio mit Whisper...";
+          else if (statusData.status === 'analyzing') phaseDesc = "Generiere Titel & Beschreibung aus Transkript...";
+          else if (statusData.status === 'editing') phaseDesc = "Rendere 1:1 Video mit Untertiteln & CI-Design...";
+          
+          setStatusMessage(`${phaseDesc} (${statusData.progress || 0}%)`);
           
           if (statusData.status === 'done') {
             clearInterval(interval);
@@ -557,6 +559,9 @@ export default function Page() {
               clipPath: statusData.clips && statusData.clips[index] ? statusData.clips[index] : null
             }));
             setClips(newClips);
+            if (newClips.length > 0 && newClips[0].social_media_caption) {
+              setSocialCaption(newClips[0].social_media_caption);
+            }
             fetchHistory(); 
           }
         } catch (e) {
@@ -740,6 +745,7 @@ export default function Page() {
                                   onClick={() => {
                                       setSelectedMode('standard');
                                       setModus1Option('one_to_one');
+                                      setShowSubtitles(true);
                                       setIsSequenceMode(false);
                                       setWizardStep(2);
                                   }}
@@ -1123,11 +1129,30 @@ export default function Page() {
                           backgroundImage: "url('https://images.unsplash.com/photo-1616469829941-c7200edec809?auto=format&fit=crop&w=400&q=80')",
                           border: `4px solid ${primaryColor}`
                       }}>
+                          {showLogo && (
+                              <div className={`absolute z-20 ${logoPosition === 'top-left' ? 'top-3 left-3' : logoPosition === 'top-right' ? 'top-3 right-3' : logoPosition === 'bottom-left' ? 'bottom-3 left-3' : 'bottom-3 right-3'}`}>
+                                  <LogoIcon className="w-5 h-5 drop-shadow-[0_0_8px_rgba(86,204,242,0.6)]" />
+                              </div>
+                          )}
                           {showTitle && (
                               <div className="absolute top-0 left-0 right-0 z-15 bg-[#0b192c]/85 flex flex-col items-center justify-center pt-2 pb-2.5 px-6 border-b-2" style={{ borderColor: primaryColor }}>
                                   <div className="text-[7px] text-white/90 font-medium tracking-wider leading-none mb-1">mimaros.eu</div>
                                   <div className="text-[9px] text-white font-heading font-bold uppercase text-center px-6 max-w-[85%] w-full mx-auto break-words leading-tight">
                                       {hookHeader || "DEIN VIRALER VIDEO TITEL"}
+                                  </div>
+                              </div>
+                          )}
+                          {showSubtitles && (
+                              <div className="absolute bottom-10 left-2 right-2 z-15 flex flex-col items-center justify-center text-center">
+                                  <div 
+                                      className="px-2.5 py-1 rounded-md font-bold uppercase text-[9px] tracking-wide shadow-lg border border-white/10 backdrop-blur-sm"
+                                      style={{
+                                          backgroundColor: 'rgba(11,17,26,0.85)',
+                                          color: textColor,
+                                          fontFamily: fontName
+                                      }}
+                                  >
+                                      <span style={{ color: highlightColor }}>DYNAMISCHE</span> UNTERTITEL VORSCHAU
                                   </div>
                               </div>
                           )}
@@ -1455,6 +1480,20 @@ export default function Page() {
                       </button>
                   </div>
               </div>
+          </div>
+      )}
+      {/* Splash Screen / Ladebildschirm mit aktualisiertem Logo */}
+      {isProcessing && (
+          <div className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/90 backdrop-blur-xl p-6">
+              <div className="w-28 h-28 mb-6 animate-pulse drop-shadow-[0_0_25px_rgba(86,204,242,0.6)]">
+                  <LogoIcon className="w-full h-full" />
+              </div>
+              <h3 className="text-2xl font-black font-heading text-white tracking-wide mb-2">
+                  Verarbeite Video...
+              </h3>
+              <p className="text-textDim text-sm max-w-md text-center">
+                  {statusMessage || "Smart Trimming, 1:1 Untertitelung & Design-Export werden angewendet."}
+              </p>
           </div>
       )}
     </div>
