@@ -1051,6 +1051,21 @@ export default function Page() {
                               )}
                           </div>
 
+                          {/* Video-Titel Input (Echtzeit-Synchronisierung mit der Vorschau) */}
+                          <div className="bg-background/40 p-4 rounded-xl border border-borderGlass space-y-2">
+                              <label className="block text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
+                                  <span>Video-Titel / Hook Text (Echtzeit-Vorschau)</span>
+                                  <span className="text-[10px] text-mimaros-gold font-normal">Wird im Video-Overlay angezeigt</span>
+                              </label>
+                              <input 
+                                  type="text" 
+                                  value={hookHeader} 
+                                  onChange={(e) => setHookHeader(e.target.value)} 
+                                  placeholder="DEIN VIRALES SHORT TITEL HIER..." 
+                                  className="w-full bg-panel border border-borderGlass p-3 rounded-xl text-xs font-bold text-white outline-none focus:border-mimaros-blue"
+                              />
+                          </div>
+
                           {/* Untertitel Vorlagen */}
                           <div className="space-y-3">
                               <label className="block text-xs font-bold text-white uppercase tracking-wider">Untertitel Template auswählen</label>
@@ -1102,44 +1117,43 @@ export default function Page() {
                           {showTitle && (
                               <div className="absolute top-0 left-0 right-0 z-15 bg-[#0b192c]/85 flex flex-col items-center justify-center pt-2 pb-2.5 px-6 border-b-2" style={{ borderColor: primaryColor }}>
                                   <div className="text-[7px] text-white/90 font-medium tracking-wider leading-none mb-1">mimaros.eu</div>
-                                  <div className="text-[9px] text-white font-heading font-bold uppercase text-center px-6 max-w-[85%] w-full mx-auto break-words leading-tight">
-                                      {hookHeader || (videoMetadata?.title ? videoMetadata.title.toUpperCase() : "TITEL WIRD AUS TRANSKRIPT GENERIERT")}
+                                  <div className="text-[9px] text-white font-heading font-bold uppercase text-center px-4 max-w-[90%] w-full mx-auto break-words leading-tight">
+                                      {hookHeader ? hookHeader.toUpperCase() : (videoMetadata?.title ? videoMetadata.title.toUpperCase() : "DEIN VIDEO TITEL HIER")}
                                   </div>
                               </div>
                           )}
                           {showSubtitles && (
                               <div className="absolute bottom-10 left-2 right-2 z-15 flex flex-col items-center justify-center text-center">
-                                  <div className="bg-black/75 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/10 shadow-2xl flex items-center justify-center">
+                                  <div className="bg-black/80 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/15 shadow-2xl flex items-center justify-center">
                                       {globalSubtitleConfig.design === 'mimaros_clean' && (
-                                          <div className="px-3 py-1.5 rounded-lg border border-[#C89B31]/50 bg-[#0b111a]/90 text-[9px] font-bold text-white tracking-widest uppercase shadow-xl backdrop-blur-md">
+                                          <div className="px-3 py-1.5 rounded-lg border border-[#C89B31]/50 bg-black/80 text-[9px] font-bold text-white tracking-widest uppercase shadow-xl backdrop-blur-md">
                                               <span className="text-[#C89B31] font-black">MIMAROS</span> CLEAN STIL
                                           </div>
                                       )}
                                       {globalSubtitleConfig.design === 'karaoke' && (
-                                          <div className="px-2.5 py-1 rounded-md bg-black/90 text-[10px] font-extrabold uppercase tracking-wide border border-white/10" style={{ color: textColor }}>
+                                          <div className="px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-sm text-[10px] font-extrabold uppercase tracking-wide border border-white/10" style={{ color: textColor }}>
                                               <span style={{ color: highlightColor || '#56CCF2' }}>KARAOKE</span> HIGHLIGHT
                                           </div>
                                       )}
                                       {globalSubtitleConfig.design === 'dynamic_box' && (
-                                          <div className="px-3 py-1.5 rounded-lg font-black text-[10px] uppercase shadow-lg tracking-wider text-white" style={{ backgroundColor: primaryColor || '#14AEEA' }}>
+                                          <div className="px-3 py-1.5 rounded-lg font-black text-[10px] uppercase shadow-lg tracking-wider text-white bg-black/80 backdrop-blur-sm border border-white/10" style={{ backgroundColor: primaryColor || '#14AEEA' }}>
                                               DYNAMIC BOX STIL
                                           </div>
                                       )}
                                       {globalSubtitleConfig.design === 'popup_bouncy' && (
-                                          <div className="text-[13px] font-black uppercase text-white animate-bounce drop-shadow-[0_4px_12px_rgba(242,153,74,0.8)]">
+                                          <div className="px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-sm border border-white/10 text-[12px] font-black uppercase text-white animate-bounce drop-shadow-[0_4px_12px_rgba(242,153,74,0.8)]">
                                               <span style={{ color: highlightColor || '#F2994A' }}>POP-UP</span> BOUNCY
                                           </div>
                                       )}
                                       {globalSubtitleConfig.design === 'hormozi' && (
-                                          <div className="text-[12px] font-black uppercase tracking-tighter drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)] bg-black/50 px-2 py-0.5 rounded border border-yellow-500/30">
+                                          <div className="px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-sm border border-white/10 text-[12px] font-black uppercase tracking-tighter drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                                               <span className="text-[#FFFF00]">HORMOZI</span> <span className="text-[#00FF00]">STYLE</span>
                                           </div>
                                       )}
                                       {globalSubtitleConfig.design !== 'mimaros_clean' && globalSubtitleConfig.design !== 'karaoke' && globalSubtitleConfig.design !== 'dynamic_box' && globalSubtitleConfig.design !== 'popup_bouncy' && globalSubtitleConfig.design !== 'hormozi' && (
                                           <div 
-                                              className="px-2.5 py-1 rounded-md font-bold uppercase text-[9px] tracking-wide shadow-lg border border-white/10 backdrop-blur-sm"
+                                              className="px-3 py-1.5 rounded-lg font-bold uppercase text-[9px] tracking-wide shadow-lg border border-white/10 bg-black/80 backdrop-blur-sm"
                                               style={{
-                                                  backgroundColor: 'rgba(11,17,26,0.85)',
                                                   color: textColor,
                                                   fontFamily: fontName
                                               }}

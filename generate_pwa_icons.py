@@ -31,26 +31,27 @@ def create_mimaros_minimalist_icon(size):
     
     return img
 
-public_dir = r"C:\Users\Miguel\Projects\Sociel Meidia Auto Posting App\frontend\public"
+for base_path in [
+    r"C:\Users\Miguel\Documents\AutoShorts\frontend\public",
+    r"C:\Users\Miguel\Projects\Sociel Meidia Auto Posting App\frontend\public"
+]:
+    os.makedirs(base_path, exist_ok=True)
+    icon_192 = create_mimaros_minimalist_icon(192)
+    icon_192.save(os.path.join(base_path, "icon-192.png"), "PNG")
 
-# Create icons for PWA and iOS Apple Touch Icons
-icon_192 = create_mimaros_minimalist_icon(192)
-icon_192.save(os.path.join(public_dir, "icon-192.png"), "PNG")
+    icon_512 = create_mimaros_minimalist_icon(512)
+    icon_512.save(os.path.join(base_path, "icon-512.png"), "PNG")
+    icon_512.save(os.path.join(base_path, "icon.png"), "PNG")
 
-icon_512 = create_mimaros_minimalist_icon(512)
-icon_512.save(os.path.join(public_dir, "icon-512.png"), "PNG")
-icon_512.save(os.path.join(public_dir, "icon.png"), "PNG")
+    icon_180 = create_mimaros_minimalist_icon(180)
+    icon_180.save(os.path.join(base_path, "apple-touch-icon.png"), "PNG")
+    icon_180.save(os.path.join(base_path, "apple-touch-icon-precomposed.png"), "PNG")
 
-icon_180 = create_mimaros_minimalist_icon(180)
-icon_180.save(os.path.join(public_dir, "apple-touch-icon.png"), "PNG")
-icon_180.save(os.path.join(public_dir, "apple-touch-icon-precomposed.png"), "PNG")
+    icon_32 = create_mimaros_minimalist_icon(32)
+    icon_32.save(os.path.join(base_path, "favicon.ico"), "ICO", sizes=[(32, 32)])
+    icon_32.save(os.path.join(base_path, "favicon-32x32.png"), "PNG")
 
-# Favicons
-icon_32 = create_mimaros_minimalist_icon(32)
-icon_32.save(os.path.join(public_dir, "favicon.ico"), "ICO", sizes=[(32, 32)])
-icon_32.save(os.path.join(public_dir, "favicon-32x32.png"), "PNG")
+    icon_16 = create_mimaros_minimalist_icon(16)
+    icon_16.save(os.path.join(base_path, "favicon-16x16.png"), "PNG")
 
-icon_16 = create_mimaros_minimalist_icon(16)
-icon_16.save(os.path.join(public_dir, "favicon-16x16.png"), "PNG")
-
-print("All Minimalist PWA & Apple Touch Icons successfully generated!")
+print("All Minimalist PWA & Apple Touch Icons successfully generated for both directories!")

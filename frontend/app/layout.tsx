@@ -10,11 +10,11 @@ const poppins = Poppins({ weight: ['400', '600', '700'], subsets: ['latin'], var
 export const metadata: Metadata = {
   title: 'mimaros AutoShorts AI',
   description: 'Convert YouTube videos to viral Shorts',
-  manifest: '/manifest.json?v=4.0.0',
+  manifest: '/manifest.json?v=5.0.0',
   icons: {
-    icon: '/favicon.svg?v=4.0.0',
-    shortcut: '/favicon.ico?v=4.0.0',
-    apple: '/apple-touch-icon.png?v=4.0.0',
+    icon: '/favicon.svg?v=5.0.0',
+    shortcut: '/favicon.ico?v=5.0.0',
+    apple: '/apple-touch-icon.png?v=5.0.0',
   }
 }
 
@@ -26,11 +26,11 @@ export default function RootLayout({
   return (
     <html lang="de">
       <head>
-        <link rel="icon" href="/favicon.svg?v=4.0.0" type="image/svg+xml" />
-        <link rel="icon" href="/icon-192.png?v=4.0.0" sizes="192x192" type="image/png" />
-        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=4.0.0" />
-        <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon-precomposed.png?v=4.0.0" />
-        <link rel="shortcut icon" href="/favicon.ico?v=4.0.0" />
+        <link rel="icon" href="/favicon.svg?v=5.0.0" type="image/svg+xml" />
+        <link rel="icon" href="/icon-192.png?v=5.0.0" sizes="192x192" type="image/png" />
+        <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=5.0.0" />
+        <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon-precomposed.png?v=5.0.0" />
+        <link rel="shortcut icon" href="/favicon.ico?v=5.0.0" />
       </head>
       <body className={`${workSans.variable} ${lato.variable} ${josefin.variable} ${poppins.variable} font-sans bg-[#0B111A] text-[#EEF3F8]`}>
         {children}

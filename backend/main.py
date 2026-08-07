@@ -206,9 +206,8 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         
         is_one_to_one = (
             modus1_opt in ["one_to_one", "1:1", "single", "1-to-1"] or 
-            selected_mode in ["standard", "single", "1:1", "one_to_one"] or 
-            req_clip_len in ["1:1", "single", "full"] or 
-            (modus1_opt != "auto_highlights" and selected_mode != "reaction" and selected_mode != "youtube")
+            (selected_mode in ["standard", "single", "1:1", "one_to_one"] and modus1_opt != "auto_highlights") or 
+            req_clip_len in ["1:1", "single", "full"]
         )
         
         if is_one_to_one:
