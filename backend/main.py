@@ -199,12 +199,11 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         jobs[job_id]["generated_caption"] = social_caption
         jobs[job_id]["transcript_text"] = full_transcript_text
         
-        # HARTER 1:1 GUARD AM ANFANG DES SEKTOR-PROZESSING:
+        # HARTER 1:1 ISOLATIONS-GUARD (OPTION A - STRIKT EINZELNES VIDEO, KEINE HIGHLIGHT-ERKENNUNG)
         modus1_opt = str(subtitle_config.get("modus1Option") or subtitle_config.get("modus1_option") or subtitle_config.get("modus") or "").lower().strip()
         selected_mode = str(subtitle_config.get("selectedMode") or subtitle_config.get("mode") or "").lower().strip()
         req_clip_len = str(clip_length).lower().strip()
         
-        # Strikte Auswertung: mode == "1:1" or selected_mode == "single" or modus1_opt == "one_to_one"
         is_one_to_one = (
             modus1_opt in ["one_to_one", "1:1", "single", "1-to-1"] or 
             selected_mode in ["standard", "single", "1:1", "one_to_one"] or 
@@ -213,8 +212,9 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         )
         
         if is_one_to_one:
-            # HARTER MODUS 1 GUARD: JEDWEDES CLUSTERING, SZENE-SPLITTING ODER VARIANTEN-GENERIERUNG WIRD HART DEAKTIVIERT!
-            # Das Video wird ausschließlich durch das Silence/Filler-Word-Trimming geführt und als exakt EIN einzelnes Video exportiert.
+            # OPTION A: STRIKT ISOLIERTER 1:1 EXPORT (KEIN SPLITTING, KEIN GEMINI HIGHLIGHT CALL)
+            jobs[job_id] = {"status": "editing", "progress": 85, "hooks": [], "clips": []}
+            
             start_sec = float(trim_start) if trim_start is not None else 0.0
             end_sec = float(trim_end) if (trim_end is not None and trim_end > start_sec) else 0.0
             
@@ -232,15 +232,53 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
                     else:
                         end_sec = 60.0
                         
-            hooks = [{
+            single_hook = {
                 "title": hook_title,
                 "start_time_approx": start_sec,
                 "end_time_approx": end_sec,
-                "rationale": "Modus 1 - Harter 1:1 Einzelvideo Guard (Kein Splitting/Chunking)",
+                "rationale": "Option A - 1:1 Video (Strikt einzelnes 1:1 Video)",
                 "social_media_caption": social_caption,
                 "viral_score": 100
-            }]
-        elif trim_start is not None and trim_end is not None and trim_end > trim_start:
+            }
+            
+            export_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Fertige_Shorts")
+            os.makedirs(export_dir, exist_ok=True)
+            output_filename = f"AutoShort_{job_id}_1to1.mp4"
+            output_clip = os.path.join(export_dir, output_filename)
+            
+            process_clip(video_path, transcript_data, start_sec, end_sec, output_clip, resolution, subtitle_config)
+            
+            public_url = upload_file_to_supabase(output_clip, "autoshorts-storage", output_filename)
+            final_clip_url = public_url if public_url else f"/videos/{output_filename}"
+            if public_url:
+                try: os.remove(output_clip)
+                except: pass
+                
+            hooks = [single_hook]
+            clips = [final_clip_url]
+            
+            jobs[job_id] = {
+                "status": "done", 
+                "progress": 100, 
+                "hooks": hooks, 
+                "clips": clips, 
+                "generated_title": context_title, 
+                "generated_caption": social_caption
+            }
+            
+            # In Historie speichern
+            history = load_db()
+            history.insert(0, {
+                "job_id": job_id,
+                "title": hook_title,
+                "thumbnail": clips[0],
+                "clips": clips
+            })
+            save_db(history)
+            return
+
+        # OPTION B: MULTI-CLIP HIGHLIGHT ERKENNUNG (NUR FÜR AUTO-HIGHLIGHTS / YOUTUBE)
+        if trim_start is not None and trim_end is not None and trim_end > trim_start:
             hooks = [{
                 "title": hook_title,
                 "start_time_approx": trim_start,
@@ -277,7 +315,7 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
             else:
                 clips.append(f"/videos/{output_filename}")
         
-        jobs[job_id] = {"status": "done", "progress": 100, "hooks": hooks, "clips": clips}
+        jobs[job_id] = {"status": "done", "progress": 100, "hooks": hooks, "clips": clips, "generated_title": context_title, "generated_caption": social_caption}
         
         # In Historie abspeichern
         history = load_db()
