@@ -1,13 +1,15 @@
 fastapi
 uvicorn
 yt-dlp
+openai-whisper
+torch
+torchaudio
 faster-whisper
 google-generativeai
 ffmpeg-python
 pydantic
 python-dotenv
 supabase
-
 google-api-python-client
 google-auth-httplib2
 google-auth-oauthlib
