@@ -597,7 +597,7 @@ export default function Page() {
             <Logo className="w-10 h-10 shrink-0 drop-shadow-[0_0_12px_rgba(86,204,242,0.5)]" />
             <div>
                 <h1 className="font-heading font-bold text-lg tracking-tight text-white leading-none">
-                    mimaros
+                    MIMAROS
                 </h1>
                 <span className="text-[10px] font-bold tracking-widest text-mimaros-blue uppercase block mt-0.5">
                     AutoShorts AI
@@ -673,31 +673,31 @@ export default function Page() {
   const renderNewProject = () => (
       <div className="flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
           {/* Multi-Step Wizard Progress Bar */}
-          <div className="bg-panel/40 backdrop-blur-lg rounded-2xl border border-borderGlass shadow-glass p-4 flex items-center justify-between">
+          <div className="bg-panel/40 backdrop-blur-lg rounded-2xl border border-borderGlass shadow-glass p-3 sm:p-4 flex flex-wrap items-center justify-between gap-2 sm:gap-3">
               <button 
                   onClick={handleResetToStep1} 
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${wizardStep === 1 ? 'bg-mimaros-blue text-white shadow-blue-glow' : 'bg-background/40 text-textDim hover:text-white'}`}
+                  className={`flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex-1 min-w-[130px] sm:min-w-[160px] ${wizardStep === 1 ? 'bg-mimaros-blue text-white shadow-blue-glow' : 'bg-background/40 text-textDim hover:text-white'}`}
               >
-                  <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">1</span>
-                  1. Modus wählen
+                  <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] shrink-0">1</span>
+                  <span className="truncate">1. Modus wählen</span>
               </button>
-              <div className="h-px bg-borderGlass flex-1 mx-3" />
+              <div className="hidden lg:block h-px bg-borderGlass flex-1 mx-2" />
               <button 
                   disabled={wizardStep < 2} 
                   onClick={() => setWizardStep(2)} 
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${wizardStep === 2 ? 'bg-mimaros-blue text-white shadow-blue-glow' : 'bg-background/40 text-textDim hover:text-white disabled:opacity-40'}`}
+                  className={`flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex-1 min-w-[130px] sm:min-w-[160px] ${wizardStep === 2 ? 'bg-mimaros-blue text-white shadow-blue-glow' : 'bg-background/40 text-textDim hover:text-white disabled:opacity-40'}`}
               >
-                  <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">2</span>
-                  2. Vorschau & Trimming
+                  <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] shrink-0">2</span>
+                  <span className="truncate">2. Vorschau & Trimming</span>
               </button>
-              <div className="h-px bg-borderGlass flex-1 mx-3" />
+              <div className="hidden lg:block h-px bg-borderGlass flex-1 mx-2" />
               <button 
                   disabled={wizardStep < 3} 
                   onClick={() => setWizardStep(3)} 
-                  className={`flex items-center gap-3 px-4 py-2.5 rounded-xl font-bold text-xs transition-all ${wizardStep === 3 ? 'bg-mimaros-blue text-white shadow-blue-glow' : 'bg-background/40 text-textDim hover:text-white disabled:opacity-40'}`}
+                  className={`flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex-1 min-w-[130px] sm:min-w-[160px] ${wizardStep === 3 ? 'bg-mimaros-blue text-white shadow-blue-glow' : 'bg-background/40 text-textDim hover:text-white disabled:opacity-40'}`}
               >
-                  <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px]">3</span>
-                  3. Design & Generierung
+                  <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] shrink-0">3</span>
+                  <span className="truncate">3. Design & Generierung</span>
               </button>
           </div>
 
@@ -1116,7 +1116,7 @@ export default function Page() {
                           )}
                           {showTitle && (
                               <div className="absolute top-0 left-0 right-0 z-15 bg-[#0b192c]/85 flex flex-col items-center justify-center pt-2 pb-2.5 px-6 border-b-2" style={{ borderColor: primaryColor }}>
-                                  <div className="text-[7px] text-white/90 font-medium tracking-wider leading-none mb-1">mimaros.eu</div>
+                                  <div className="text-[7px] text-white/90 font-medium tracking-wider leading-none mb-1">MIMAROS.eu</div>
                                   <div className="text-[9px] text-white font-heading font-bold uppercase text-center px-4 max-w-[90%] w-full mx-auto break-words leading-tight">
                                       {hookHeader ? hookHeader.toUpperCase() : (videoMetadata?.title ? videoMetadata.title.toUpperCase() : "DEIN VIDEO TITEL HIER")}
                                   </div>
@@ -1403,7 +1403,7 @@ export default function Page() {
              <div className="flex items-center gap-3">
                  <Logo className="w-10 h-10 shrink-0 drop-shadow-[0_0_12px_rgba(86,204,242,0.5)]" />
                  <div>
-                     <h1 className="font-heading font-bold text-base sm:text-lg tracking-tight text-white leading-none">mimaros</h1>
+                     <h1 className="font-heading font-bold text-base sm:text-lg tracking-tight text-white leading-none">MIMAROS</h1>
                      <span className="text-[9px] sm:text-[10px] font-bold text-mimaros-blue uppercase block mt-0.5 tracking-wider">AutoShorts AI</span>
                  </div>
              </div>
