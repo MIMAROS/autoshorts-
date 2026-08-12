@@ -1,10 +1,6 @@
 fastapi
 uvicorn
 yt-dlp
-openai-whisper
-torch
-torchaudio
-faster-whisper
 google-generativeai
 ffmpeg-python
 pydantic
