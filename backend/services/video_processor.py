@@ -12,16 +12,18 @@ def ensure_fonts():
         "WorkSans-Bold.ttf": "https://fonts.gstatic.com/s/worksans/v24/QGY_z_wNahGAdqQ43RhVcIgYT2Xz5u32K67QBi8Jow.ttf",
         "Lato-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/lato/Lato-Bold.ttf",
         "Montserrat-Black.ttf": "https://fonts.gstatic.com/s/montserrat/v31/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCvC73w5aX8.ttf",
-        "Oswald-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/oswald/Oswald-Bold.ttf",
+        "Oswald-Bold.ttf": "https://fonts.gstatic.com/s/oswald/v57/TK3_WkUHHAIjg75cFRf3bXL8LICs1xZogUE.ttf",
         "Anton-Regular.ttf": "https://github.com/google/fonts/raw/main/ofl/anton/Anton-Regular.ttf"
     }
     
     for font_name, url in fonts.items():
         font_path = os.path.join(fonts_dir, font_name)
-        if not os.path.exists(font_path):
+        if not os.path.exists(font_path) or os.path.getsize(font_path) == 0:
             print(f"Downloading font {font_name}...")
             try:
-                urllib.request.urlretrieve(url, font_path)
+                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+                with urllib.request.urlopen(req) as resp, open(font_path, "wb") as out_file:
+                    out_file.write(resp.read())
             except Exception as e:
                 print(f"Error downloading {font_name}: {e}")
     return fonts_dir
