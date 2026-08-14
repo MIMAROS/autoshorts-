@@ -1,20 +1,14 @@
 import os
+from supabase import create_client, Client
 
-SUPABASE_URL = os.environ.get("SUPABASE_URL", "").strip()
-SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "").strip()
+SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
+SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 
-supabase = None
-
-if SUPABASE_URL and SUPABASE_KEY:
-    try:
-        from supabase import create_client, Client
-        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
-        print("Supabase Client erfolgreich initialisiert.")
-    except Exception as e:
-        print(f"Warnung: Supabase Client Initialisierung fehlgeschlagen ({e}). Verwende lokalen Speicher.")
-        supabase = None
-else:
-    print("Hinweis: SUPABASE_URL oder SUPABASE_KEY fehlen in Umgebungsvariablen. Verwende lokalen Speicher (/videos/).")
+try:
+    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+except Exception as e:
+    print(f"Error initializing Supabase client: {e}")
+    supabase = None
 
 def upload_file_to_supabase(local_file_path: str, bucket_name: str, remote_file_name: str) -> str:
     """
@@ -22,7 +16,7 @@ def upload_file_to_supabase(local_file_path: str, bucket_name: str, remote_file_
     Gibt im Fehlerfall (oder wenn Supabase nicht konfiguriert ist) None zurück.
     """
     if not supabase:
-        print("Supabase client nicht aktiv, verwende lokalen Server-Pfad.")
+        print("Supabase client not initialized.")
         return None
     try:
         with open(local_file_path, "rb") as f:

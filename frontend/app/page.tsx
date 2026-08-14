@@ -237,13 +237,13 @@ export default function Page() {
         if (data.title) setHookHeader(data.title.toUpperCase());
         if (data.caption) setSocialCaption(data.caption);
       } else {
-        setHookHeader("VIRALES VIDEO SHORT 🔥");
-        setSocialCaption("🔥 Schau dir dieses virale Short an!\n\n#viral #shorts");
+        setHookHeader("");
+        setSocialCaption("");
       }
     } catch (err) {
       console.error("Fehler bei Bereichs-Analyse:", err);
-      setHookHeader("VIRALES VIDEO SHORT 🔥");
-      setSocialCaption("🔥 Schau dir dieses virale Short an!\n\n#viral #shorts");
+      setHookHeader("");
+      setSocialCaption("");
     } finally {
       setIsAnalyzingSection(false);
       setWizardStep(3);
@@ -1067,7 +1067,7 @@ export default function Page() {
                                   type="text" 
                                   value={hookHeader} 
                                   onChange={(e) => setHookHeader(e.target.value)} 
-                                  placeholder="DEIN VIRALES SHORT TITEL HIER..." 
+                                  placeholder="Titel eingeben oder per KI generieren..." 
                                   className="w-full bg-panel border border-borderGlass p-3 rounded-xl text-xs font-bold text-white outline-none focus:border-mimaros-blue"
                               />
                           </div>
@@ -1081,7 +1081,7 @@ export default function Page() {
                                       { id: 'dynamic_box', name: 'Dynamic Box', desc: 'Farbige CI Backdrop Box' },
                                       { id: 'popup_bouncy', name: 'Pop-Up Bouncy', desc: '1-Wort Bouncy Text' },
                                       { id: 'hormozi', name: 'Hormozi Style', desc: 'Ultra Bold Anton Font' },
-                                      { id: 'mimaros_clean', name: 'mimaros Clean', desc: 'B2B Minimalist Fades' }
+                                      { id: 'mimaros_clean', name: 'MIMAROS Clean', desc: 'B2B Minimalist Fades' }
                                   ].map((tpl) => (
                                       <button 
                                           key={tpl.id}
@@ -1117,11 +1117,11 @@ export default function Page() {
                       }}>
                           {showLogo && (
                               <div className={`absolute z-30 ${logoPosition === 'top-left' ? 'top-3 left-3' : logoPosition === 'top-right' ? 'top-3 right-3' : logoPosition === 'bottom-left' ? 'bottom-3 left-3' : 'bottom-3 right-3'}`}>
-                                  <LogoIcon className="w-5 h-5 drop-shadow-[0_0_8px_rgba(86,204,242,0.6)]" />
+                                  <LogoIcon className="w-5 h-5 drop-shadow-[0_0_8px_rgba(20,174,234,0.6)]" />
                               </div>
                           )}
                           {showTitle && (
-                              <div className="absolute top-0 left-0 right-0 z-15 bg-[#0b192c]/85 flex flex-col items-center justify-center pt-2 pb-2.5 px-6 border-b-2" style={{ borderColor: primaryColor }}>
+                              <div className="absolute top-0 left-0 right-0 z-15 bg-[#064A63]/85 flex flex-col items-center justify-center pt-2 pb-2.5 px-6 border-b-2" style={{ borderColor: primaryColor }}>
                                   <div className="text-[7px] text-white/90 font-medium tracking-wider leading-none mb-1">MIMAROS.eu</div>
                                   <div className="text-[9px] text-white font-heading font-bold uppercase text-center px-4 max-w-[90%] w-full mx-auto break-words leading-tight">
                                       {hookHeader ? hookHeader.toUpperCase() : (videoMetadata?.title ? videoMetadata.title.toUpperCase() : "DEIN VIDEO TITEL HIER")}
@@ -1130,35 +1130,35 @@ export default function Page() {
                           )}
                           {showSubtitles && (
                               <div className="absolute bottom-10 left-2 right-2 z-15 flex flex-col items-center justify-center text-center">
-                                  <div className="bg-black/80 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/15 shadow-2xl flex items-center justify-center">
+                                  <div className="bg-[#064A63]/85 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/15 shadow-2xl flex items-center justify-center">
                                       {globalSubtitleConfig.design === 'mimaros_clean' && (
-                                          <div className="px-3 py-1.5 rounded-lg border border-[#C89B31]/50 bg-black/80 text-[9px] font-bold text-white tracking-widest uppercase shadow-xl backdrop-blur-md">
+                                          <div className="px-3 py-1.5 rounded-lg border border-[#C89B31]/50 bg-[#064A63]/90 text-[9px] font-bold text-white tracking-widest uppercase shadow-xl backdrop-blur-md">
                                               <span className="text-[#C89B31] font-black">MIMAROS</span> CLEAN STIL
                                           </div>
                                       )}
                                       {globalSubtitleConfig.design === 'karaoke' && (
-                                          <div className="px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-sm text-[10px] font-extrabold uppercase tracking-wide border border-white/10" style={{ color: textColor }}>
-                                              <span style={{ color: highlightColor || '#56CCF2' }}>KARAOKE</span> HIGHLIGHT
+                                          <div className="px-3 py-1.5 rounded-lg bg-[#064A63]/90 backdrop-blur-sm text-[10px] font-extrabold uppercase tracking-wide border border-white/10" style={{ color: textColor }}>
+                                              <span style={{ color: highlightColor || '#14AEEA' }}>KARAOKE</span> HIGHLIGHT
                                           </div>
                                       )}
                                       {globalSubtitleConfig.design === 'dynamic_box' && (
-                                          <div className="px-3 py-1.5 rounded-lg font-black text-[10px] uppercase shadow-lg tracking-wider text-white bg-black/80 backdrop-blur-sm border border-white/10" style={{ backgroundColor: primaryColor || '#14AEEA' }}>
+                                          <div className="px-3 py-1.5 rounded-lg font-black text-[10px] uppercase shadow-lg tracking-wider text-white bg-[#064A63]/90 backdrop-blur-sm border border-white/10" style={{ backgroundColor: primaryColor || '#14AEEA' }}>
                                               DYNAMIC BOX STIL
                                           </div>
                                       )}
                                       {globalSubtitleConfig.design === 'popup_bouncy' && (
-                                          <div className="px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-sm border border-white/10 text-[12px] font-black uppercase text-white animate-bounce drop-shadow-[0_4px_12px_rgba(242,153,74,0.8)]">
-                                              <span style={{ color: highlightColor || '#F2994A' }}>POP-UP</span> BOUNCY
+                                          <div className="px-3 py-1.5 rounded-lg bg-[#064A63]/90 backdrop-blur-sm border border-white/10 text-[12px] font-black uppercase text-white animate-bounce drop-shadow-[0_4px_12px_rgba(217,168,58,0.8)]">
+                                              <span style={{ color: highlightColor || '#D9A83A' }}>POP-UP</span> BOUNCY
                                           </div>
                                       )}
                                       {globalSubtitleConfig.design === 'hormozi' && (
-                                          <div className="px-3 py-1.5 rounded-lg bg-black/80 backdrop-blur-sm border border-white/10 text-[12px] font-black uppercase tracking-tighter drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
+                                          <div className="px-3 py-1.5 rounded-lg bg-[#064A63]/90 backdrop-blur-sm border border-white/10 text-[12px] font-black uppercase tracking-tighter drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
                                               <span className="text-[#FFFF00]">HORMOZI</span> <span className="text-[#00FF00]">STYLE</span>
                                           </div>
                                       )}
                                       {globalSubtitleConfig.design !== 'mimaros_clean' && globalSubtitleConfig.design !== 'karaoke' && globalSubtitleConfig.design !== 'dynamic_box' && globalSubtitleConfig.design !== 'popup_bouncy' && globalSubtitleConfig.design !== 'hormozi' && (
                                           <div 
-                                              className="px-3 py-1.5 rounded-lg font-bold uppercase text-[9px] tracking-wide shadow-lg border border-white/10 bg-black/80 backdrop-blur-sm"
+                                              className="px-3 py-1.5 rounded-lg font-bold uppercase text-[9px] tracking-wide shadow-lg border border-white/10 bg-[#064A63]/90 backdrop-blur-sm"
                                               style={{
                                                   color: textColor,
                                                   fontFamily: fontName
@@ -1406,9 +1406,9 @@ export default function Page() {
       <main className="flex-1 flex flex-col relative z-10 overflow-y-auto h-screen md:pl-64">
           {/* Header/Navbar mit sichtbarem Logo (Desktop & Mobile) */}
           <header className="w-full border-b border-borderGlass bg-panel/85 backdrop-blur-xl sticky top-0 z-30 px-4 sm:px-6 py-3.5 flex items-center justify-between shadow-glass">
-             <div className="flex items-center gap-3">
-                 <Logo className="w-10 h-10 shrink-0 drop-shadow-[0_0_12px_rgba(86,204,242,0.5)]" />
-                 <div>
+             <div className="flex items-center gap-3 shrink-0">
+                 <Logo className="w-9 h-9 sm:w-10 sm:h-10 shrink-0 block drop-shadow-[0_0_12px_rgba(20,174,234,0.5)]" />
+                 <div className="flex flex-col">
                      <h1 className="font-heading font-bold text-base sm:text-lg tracking-tight text-white leading-none">MIMAROS</h1>
                      <span className="text-[9px] sm:text-[10px] font-bold text-mimaros-blue uppercase block mt-0.5 tracking-wider">AutoShorts AI</span>
                  </div>

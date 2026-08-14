@@ -5,28 +5,61 @@ import uuid
 import urllib.request
 
 def ensure_fonts():
-    fonts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "fonts")
-    os.makedirs(fonts_dir, exist_ok=True)
+    """
+    Find and return the local fonts directory without any external HTTP downloads.
+    """
+    base_dir = os.path.dirname(os.path.abspath(__file__))
+    candidates = [
+        os.path.join(base_dir, "..", "fonts"),
+        os.path.join(base_dir, "..", "assets", "fonts"),
+        os.path.join(base_dir, "fonts"),
+        os.path.join(base_dir, "assets", "fonts"),
+    ]
+    for d in candidates:
+        if os.path.isdir(d):
+            return os.path.abspath(d)
     
-    fonts = {
-        "WorkSans-Bold.ttf": "https://fonts.gstatic.com/s/worksans/v24/QGY_z_wNahGAdqQ43RhVcIgYT2Xz5u32K67QBi8Jow.ttf",
-        "Lato-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/lato/Lato-Bold.ttf",
-        "Montserrat-Black.ttf": "https://fonts.gstatic.com/s/montserrat/v31/JTUHjIg1_i6t8kCHKm4532VJOt5-QNFgpCvC73w5aX8.ttf",
-        "Oswald-Bold.ttf": "https://fonts.gstatic.com/s/oswald/v57/TK3_WkUHHAIjg75cFRf3bXL8LICs1xZogUE.ttf",
-        "Anton-Regular.ttf": "https://github.com/google/fonts/raw/main/ofl/anton/Anton-Regular.ttf"
+    fallback_dir = os.path.join(base_dir, "..", "fonts")
+    os.makedirs(fallback_dir, exist_ok=True)
+    return os.path.abspath(fallback_dir)
+
+def get_font_file_path(font_name: str, fonts_dir: str = None) -> str:
+    """
+    Returns the absolute path to the local TTF font file.
+    Falls back safely to local WorkSans-Bold or Lato-Bold if a font is missing.
+    """
+    if not fonts_dir:
+        fonts_dir = ensure_fonts()
+        
+    font_mapping = {
+        "Work Sans": "WorkSans-Bold.ttf",
+        "Montserrat": "Montserrat-Black.ttf",
+        "Oswald": "Oswald-Bold.ttf",
+        "Anton": "Anton-Regular.ttf",
+        "Lato": "Lato-Bold.ttf",
+        "Impact": "Anton-Regular.ttf"
     }
     
-    for font_name, url in fonts.items():
-        font_path = os.path.join(fonts_dir, font_name)
-        if not os.path.exists(font_path) or os.path.getsize(font_path) == 0:
-            print(f"Downloading font {font_name}...")
-            try:
-                req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
-                with urllib.request.urlopen(req) as resp, open(font_path, "wb") as out_file:
-                    out_file.write(resp.read())
-            except Exception as e:
-                print(f"Error downloading {font_name}: {e}")
-    return fonts_dir
+    target_filename = font_mapping.get(font_name, "WorkSans-Bold.ttf")
+    
+    # 1. Check in primary fonts_dir
+    candidate = os.path.join(fonts_dir, target_filename)
+    if os.path.exists(candidate) and os.path.getsize(candidate) > 0:
+        return candidate
+        
+    # 2. Check in alternative assets/fonts
+    alt_dir = os.path.join(os.path.dirname(fonts_dir), "assets", "fonts")
+    candidate_alt = os.path.join(alt_dir, target_filename)
+    if os.path.exists(candidate_alt) and os.path.getsize(candidate_alt) > 0:
+        return candidate_alt
+        
+    # 3. Safe local fallback: WorkSans-Bold.ttf or Lato-Bold.ttf
+    for fb in ["WorkSans-Bold.ttf", "Lato-Bold.ttf", "Montserrat-Black.ttf", "Oswald-Bold.ttf", "Anton-Regular.ttf"]:
+        fb_path = os.path.join(fonts_dir, fb)
+        if os.path.exists(fb_path) and os.path.getsize(fb_path) > 0:
+            return fb_path
+            
+    return os.path.join(fonts_dir, target_filename)
 
 def generate_cta_button_image(text: str, bg_color_hex: str, text_color_hex: str, font_name: str, resolution: str, output_path: str) -> str:
     from PIL import Image, ImageDraw, ImageFont
@@ -43,28 +76,18 @@ def generate_cta_button_image(text: str, bg_color_hex: str, text_color_hex: str,
         padding_y = 25
         radius = 30
         
-    # Get the font
-    fonts_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "fonts")
-    if font_name == "Work Sans":
-        font_file = "WorkSans-Bold.ttf"
-    elif font_name == "Montserrat":
-        font_file = "Montserrat-Black.ttf"
-    elif font_name == "Oswald":
-        font_file = "Oswald-Bold.ttf"
-    elif font_name == "Anton":
-        font_file = "Anton-Regular.ttf"
-    else:
-        font_file = "Lato-Bold.ttf"
-    font_path = os.path.join(fonts_dir, font_file)
-    if not os.path.exists(font_path):
-        ensure_fonts()
-    if not os.path.exists(font_path):
-        font_path = "arial.ttf" # system fallback
+    # Get the font locally
+    fonts_dir = ensure_fonts()
+    font_path = get_font_file_path(font_name, fonts_dir)
         
     try:
         font = ImageFont.truetype(font_path, font_size)
     except:
-        font = ImageFont.load_default()
+        try:
+            fb = get_font_file_path("Work Sans", fonts_dir)
+            font = ImageFont.truetype(fb, font_size)
+        except:
+            font = ImageFont.load_default()
         
     # Measure text precisely
     try:
@@ -106,21 +129,6 @@ def hex_to_ass_color(hex_color: str) -> str:
         r, g, b = hex_color[0:2], hex_color[2:4], hex_color[4:6]
         return f"&H00{b}{g}{r}"
     return "&H00FFFFFF"
-
-def get_font_file_path(font_name: str, fonts_dir: str) -> str:
-    if font_name == "Work Sans":
-        return os.path.join(fonts_dir, "WorkSans-Bold.ttf")
-    elif font_name == "Montserrat":
-        return os.path.join(fonts_dir, "Montserrat-Black.ttf")
-    elif font_name == "Oswald":
-        return os.path.join(fonts_dir, "Oswald-Bold.ttf")
-    elif font_name == "Anton":
-        return os.path.join(fonts_dir, "Anton-Regular.ttf")
-    elif font_name == "Lato":
-        return os.path.join(fonts_dir, "Lato-Bold.ttf")
-    elif font_name == "Impact":
-        return os.path.join(fonts_dir, "Impact-Regular.ttf")
-    return os.path.join(fonts_dir, "WorkSans-Bold.ttf")
 
 def wrap_text_smart(text: str, max_chars_per_line: int = 18) -> str:
     """
@@ -238,15 +246,15 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
             wrapped_title = wrap_text_smart(hook_header.upper(), max_chars_per_line=max_chars)
             escaped_title = wrapped_title.replace("'", "\\'").replace(":", "\\:")
             
-            # Draw title with 70% opacity Deep Blue backdrop box using box border padding & line spacing
-            vf_filter += f",drawtext=text='{escaped_title}':fontfile='{font_path}':fontsize={title_font_size}:fontcolor=white:box=1:boxcolor=0x0B192C@0.7:boxborderw={box_border_w}:line_spacing=10:x=(w-text_w)/2:y={title_y}"
+            # Draw title with 85% opacity MIMAROS Dunkelblau (#064A63) backdrop box
+            vf_filter += f",drawtext=text='{escaped_title}':fontfile='{font_path}':fontsize={title_font_size}:fontcolor=white:box=1:boxcolor=0x064A63@0.85:boxborderw={box_border_w}:line_spacing=10:x=(w-text_w)/2:y={title_y}"
             
         # 5. Full-Width Subtitle Backdrop Banner (extends all the way to the bottom border)
         if show_subtitles:
             if resolution == "1080p":
-                vf_filter += f",drawbox=x=0:y=1320:w=iw:h=ih-1320:color=0x0B192C@0.7:t=fill"
+                vf_filter += f",drawbox=x=0:y=1320:w=iw:h=ih-1320:color=0x064A63@0.85:t=fill"
             else:
-                vf_filter += f",drawbox=x=0:y=880:w=iw:h=ih-880:color=0x0B192C@0.7:t=fill"
+                vf_filter += f",drawbox=x=0:y=880:w=iw:h=ih-880:color=0x064A63@0.85:t=fill"
         
     if show_subtitles:
         vf_filter += f",subtitles='{escaped_srt_path}':fontsdir='{escaped_fonts_dir}'"
@@ -428,11 +436,8 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
     else:
         text_color_ass = "&H00FFFFFF"
         
-    if len(primary_color_hex) == 6:
-        p_r, p_g, p_b = primary_color_hex[0:2], primary_color_hex[2:4], primary_color_hex[4:6]
-        primary_color_box_ass = f"&H4C{p_b}{p_g}{p_r}" # 70% opacity Deep Blue/CI Color
-    else:
-        primary_color_box_ass = "&H4C0B192C" # fallback Deep Blue
+    # MIMAROS Dunkelblau (#064A63) with 85% opacity in ASS format (AABBGGRR)
+    mimaros_deep_blue_box_ass = "&H26634A06"
         
     font_name = config.get("fontName", "Work Sans")
     ass_font = "Work Sans"
@@ -491,19 +496,19 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
             
             # Apply individual style parameters based on template choice
             if design == "dynamic_box":
-                # Outline is 0, Box border is drawn using BorderStyle=3 with 70% opacity CI primary color box
-                f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,{primary_color_box_ass},-1,0,0,0,100,100,0,0,3,0,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                # Outline is 0, Box border is drawn using BorderStyle=3 with 85% opacity Dunkelblau (#064A63) box
+                f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,{mimaros_deep_blue_box_ass},-1,0,0,0,100,100,0,0,3,0,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             elif design == "popup_bouncy":
                 # Centered exactly in the middle of the screen (Alignment=5)
-                f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,3,0,5,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,{mimaros_deep_blue_box_ass},-1,0,0,0,100,100,0,0,1,3,0,5,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             elif design == "hormozi":
                 # Ultra thick Anton font by default, bold outline
-                f.write(f"Style: Default,Anton,{font_size + 6},{text_color_ass},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,4,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                f.write(f"Style: Default,Anton,{font_size + 6},{text_color_ass},&H000000FF,&H00000000,{mimaros_deep_blue_box_ass},-1,0,0,0,100,100,0,0,1,4,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             elif design == "mimaros_clean":
                 # Thin, elegant Montserrat/Work Sans, smaller, alignment bottom center
-                f.write(f"Style: Default,{ass_font},{font_size - 4},{text_color_ass},&H000000FF,&H00000000,&H00000000,0,0,0,0,100,100,0,0,1,1.5,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                f.write(f"Style: Default,{ass_font},{font_size - 4},{text_color_ass},&H000000FF,&H00000000,{mimaros_deep_blue_box_ass},0,0,0,0,100,100,0,0,1,1.5,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             else: # karaoke highlight (default)
-                f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,3,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,{mimaros_deep_blue_box_ass},-1,0,0,0,100,100,0,0,1,3,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             
             f.write("\n")
             

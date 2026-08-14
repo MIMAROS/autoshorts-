@@ -1,4 +1,3 @@
-from typing import Optional, List, Dict, Any
 from fastapi import FastAPI, BackgroundTasks, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
@@ -508,8 +507,8 @@ async def analyze_trimmed_section(
         print(f"Fehler in analyze_trimmed_section: {e}")
         return {
             "status": "fallback",
-            "title": "VIRALES VIDEO SHORT 🔥",
-            "caption": "🔥 Schau dir dieses virale Short an!\n\n#viral #shorts #mimaros"
+            "title": "",
+            "caption": ""
         }
     finally:
         if os.path.exists(temp_video):
@@ -522,7 +521,7 @@ async def analyze_trimmed_section(
 async def generate_viral_title(request: TitleRequest):
     import re
     cleaned_input = re.sub(r'\.[a-zA-Z0-9]+$', '', request.text or '').replace('_', ' ').replace('-', ' ').strip()
-    fallback_title = f"VIRAL: {cleaned_input.upper()}" if cleaned_input else "DAS DARFST DU NICHT VERPASSEN 🔥"
+    fallback_title = cleaned_input.upper() if cleaned_input else ""
     
     try:
         from services.gemini_analyzer import api_key
