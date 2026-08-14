@@ -644,7 +644,13 @@ export default function Page() {
         <div className="md:hidden fixed inset-0 z-[60] bg-black/80 backdrop-blur-sm flex">
             <div className="w-64 bg-panel border-r border-borderGlass h-full flex flex-col">
                 <div className="p-4 border-b border-borderGlass flex justify-between items-center">
-                    <h2 className="font-heading font-bold text-xl text-white">Menü</h2>
+                    <div className="flex items-center gap-2.5">
+                        <Logo className="w-8 h-8 shrink-0 drop-shadow-[0_0_10px_rgba(86,204,242,0.5)]" />
+                        <div>
+                            <h2 className="font-heading font-bold text-base text-white leading-none">MIMAROS</h2>
+                            <span className="text-[8px] font-bold text-mimaros-blue uppercase tracking-wider block mt-0.5">AutoShorts AI</span>
+                        </div>
+                    </div>
                     <button onClick={() => setIsMobileMenuOpen(false)} className="text-textDim hover:text-white">
                         <X className="w-6 h-6" />
                     </button>
@@ -1110,7 +1116,7 @@ export default function Page() {
                           border: `4px solid ${primaryColor}`
                       }}>
                           {showLogo && (
-                              <div className={`absolute z-20 ${logoPosition === 'top-left' ? 'top-3 left-3' : logoPosition === 'top-right' ? 'top-3 right-3' : logoPosition === 'bottom-left' ? 'bottom-3 left-3' : 'bottom-3 right-3'}`}>
+                              <div className={`absolute z-30 ${logoPosition === 'top-left' ? 'top-3 left-3' : logoPosition === 'top-right' ? 'top-3 right-3' : logoPosition === 'bottom-left' ? 'bottom-3 left-3' : 'bottom-3 right-3'}`}>
                                   <LogoIcon className="w-5 h-5 drop-shadow-[0_0_8px_rgba(86,204,242,0.6)]" />
                               </div>
                           )}

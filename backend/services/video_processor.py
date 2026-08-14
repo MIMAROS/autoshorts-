@@ -163,10 +163,13 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     fonts_dir = ensure_fonts()
     escaped_fonts_dir = fonts_dir.replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
 
-    # Defaults (Mimaros)
     primary_color = config.get("primaryColor", "#14AEEA")
     text_color = config.get("textColor", "#ffffff")
     logo_path = config.get("logoPath", None)
+    if not logo_path or not os.path.exists(logo_path):
+        default_logo = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "logo.png")
+        if os.path.exists(default_logo):
+            logo_path = default_logo
     logo_pos = str(config.get("logoPosition", "top-left")).lower().replace("-", "_")
     font_name = config.get("fontName", "Work Sans")
     
