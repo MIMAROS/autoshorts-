@@ -16,6 +16,12 @@ def download_video(url: str, output_path: str = "temp", trim_start: int = None, 
         'outtmpl': f'{output_path}/%(id)s.%(ext)s',
         'quiet': False,
         'no_warnings': True,
+        'nocheckcertificate': True,
+        'geo_bypass': True,
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        },
+        'extractor_args': {'youtube': ['player_client=android']}
     }
 
     if trim_start is not None and trim_end is not None:
@@ -48,7 +54,13 @@ def get_video_info(url: str) -> dict:
     ydl_opts = {
         'quiet': True,
         'no_warnings': True,
-        'extract_flat': True
+        'extract_flat': True,
+        'nocheckcertificate': True,
+        'geo_bypass': True,
+        'http_headers': {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+        },
+        'extractor_args': {'youtube': ['player_client=android']}
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
