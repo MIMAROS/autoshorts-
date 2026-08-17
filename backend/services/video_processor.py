@@ -6,30 +6,28 @@ import urllib.request
 
 def ensure_fonts():
     """
-    Find and return the local fonts directory without any external HTTP downloads.
+    Returns a temporary directory for fonts to save container size.
     """
-    base_dir = os.path.dirname(os.path.abspath(__file__))
-    candidates = [
-        os.path.join(base_dir, "..", "fonts"),
-        os.path.join(base_dir, "..", "assets", "fonts"),
-        os.path.join(base_dir, "fonts"),
-        os.path.join(base_dir, "assets", "fonts"),
-    ]
-    for d in candidates:
-        if os.path.isdir(d):
-            return os.path.abspath(d)
-    
-    fallback_dir = os.path.join(base_dir, "..", "fonts")
-    os.makedirs(fallback_dir, exist_ok=True)
-    return os.path.abspath(fallback_dir)
+    import tempfile
+    tmp_dir = os.path.join(tempfile.gettempdir(), "mimaros_fonts")
+    os.makedirs(tmp_dir, exist_ok=True)
+    return tmp_dir
 
 def get_font_file_path(font_name: str, fonts_dir: str = None) -> str:
     """
-    Returns the absolute path to the local TTF font file.
-    Falls back safely to local WorkSans-Bold or Lato-Bold if a font is missing.
+    Returns the absolute path to the TTF font file.
+    Downloads on demand to /tmp. Falls back to DejaVu Sans.
     """
     if not fonts_dir:
         fonts_dir = ensure_fonts()
+        
+    font_urls = {
+        "WorkSans-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/worksans/static/WorkSans-Bold.ttf",
+        "Montserrat-Black.ttf": "https://github.com/google/fonts/raw/main/ofl/montserrat/static/Montserrat-Black.ttf",
+        "Oswald-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/oswald/static/Oswald-Bold.ttf",
+        "Anton-Regular.ttf": "https://github.com/google/fonts/raw/main/ofl/anton/Anton-Regular.ttf",
+        "Lato-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/lato/Lato-Bold.ttf",
+    }
         
     font_mapping = {
         "Work Sans": "WorkSans-Bold.ttf",
@@ -41,25 +39,24 @@ def get_font_file_path(font_name: str, fonts_dir: str = None) -> str:
     }
     
     target_filename = font_mapping.get(font_name, "WorkSans-Bold.ttf")
+    font_path = os.path.join(fonts_dir, target_filename)
+    sys_fallback = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
     
-    # 1. Check in primary fonts_dir
-    candidate = os.path.join(fonts_dir, target_filename)
-    if os.path.exists(candidate) and os.path.getsize(candidate) > 0:
-        return candidate
-        
-    # 2. Check in alternative assets/fonts
-    alt_dir = os.path.join(os.path.dirname(fonts_dir), "assets", "fonts")
-    candidate_alt = os.path.join(alt_dir, target_filename)
-    if os.path.exists(candidate_alt) and os.path.getsize(candidate_alt) > 0:
-        return candidate_alt
-        
-    # 3. Safe local fallback: WorkSans-Bold.ttf or Lato-Bold.ttf
-    for fb in ["WorkSans-Bold.ttf", "Lato-Bold.ttf", "Montserrat-Black.ttf", "Oswald-Bold.ttf", "Anton-Regular.ttf"]:
-        fb_path = os.path.join(fonts_dir, fb)
-        if os.path.exists(fb_path) and os.path.getsize(fb_path) > 0:
-            return fb_path
-            
-    return os.path.join(fonts_dir, target_filename)
+    if not os.path.exists(font_path) or os.path.getsize(font_path) == 0:
+        url = font_urls.get(target_filename)
+        if url:
+            try:
+                print(f"Downloading {target_filename} to {font_path}...")
+                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
+                with urllib.request.urlopen(req) as response, open(font_path, 'wb') as out_file:
+                    out_file.write(response.read())
+            except Exception as e:
+                print(f"Error downloading {target_filename}: {e}")
+                return sys_fallback if os.path.exists(sys_fallback) else font_path
+                
+    if os.path.exists(font_path):
+        return font_path
+    return sys_fallback if os.path.exists(sys_fallback) else font_path
 
 def generate_cta_button_image(text: str, bg_color_hex: str, text_color_hex: str, font_name: str, resolution: str, output_path: str) -> str:
     from PIL import Image, ImageDraw, ImageFont

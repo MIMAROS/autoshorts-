@@ -11,6 +11,4 @@ google-auth-httplib2
 google-auth-oauthlib
 python-multipart
 pillow
-gtts
 edge-tts
-openai
