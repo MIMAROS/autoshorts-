@@ -22,9 +22,9 @@ def get_font_file_path(font_name: str, fonts_dir: str = None) -> str:
         fonts_dir = ensure_fonts()
         
     font_urls = {
-        "WorkSans-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/worksans/static/WorkSans-Bold.ttf",
-        "Montserrat-Black.ttf": "https://github.com/google/fonts/raw/main/ofl/montserrat/static/Montserrat-Black.ttf",
-        "Oswald-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/oswald/static/Oswald-Bold.ttf",
+        "WorkSans-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/worksans/WorkSans%5Bwght%5D.ttf",
+        "Montserrat-Black.ttf": "https://raw.githubusercontent.com/JulietaUla/Montserrat/master/fonts/ttf/Montserrat-Black.ttf",
+        "Oswald-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/oswald/Oswald%5Bwght%5D.ttf",
         "Anton-Regular.ttf": "https://github.com/google/fonts/raw/main/ofl/anton/Anton-Regular.ttf",
         "Lato-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/lato/Lato-Bold.ttf",
     }
@@ -48,14 +48,26 @@ def get_font_file_path(font_name: str, fonts_dir: str = None) -> str:
             try:
                 print(f"Downloading {target_filename} to {font_path}...")
                 req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                with urllib.request.urlopen(req) as response, open(font_path, 'wb') as out_file:
-                    out_file.write(response.read())
+                with urllib.request.urlopen(req) as response:
+                    data = response.read()
+                    if len(data) > 0:
+                        with open(font_path, 'wb') as out_file:
+                            out_file.write(data)
             except Exception as e:
                 print(f"Error downloading {target_filename}: {e}")
-                return sys_fallback if os.path.exists(sys_fallback) else font_path
+                if os.path.exists(font_path):
+                    os.remove(font_path)
                 
-    if os.path.exists(font_path):
+    if os.path.exists(font_path) and os.path.getsize(font_path) > 0:
         return font_path
+        
+    # 2. Try to fallback to Lato or Anton which might have been downloaded successfully earlier
+    for fb_name in ["Lato-Bold.ttf", "Anton-Regular.ttf"]:
+        fb_path = os.path.join(fonts_dir, fb_name)
+        if os.path.exists(fb_path) and os.path.getsize(fb_path) > 0:
+            return fb_path
+            
+    # 3. System fallback
     return sys_fallback if os.path.exists(sys_fallback) else font_path
 
 def generate_cta_button_image(text: str, bg_color_hex: str, text_color_hex: str, font_name: str, resolution: str, output_path: str) -> str:
