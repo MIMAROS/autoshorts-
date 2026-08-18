@@ -237,7 +237,8 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         if has_title:
             raw_font_path = get_font_file_path(font_name, fonts_dir)
             if raw_font_path and os.path.exists(raw_font_path) and os.path.getsize(raw_font_path) > 0:
-                font_arg = f":fontfile='{raw_font_path.replace('\\', '/').replace(':', '\\:').replace(\"'\", \"\\'\")}'"
+                escaped_fp = raw_font_path.replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
+                font_arg = f":fontfile='{escaped_fp}'"
             else:
                 font_arg = ":font='Sans'"
                 
