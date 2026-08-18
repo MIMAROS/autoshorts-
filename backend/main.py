@@ -136,13 +136,15 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         
         # 1. Video herunterladen (oder lokales Video nutzen)
         if is_local:
-            if trim_start is not None and trim_end is not None:
+            if trim_start is not None and trim_end is not None and trim_end > trim_start:
                 # Trimming local file with FFmpeg
                 import subprocess
-                trimmed_path = os.path.join("temp", f"{job_id}_trimmed.mp4")
+                trimmed_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp")
+                os.makedirs(trimmed_dir, exist_ok=True)
+                trimmed_path = os.path.join(trimmed_dir, f"{job_id}_trimmed.mp4")
                 duration = trim_end - trim_start
                 try:
-                    subprocess.run(["ffmpeg", "-y", "-i", local_path, "-ss", str(trim_start), "-t", str(duration), "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-c:a", "aac", trimmed_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    subprocess.run(["ffmpeg", "-y", "-ss", str(trim_start), "-t", str(duration), "-i", local_path, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-c:a", "aac", trimmed_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
                     video_path = trimmed_path
                 except Exception as e:
                     print(f"Fehler beim lokalen Trimming: {e}")
@@ -150,7 +152,9 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
             else:
                 video_path = local_path
         else:
-            video_path = download_video(url, output_path=f"temp/{job_id}", trim_start=trim_start, trim_end=trim_end)
+            temp_output = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp", job_id)
+            os.makedirs(temp_output, exist_ok=True)
+            video_path = download_video(url, output_path=temp_output, trim_start=trim_start, trim_end=trim_end)
         
         # 2. Transkribieren (Whisper)
         jobs[job_id] = {"status": "transcribing", "progress": 40, "hooks": [], "clips": []}

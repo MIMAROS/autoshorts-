@@ -235,7 +235,12 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         
         # 4. Top Video Title (styled with bounding box backdrop exactly like subtitles, placed below logo)
         if has_title:
-            font_path = get_font_file_path(font_name, fonts_dir).replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
+            raw_font_path = get_font_file_path(font_name, fonts_dir)
+            if raw_font_path and os.path.exists(raw_font_path) and os.path.getsize(raw_font_path) > 0:
+                font_arg = f":fontfile='{raw_font_path.replace('\\', '/').replace(':', '\\:').replace(\"'\", \"\\'\")}'"
+            else:
+                font_arg = ":font='Sans'"
+                
             has_top_logo = show_logo and logo_path and os.path.exists(logo_path) and ("top" in logo_pos)
             
             if has_top_logo:
@@ -256,7 +261,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
             escaped_title = wrapped_title.replace("'", "\\'").replace(":", "\\:")
             
             # Draw title with 85% opacity MIMAROS Dunkelblau (#064A63) backdrop box
-            vf_filter += f",drawtext=text='{escaped_title}':fontfile='{font_path}':fontsize={title_font_size}:fontcolor=white:box=1:boxcolor=0x064A63@0.85:boxborderw={box_border_w}:line_spacing=10:x=(w-text_w)/2:y={title_y}"
+            vf_filter += f",drawtext=text='{escaped_title}'{font_arg}:fontsize={title_font_size}:fontcolor=white:box=1:boxcolor=0x064A63@0.85:boxborderw={box_border_w}:line_spacing=10:x=(w-text_w)/2:y={title_y}"
             
         # 5. Full-Width Subtitle Backdrop Banner (extends all the way to the bottom border)
         if show_subtitles:
