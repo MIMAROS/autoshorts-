@@ -215,26 +215,28 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
             # OPTION A: STRIKT ISOLIERTER 1:1 EXPORT (KEIN SPLITTING, KEIN GEMINI HIGHLIGHT CALL)
             jobs[job_id] = {"status": "editing", "progress": 85, "hooks": [], "clips": []}
             
-            start_sec = float(trim_start) if trim_start is not None else 0.0
-            end_sec = float(trim_end) if (trim_end is not None and trim_end > start_sec) else 0.0
-            
-            if end_sec <= start_sec:
-                import subprocess
-                try:
-                    probe = subprocess.run(
-                        ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", video_path],
-                        capture_output=True, text=True, check=True
-                    )
-                    end_sec = float(probe.stdout.strip())
-                except Exception as e:
-                    if transcript_data.get("segments"):
-                        end_sec = float(transcript_data["segments"][-1].get("end", 60.0))
-                    else:
-                        end_sec = 60.0
+            # Ermittle tatsächliche Dauer der heruntergeladenen/gespeicherten Videodatei
+            import subprocess
+            try:
+                probe = subprocess.run(
+                    ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", video_path],
+                    capture_output=True, text=True, check=True
+                )
+                total_video_dur = float(probe.stdout.strip())
+            except Exception as e:
+                if transcript_data.get("segments"):
+                    total_video_dur = float(transcript_data["segments"][-1].get("end", 60.0))
+                else:
+                    total_video_dur = 60.0
+
+            # Da video_path bei trim_start/trim_end bereits zugeschnitten ist (oder das volle Video ist),
+            # ist der relative Startpunkt in video_path IMMER 0.0 und die Endzeit total_video_dur!
+            start_sec = 0.0
+            end_sec = total_video_dur
                         
             single_hook = {
                 "title": hook_title,
-                "start_time_approx": start_sec,
+                "start_time_approx": 0.0,
                 "end_time_approx": end_sec,
                 "rationale": "Option A - 1:1 Video (Strikt einzelnes 1:1 Video)",
                 "social_media_caption": social_caption,
@@ -279,10 +281,11 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
 
         # OPTION B: MULTI-CLIP HIGHLIGHT ERKENNUNG (NUR FÜR AUTO-HIGHLIGHTS / YOUTUBE)
         if trim_start is not None and trim_end is not None and trim_end > trim_start:
+            # Da video_path bereits vorab zugeschnitten wurde, beginnt die Datei bei 0.0
             hooks = [{
                 "title": hook_title,
-                "start_time_approx": trim_start,
-                "end_time_approx": trim_end,
+                "start_time_approx": "00:00",
+                "end_time_approx": f"{int(trim_end - trim_start)}",
                 "rationale": "Vom Nutzer definierter Zeitbereich mit Smart Trimming",
                 "social_media_caption": social_caption,
                 "viral_score": 95

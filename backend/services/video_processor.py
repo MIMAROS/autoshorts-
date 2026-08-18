@@ -210,7 +210,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     if resolution == "1080p":
         ass_margin_v = 480
         ass_margin_lr = 120
-        vf_scale = "scale='if(gt(a,9/16),-1,1080)':'if(gt(a,9/16),1920,-1)',crop=1080:1920"
+        vf_scale = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920"
         border_thickness = 10
         logo_width = 180
         margin_x = 60
@@ -219,7 +219,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     else:
         ass_margin_v = 320
         ass_margin_lr = 80
-        vf_scale = "scale='if(gt(a,9/16),-1,720)':'if(gt(a,9/16),1280,-1)',crop=720:1280"
+        vf_scale = "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280"
         border_thickness = 6
         logo_width = 120
         margin_x = 40
@@ -309,7 +309,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         else:
             x_pos = f"{margin_x}"
             
-        filter_complex += f";[{logo_input_index}:v]scale={logo_width}:-1[logo];[v_base][logo]overlay=x={x_pos}:y={y_pos}[v_logo]"
+        filter_complex += f";[{logo_input_index}:v]scale={logo_width}:-2[logo];[v_base][logo]overlay=x={x_pos}:y={y_pos}[v_logo]"
         current_v = "[v_logo]"
     else:
         current_v = "[v_base]"
@@ -744,9 +744,9 @@ def normalize_clip(input_path: str, output_path: str, resolution: str = "1080p")
     Dies ist essenziell, damit FFmpeg xfade reibungslos funktioniert.
     """
     if resolution == "1080p":
-        vf_scale = "scale='if(gt(a,9/16),-1,1080)':'if(gt(a,9/16),1920,-1)',crop=1080:1920,fps=30"
+        vf_scale = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920,fps=30"
     else:
-        vf_scale = "scale='if(gt(a,9/16),-1,720)':'if(gt(a,9/16),1280,-1)',crop=720:1280,fps=30"
+        vf_scale = "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280,fps=30"
         
     command = [
         "ffmpeg", "-y",
