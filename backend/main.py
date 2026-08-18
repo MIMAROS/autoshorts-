@@ -180,23 +180,28 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         jobs[job_id] = {"status": "analyzing", "progress": 70, "hooks": [], "clips": []}
         
         full_transcript_text = " ".join([seg.get("text", "") for seg in transcript_data.get("segments", [])]).strip()
-        context_title = "VIDEO SHORT"
-        social_caption = ""
+        custom_header = (subtitle_config.get("hookHeader") or "").strip()
         
-        try:
-            from services.gemini_analyzer import generate_context_aware_title, generate_social_caption
-            if full_transcript_text:
-                context_title = generate_context_aware_title(full_transcript_text)
-                social_caption = generate_social_caption(full_transcript_text)
-            else:
-                context_title = "VIDEO SHORT"
-                social_caption = "Schau dir dieses Video an!\n\n#shorts #content"
-        except Exception as e:
-            print(f"Fehler bei LLM Titel/Caption Generierung aus Transkript: {e}")
-            context_title = subtitle_config.get("hookHeader") or "VIDEO SHORT"
-            social_caption = f"{context_title}\n\n#shorts #content"
+        if custom_header:
+            context_title = custom_header
+            social_caption = f"{custom_header}\n\n#shorts #viral"
+        else:
+            try:
+                from services.gemini_analyzer import generate_context_aware_title, generate_social_caption
+                if full_transcript_text and len(full_transcript_text) > 3:
+                    context_title = generate_context_aware_title(full_transcript_text)
+                    social_caption = generate_social_caption(full_transcript_text)
+                else:
+                    context_title = "VIRAL SHORT"
+                    social_caption = "Schau dir dieses Video an!\n\n#shorts #content"
+            except Exception as e:
+                print(f"Fehler bei LLM Titel/Caption Generierung aus Transkript: {e}")
+                context_title = "VIRAL SHORT"
+                social_caption = f"{context_title}\n\n#shorts #content"
             
         subtitle_config["hookHeader"] = context_title
+        subtitle_config["showTitle"] = subtitle_config.get("showTitle", True)
+        subtitle_config["showSubtitles"] = subtitle_config.get("showSubtitles", True)
         hook_title = context_title.upper()
         
         # Aktualisiere Job-Zustand mit den aus dem Transkript generierten Daten

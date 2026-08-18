@@ -2,15 +2,20 @@ import os
 import subprocess
 import tempfile
 import json
+from dotenv import load_dotenv
+
+load_dotenv()
 
 def transcribe_with_gemini(audio_path: str, lang: str = "auto") -> dict:
     """
-    Transkribiert Audio direkt über die Google Gemini API (kostenlos & blitzschnell).
+    Transkribiert Audio direkt über die Google Gemini API (kostenlos, schnell & präzise).
+    Verwendet Inline Audio Bytes für maximale Ausfallsicherheit.
     """
     try:
         import google.generativeai as genai
         api_key = os.getenv("GEMINI_API_KEY")
         if not api_key:
+            print("Kein GEMINI_API_KEY gefunden.")
             return None
             
         genai.configure(api_key=api_key)
@@ -19,32 +24,36 @@ def transcribe_with_gemini(audio_path: str, lang: str = "auto") -> dict:
         except:
             model = genai.GenerativeModel('gemini-1.5-flash')
             
-        print(f"Lade Audio zu Google Gemini hoch für Transkription: {audio_path}")
-        audio_file = genai.upload_file(path=audio_path)
+        print(f"Transkribiere Audio mit Google Gemini ({os.path.basename(audio_path)})...")
+        with open(audio_path, "rb") as f:
+            audio_bytes = f.read()
+            
+        prompt = """
+        Du bist ein präziser Transkriptions-Dienst für Videos.
+        Transkribiere das gesprochene Audio Wort für Wort mit präzisen Zeitstempeln.
+        Teile die gesprochenen Sätze in kurze Segmente (2 bis 5 Sekunden) auf.
         
-        prompt = """Transcribe this audio with precise timestamps.
-Return ONLY a valid JSON object matching this schema:
-{
-  "text": "Full text...",
-  "segments": [
-    {
-      "start": 0.0,
-      "end": 3.0,
-      "text": "spoken sentence",
-      "words": [
-        {"word": "spoken", "start": 0.0, "end": 1.5},
-        {"word": "sentence", "start": 1.5, "end": 3.0}
-      ]
-    }
-  ]
-}
-"""
-        response = model.generate_content([audio_file, prompt])
+        Antworte AUSSCHLIESSLICH als gültiges JSON-Objekt im folgenden Format (ohne Markdown, ohne ```json):
+        {
+          "text": "Vollständiger Text des Audios",
+          "segments": [
+            {
+              "start": 0.0,
+              "end": 2.5,
+              "text": "Gesprochener Satz",
+              "words": [
+                {"word": "Gesprochener", "start": 0.0, "end": 1.2},
+                {"word": "Satz", "start": 1.2, "end": 2.5}
+              ]
+            }
+          ]
+        }
+        """
         
-        try:
-            genai.delete_file(audio_file.name)
-        except:
-            pass
+        response = model.generate_content([
+            {"mime_type": "audio/mp3", "data": audio_bytes},
+            prompt
+        ])
             
         raw_text = response.text.strip()
         if raw_text.startswith("```json"):
@@ -54,9 +63,25 @@ Return ONLY a valid JSON object matching this schema:
             
         data = json.loads(raw_text)
         if isinstance(data, dict) and "segments" in data:
+            # Stelle sicher, dass jedes Segment auch 'words' hat
+            for seg in data["segments"]:
+                if "words" not in seg or not seg["words"]:
+                    words_list = seg.get("text", "").strip().split()
+                    if words_list:
+                        s_start = float(seg.get("start", 0.0))
+                        s_end = float(seg.get("end", s_start + 2.0))
+                        dur_per_word = (s_end - s_start) / max(len(words_list), 1)
+                        seg["words"] = [
+                            {
+                                "word": w,
+                                "start": round(s_start + (i * dur_per_word), 2),
+                                "end": round(s_start + ((i + 1) * dur_per_word), 2)
+                            }
+                            for i, w in enumerate(words_list)
+                        ]
             return data
     except Exception as e:
-        print(f"Gemini Audio-Transkription nicht verfügbar/Fehler: {e}")
+        print(f"Gemini Audio-Transkription Hinweis/Fehler: {e}")
     return None
 
 def transcribe_audio(video_path: str, video_lang: str = "auto", subtitle_lang: str = "auto") -> dict:

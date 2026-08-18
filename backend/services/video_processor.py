@@ -168,13 +168,13 @@ def wrap_text_smart(text: str, max_chars_per_line: int = 18) -> str:
     return "\n".join(lines)
 
 def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: dict, output_path: str, start_time: str = None, duration: str = None) -> list:
-    use_master_ci = config.get("use_master_ci", True)
+    use_master_ci = config.get("use_master_ci", config.get("useMasterCi", True))
     
     # Read Visibility Toggles (default to True)
-    show_title = config.get("showTitle", True)
-    show_logo = config.get("showLogo", True)
-    show_subtitles = config.get("showSubtitles", True)
-    show_cta = config.get("showCTA", True)
+    show_title = config.get("showTitle", config.get("show_title", True))
+    show_logo = config.get("showLogo", config.get("show_logo", True))
+    show_subtitles = config.get("showSubtitles", config.get("show_subtitles", True))
+    show_cta = config.get("showCTA", config.get("show_cta", True))
     
     # Fonts download & path
     fonts_dir = ensure_fonts()
@@ -203,7 +203,9 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     else:
         ass_font = "Impact"
         
-    hook_header = config.get("hookHeader", "").strip().replace("'", "\\'")
+    hook_header = config.get("hookHeader", config.get("hook_header", "")).strip().replace("'", "\\'")
+    if not hook_header and show_title:
+        hook_header = "VIRAL SHORT"
     has_title = bool(hook_header and show_title)
     
     resolution = config.get("resolution", "720p")
