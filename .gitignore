@@ -8,6 +8,9 @@ Fertige_Shorts/
 .env
 client_secret*.json
 *.sqlite
+.agents/
+*.log
+*.exe
 
 venv/
 

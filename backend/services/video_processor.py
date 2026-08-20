@@ -6,32 +6,22 @@ import urllib.request
 
 def ensure_fonts():
     """
-    Returns a temporary directory for fonts to save container size.
+    Returns the permanent backend/assets/fonts directory containing all high-resolution TTF font families.
     """
-    import tempfile
-    tmp_dir = os.path.join(tempfile.gettempdir(), "mimaros_fonts")
-    os.makedirs(tmp_dir, exist_ok=True)
-    return tmp_dir
+    local_fonts_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "assets", "fonts")
+    os.makedirs(local_fonts_dir, exist_ok=True)
+    return local_fonts_dir
 
 def get_font_file_path(font_name: str, fonts_dir: str = None) -> str:
     """
     Returns the absolute path to the TTF font file.
-    Downloads on demand to /tmp. Falls back to DejaVu Sans.
     """
     if not fonts_dir:
         fonts_dir = ensure_fonts()
         
-    font_urls = {
-        "WorkSans-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/worksans/WorkSans%5Bwght%5D.ttf",
-        "Montserrat-Black.ttf": "https://raw.githubusercontent.com/JulietaUla/Montserrat/master/fonts/ttf/Montserrat-Black.ttf",
-        "Oswald-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/oswald/Oswald%5Bwght%5D.ttf",
-        "Anton-Regular.ttf": "https://github.com/google/fonts/raw/main/ofl/anton/Anton-Regular.ttf",
-        "Lato-Bold.ttf": "https://github.com/google/fonts/raw/main/ofl/lato/Lato-Bold.ttf",
-    }
-        
     font_mapping = {
         "Work Sans": "WorkSans-Bold.ttf",
-        "Montserrat": "Montserrat-Black.ttf",
+        "Montserrat": "Montserrat-ExtraBold.ttf",
         "Oswald": "Oswald-Bold.ttf",
         "Anton": "Anton-Regular.ttf",
         "Lato": "Lato-Bold.ttf",
@@ -40,35 +30,16 @@ def get_font_file_path(font_name: str, fonts_dir: str = None) -> str:
     
     target_filename = font_mapping.get(font_name, "WorkSans-Bold.ttf")
     font_path = os.path.join(fonts_dir, target_filename)
-    sys_fallback = "/usr/share/fonts/truetype/dejavu/DejaVuSans-Bold.ttf"
-    
-    if not os.path.exists(font_path) or os.path.getsize(font_path) == 0:
-        url = font_urls.get(target_filename)
-        if url:
-            try:
-                print(f"Downloading {target_filename} to {font_path}...")
-                req = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0'})
-                with urllib.request.urlopen(req) as response:
-                    data = response.read()
-                    if len(data) > 0:
-                        with open(font_path, 'wb') as out_file:
-                            out_file.write(data)
-            except Exception as e:
-                print(f"Error downloading {target_filename}: {e}")
-                if os.path.exists(font_path):
-                    os.remove(font_path)
-                
     if os.path.exists(font_path) and os.path.getsize(font_path) > 0:
         return font_path
-        
-    # 2. Try to fallback to Lato or Anton which might have been downloaded successfully earlier
-    for fb_name in ["Lato-Bold.ttf", "Anton-Regular.ttf"]:
-        fb_path = os.path.join(fonts_dir, fb_name)
-        if os.path.exists(fb_path) and os.path.getsize(fb_path) > 0:
-            return fb_path
+    
+    # Fallback to any existing font in fonts_dir
+    for fb in ["WorkSans-Bold.ttf", "Anton-Regular.ttf", "Lato-Bold.ttf", "Montserrat-ExtraBold.ttf"]:
+        p = os.path.join(fonts_dir, fb)
+        if os.path.exists(p) and os.path.getsize(p) > 0:
+            return p
             
-    # 3. System fallback
-    return sys_fallback if os.path.exists(sys_fallback) else font_path
+    return font_path
 
 def generate_cta_button_image(text: str, bg_color_hex: str, text_color_hex: str, font_name: str, resolution: str, output_path: str) -> str:
     from PIL import Image, ImageDraw, ImageFont
@@ -131,19 +102,21 @@ def generate_cta_button_image(text: str, bg_color_hex: str, text_color_hex: str,
     image.save(output_path, "PNG")
     return output_path
 
-def hex_to_ass_color(hex_color: str) -> str:
-    # Converts #RRGGBB to &H00BBGGRR
-    hex_color = hex_color.lstrip('#')
+def hex_to_ass_color(hex_color: str, alpha_hex: str = "00") -> str:
+    # Converts #RRGGBB to &HAABBGGRR (ASS format)
+    hex_color = (hex_color or "#FFFFFF").lstrip('#')
     if len(hex_color) == 6:
         r, g, b = hex_color[0:2], hex_color[2:4], hex_color[4:6]
-        return f"&H00{b}{g}{r}"
-    return "&H00FFFFFF"
+        return f"&H{alpha_hex}{b}{g}{r}"
+    return f"&H{alpha_hex}FFFFFF"
 
 def wrap_text_smart(text: str, max_chars_per_line: int = 18) -> str:
     """
-    Trennt lange Titel an Wortgrenzen in mehrere Zeilen (mit \n),
+    Trennt lange Titel an Wortgrenzen in mehrere Zeilen (mit \\n),
     damit der Text im 9:16 Video niemals über den Rand hinausragt.
     """
+    if not text:
+        return ""
     words = text.strip().split()
     if not words:
         return ""
@@ -181,7 +154,6 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     escaped_fonts_dir = fonts_dir.replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
 
     primary_color = config.get("primaryColor", "#14AEEA")
-    text_color = config.get("textColor", "#ffffff")
     logo_path = config.get("logoPath", None)
     if not logo_path or not os.path.exists(logo_path):
         default_logo = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "logo.png")
@@ -190,9 +162,6 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     logo_pos = str(config.get("logoPosition", "top-left")).lower().replace("-", "_")
     font_name = config.get("fontName", "Work Sans")
     
-    # Base ASS Styling
-    ass_text_color = hex_to_ass_color(text_color)
-    
     # Mapping selected font names to families registered in TTF files
     if font_name == "Work Sans":
         ass_font = "Work Sans"
@@ -200,18 +169,18 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         ass_font = "Lato"
     elif font_name == "Montserrat":
         ass_font = "Montserrat"
+    elif font_name == "Oswald":
+        ass_font = "Oswald"
+    elif font_name == "Anton":
+        ass_font = "Anton"
     else:
         ass_font = "Impact"
         
-    hook_header = config.get("hookHeader", config.get("hook_header", "")).strip().replace("'", "\\'")
-    if not hook_header and show_title:
-        hook_header = "VIRAL SHORT"
+    hook_header = config.get("hookHeader", config.get("hook_header", "")).strip()
     has_title = bool(hook_header and show_title)
     
     resolution = config.get("resolution", "720p")
     if resolution == "1080p":
-        ass_margin_v = 480
-        ass_margin_lr = 120
         vf_scale = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920"
         border_thickness = 10
         logo_width = 180
@@ -219,8 +188,6 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         margin_y = 30 # Logo is at the very top
         cta_offset_y = 170
     else:
-        ass_margin_v = 320
-        ass_margin_lr = 80
         vf_scale = "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280"
         border_thickness = 6
         logo_width = 120
@@ -231,54 +198,17 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     # Start building filtergraph for video stream 0
     vf_filter = f"[0:v]{vf_scale}"
     
+    # 1. CI Border around the entire video frame
     if use_master_ci:
-        # Add primaryColor Border
         vf_filter += f",drawbox=x=0:y=0:w=iw:h=ih:color={primary_color}:thickness={border_thickness}"
         
-        # 4. Top Video Title (styled with bounding box backdrop exactly like subtitles, placed below logo)
-        if has_title:
-            raw_font_path = get_font_file_path(font_name, fonts_dir)
-            if raw_font_path and os.path.exists(raw_font_path) and os.path.getsize(raw_font_path) > 0:
-                escaped_fp = raw_font_path.replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
-                font_arg = f":fontfile='{escaped_fp}'"
-            else:
-                font_arg = ":font='Sans'"
-                
-            has_top_logo = show_logo and logo_path and os.path.exists(logo_path) and ("top" in logo_pos)
-            
-            if has_top_logo:
-                title_y = 240 if resolution == "1080p" else 160
-            else:
-                title_y = 50 if resolution == "1080p" else 30
-                
-            if resolution == "1080p":
-                title_font_size = 54
-                box_border_w = 16
-                max_chars = 14
-            else:
-                title_font_size = 36
-                box_border_w = 10
-                max_chars = 12
-                
-            wrapped_title = wrap_text_smart(hook_header.upper(), max_chars_per_line=max_chars)
-            escaped_title = wrapped_title.replace("'", "\\'").replace(":", "\\:")
-            
-            # Draw title with 85% opacity MIMAROS Dunkelblau (#064A63) backdrop box
-            vf_filter += f",drawtext=text='{escaped_title}'{font_arg}:fontsize={title_font_size}:fontcolor=white:box=1:boxcolor=0x064A63@0.85:boxborderw={box_border_w}:line_spacing=10:x=(w-text_w)/2:y={title_y}"
-            
-        # 5. Full-Width Subtitle Backdrop Banner (extends all the way to the bottom border)
-        if show_subtitles:
-            if resolution == "1080p":
-                vf_filter += f",drawbox=x=0:y=1320:w=iw:h=ih-1320:color=0x064A63@0.85:t=fill"
-            else:
-                vf_filter += f",drawbox=x=0:y=880:w=iw:h=ih-880:color=0x064A63@0.85:t=fill"
-        
-    if show_subtitles:
+    # 2. Subtitles and Title (both rendered via ASS in a single, high-fidelity pass)
+    if show_subtitles or has_title:
         vf_filter += f",subtitles='{escaped_srt_path}':fontsdir='{escaped_fonts_dir}'"
     
-    # Watermark
+    # 3. Watermark
     watermark_text = config.get("watermark_text", "mimaros.eu").replace("'", "\\'")
-    if watermark_text:
+    if watermark_text and use_master_ci:
         # Watermark position shifted if top title is present to avoid overlay
         if has_title:
             watermark_y = 380 if resolution == "1080p" else 250
@@ -294,9 +224,9 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     # Compose input files
     inputs = [video_path]
     
-    # 1. Overlay Logo
+    # 4. Overlay Logo
     logo_input_index = -1
-    if logo_path and os.path.exists(logo_path) and use_master_ci and show_logo:
+    if logo_path and os.path.exists(logo_path) and show_logo:
         inputs.append(logo_path)
         logo_input_index = len(inputs) - 1
         
@@ -322,7 +252,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     else:
         current_v = "[v_base]"
         
-    # 2. Overlay CTA Button
+    # 5. Overlay CTA Button
     cta = config.get("cta", "none")
     cta_text = ""
     if cta == "subscribe":
@@ -333,9 +263,9 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         cta_text = "MEHR VIDEOS"
         
     cta_input_index = -1
-    if cta_text and use_master_ci and show_cta:
+    if cta_text and show_cta:
         # Generate rounded button image dynamically
-        cta_img_path = os.path.join(os.path.dirname(output_path), f"cta_{os.path.basename(output_path)}.png")
+        cta_img_path = os.path.join(os.path.dirname(os.path.abspath(output_path)), f"cta_{os.path.basename(output_path)}.png")
         try:
             generate_cta_button_image(cta_text, primary_color, "#FFFFFF", font_name, resolution, cta_img_path)
             inputs.append(cta_img_path)
@@ -427,66 +357,105 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
 
 def generate_ass(segments: list, start_time: float, end_time: float, ass_path: str, config: dict = None):
     """
-    Generiert eine .ass Datei für den spezifischen Zeitbereich (Hook) mit 5 stark abweichenden
-    Untertitel-Vorlagen (Karaoke, Dynamic Box, Pop-Up Bouncy, Hormozi, mimaros Clean).
+    Generiert eine professionelle .ass Datei mit separaten Styles für
+    Untertitel (Karaoke, Dynamic Box, Pop-Up Bouncy, Hormozi, MIMAROS Clean)
+    UND Video-Titel (mit präzisen Farben, Schriftarten, Abständen und CI-Branding).
     """
     if config is None:
         config = {}
     
-    # Read styling parameters
-    highlight_color_hex = config.get("highlightColor", "#D4AF37").lstrip('#')
-    text_color_hex = config.get("textColor", "#ffffff").lstrip('#')
-    primary_color_hex = config.get("primaryColor", "#14AEEA").lstrip('#')
+    # 1. Colors parsing
+    highlight_color_hex = config.get("highlightColor", "#D4AF37")
+    text_color_hex = config.get("textColor", "#ffffff")
+    primary_color_hex = config.get("primaryColor", "#14AEEA")
+    box_color_hex = config.get("boxColor", config.get("titleBgColor", "#064A63"))
+    title_color_hex = config.get("titleColor", text_color_hex)
     
-    # Convert hex colors to ASS format (AABBGGRR)
-    if len(highlight_color_hex) == 6:
-        h_r, h_g, h_b = highlight_color_hex[0:2], highlight_color_hex[2:4], highlight_color_hex[4:6]
-        highlight_color_ass = f"&H00{h_b}{h_g}{h_r}&" # inline tag
-        highlight_color_style = f"&H00{h_b}{h_g}{h_r}" # style line
-    else:
-        highlight_color_ass = "&H0037AFD4&"
-        highlight_color_style = "&H0037AFD4"
-        
-    if len(text_color_hex) == 6:
-        t_r, t_g, t_b = text_color_hex[0:2], text_color_hex[2:4], text_color_hex[4:6]
-        text_color_ass = f"&H00{t_b}{t_g}{t_r}"
-    else:
-        text_color_ass = "&H00FFFFFF"
-        
-    # MIMAROS Dunkelblau (#064A63) with 85% opacity in ASS format (AABBGGRR)
-    mimaros_deep_blue_box_ass = "&H26634A06"
-        
+    highlight_color_ass = hex_to_ass_color(highlight_color_hex, "00") + "&"
+    text_color_ass = hex_to_ass_color(text_color_hex, "00")
+    primary_color_ass = hex_to_ass_color(primary_color_hex, "00")
+    box_color_ass = hex_to_ass_color(box_color_hex, "26") # 85% opacity
+    title_color_ass = hex_to_ass_color(title_color_hex, "00")
+    title_box_ass = hex_to_ass_color(box_color_hex, "26")
+    
+    # 2. Font configuration
     font_name = config.get("fontName", "Work Sans")
-    ass_font = "Work Sans"
-    if font_name == "Lato":
-        ass_font = "Lato"
-    elif font_name == "Montserrat":
-        ass_font = "Montserrat"
-    elif font_name == "Oswald":
-        ass_font = "Oswald"
-    elif font_name == "Anton":
-        ass_font = "Anton"
-    elif font_name == "Impact":
-        ass_font = "Impact"
-        
-    # Margin settings based on resolution
-    resolution = config.get("resolution", "720p")
-    if resolution == "1080p":
-        ass_margin_v = 480
-        ass_margin_lr = 120
-        font_size = 76
-        active_font_size = 86
-        title_font_size = 80
-        title_margin_v = 40
+    if font_name in ["Work Sans", "Montserrat", "Anton", "Oswald", "Lato"]:
+        ass_font = font_name
+    elif font_name:
+        ass_font = font_name
     else:
-        ass_margin_v = 320
-        ass_margin_lr = 80
-        font_size = 50
-        active_font_size = 56
-        title_font_size = 54
-        title_margin_v = 25
+        ass_font = "Work Sans"
         
+    # 3. Resolution scaling
+    resolution = config.get("resolution", "720p")
+    is_1080 = (resolution == "1080p")
+    
+    # Subtitle Font Size & Position
+    sub_size_setting = str(config.get("subtitleFontSize", "normal")).lower()
+    if sub_size_setting == "large":
+        sub_font_size = 78 if is_1080 else 52
+    elif sub_size_setting in ["xlarge", "extra-large", "extra_large"]:
+        sub_font_size = 90 if is_1080 else 60
+    else: # normal
+        sub_font_size = 68 if is_1080 else 44
+        
+    # Title Font Size
+    title_size_setting = str(config.get("titleFontSize", "normal")).lower()
+    if title_size_setting == "large":
+        title_font_size = 66 if is_1080 else 44
+    elif title_size_setting in ["xlarge", "extra-large", "extra_large"]:
+        title_font_size = 78 if is_1080 else 52
+    else: # normal
+        title_font_size = 56 if is_1080 else 38
+        
+    # Margin settings
+    ass_margin_lr = 80 if is_1080 else 50
+    ass_margin_v = int(config.get("subtitleMarginV", 220 if is_1080 else 150))
+    
+    # Title options
+    show_title = config.get("showTitle", config.get("show_title", True))
+    hook_header = config.get("hookHeader", config.get("hook_header", "")).strip()
+    title_pos = str(config.get("titlePosition", "top")).lower()
+    title_style = str(config.get("titleStyle", "box")).lower()
+    show_logo = config.get("showLogo", config.get("show_logo", True))
+    logo_pos = str(config.get("logoPosition", "top-left")).lower()
+    
+    if "center" in title_pos or "middle" in title_pos:
+        title_alignment = 5
+        title_margin_v = 0
+    elif "bottom" in title_pos:
+        title_alignment = 2
+        title_margin_v = 460 if is_1080 else 310
+    else: # top (default)
+        title_alignment = 8
+        if show_logo and "top" in logo_pos:
+            title_margin_v = 180 if is_1080 else 120
+        else:
+            title_margin_v = 110 if is_1080 else 75
+            
+    # Title border style
+    if title_style == "outline":
+        title_border_mode = 1
+        title_outline_w = 4.5 if is_1080 else 3.0
+        title_shadow_w = 2.5 if is_1080 else 1.8
+        title_outline_col = "&H00000000"
+    elif title_style == "clean":
+        title_border_mode = 1
+        title_outline_w = 1.5 if is_1080 else 1.0
+        title_shadow_w = 2.0 if is_1080 else 1.5
+        title_outline_col = "&H00000000"
+    else: # "box" / default CI Backdrop Box
+        title_border_mode = 3
+        title_outline_w = 14 if is_1080 else 9 # Box padding in pixels
+        title_shadow_w = 0
+        title_outline_col = title_box_ass
+        
+    design = config.get("design", "karaoke")
+    show_subtitles = config.get("showSubtitles", config.get("show_subtitles", True))
+    
     def format_ass_time(seconds: float) -> str:
+        seconds = max(0.0, seconds)
         hours = int(seconds // 3600)
         minutes = int((seconds % 3600) // 60)
         secs = int(seconds % 60)
@@ -496,139 +465,134 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
             centis = 0
         return f"{hours}:{minutes:02d}:{secs:02d}.{centis:02d}"
 
-    design = config.get("design", "karaoke")
-    print(f"Generating ASS subtitles with template: {design} to path: {ass_path}")
+    clip_duration = max(0.1, end_time - start_time)
+
     try:
         with open(ass_path, 'w', encoding='utf-8') as f:
             # 1. Write ASS Header
             f.write("[Script Info]\n")
             f.write("ScriptType: v4.00+\n")
-            f.write("PlayResX: 1080\n" if resolution == "1080p" else "PlayResX: 720\n")
-            f.write("PlayResY: 1920\n" if resolution == "1080p" else "PlayResY: 1280\n")
+            f.write("PlayResX: 1080\n" if is_1080 else "PlayResX: 720\n")
+            f.write("PlayResY: 1920\n" if is_1080 else "PlayResY: 1280\n")
             f.write("ScaledBorderAndShadow: yes\n\n")
             
             # 2. Write Styles
             f.write("[V4+ Styles]\n")
             f.write("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n")
             
-            # Apply individual style parameters based on template choice
+            # Subtitle Style: Default
             if design == "dynamic_box":
-                # Outline is 0, Box border is drawn using BorderStyle=3 with 85% opacity Dunkelblau (#064A63) box
-                f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,{mimaros_deep_blue_box_ass},-1,0,0,0,100,100,0,0,3,0,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                box_pad = 12 if is_1080 else 8
+                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,{box_color_ass},{box_color_ass},-1,0,0,0,100,100,0,0,3,{box_pad},0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             elif design == "popup_bouncy":
-                # Centered exactly in the middle of the screen (Alignment=5)
-                f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,{mimaros_deep_blue_box_ass},-1,0,0,0,100,100,0,0,1,3,0,5,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                f.write(f"Style: Default,{ass_font},{sub_font_size + 16},{highlight_color_ass},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,5.5,3.0,5,{ass_margin_lr},{ass_margin_lr},0,1\n")
             elif design == "hormozi":
-                # Ultra thick Anton font by default, bold outline
-                f.write(f"Style: Default,Anton,{font_size + 6},{text_color_ass},&H000000FF,&H00000000,{mimaros_deep_blue_box_ass},-1,0,0,0,100,100,0,0,1,4,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                f.write(f"Style: Default,Anton,{sub_font_size + 12},{text_color_ass},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,5.5,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             elif design == "mimaros_clean":
-                # Thin, elegant Montserrat/Work Sans, smaller, alignment bottom center
-                f.write(f"Style: Default,{ass_font},{font_size - 4},{text_color_ass},&H000000FF,&H00000000,{mimaros_deep_blue_box_ass},0,0,0,0,100,100,0,0,1,1.5,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
-            else: # karaoke highlight (default)
-                f.write(f"Style: Default,{ass_font},{font_size},{text_color_ass},&H000000FF,&H00000000,{mimaros_deep_blue_box_ass},-1,0,0,0,100,100,0,0,1,3,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
-            
+                f.write(f"Style: Default,{ass_font},{sub_font_size - 4},{text_color_ass},&H000000FF,&H00000000,&H90000000,-1,0,0,0,100,100,2,0,1,2.5,1.5,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+            else: # karaoke
+                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,&H00000000,&H90000000,-1,0,0,0,100,100,0,0,1,4.0,2.0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                
+            # Title Style
+            if show_title and hook_header:
+                f.write(f"Style: Title,{ass_font},{title_font_size},{title_color_ass},&H000000FF,{title_outline_col},{title_box_ass},-1,0,0,0,100,100,0,0,{title_border_mode},{title_outline_w},{title_shadow_w},{title_alignment},{ass_margin_lr},{ass_margin_lr},{title_margin_v},1\n")
+                
             f.write("\n")
             
             # 3. Write Events
             f.write("[Events]\n")
             f.write("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
             
-            # Write Subtitle segments
-            index = 1
-            for segment in segments:
-                if "words" in segment and segment["words"]:
-                    # Filter words that fall in the clip range
-                    words_in_range = []
-                    for word in segment["words"]:
-                        w_start = word["start"]
-                        w_end = word["end"]
-                        w_text = word["word"].strip()
-                        if w_start >= start_time and w_end <= end_time:
-                            words_in_range.append({"text": w_text, "start": w_start, "end": w_end})
-                    
-                    if not words_in_range:
-                        continue
-                    
-                    # Set chunk size based on template
-                    if design == "popup_bouncy":
-                        chunk_size = 1 # 1 word at a time
-                    elif design == "hormozi":
-                        chunk_size = 2 # max 2 words per line
-                    elif design == "mimaros_clean":
-                        chunk_size = 6 # whole elegant sentences
-                    else: # karaoke / dynamic_box
-                        chunk_size = 3
-                        
-                    for chunk_idx in range(0, len(words_in_range), chunk_size):
-                        chunk = words_in_range[chunk_idx : chunk_idx + chunk_size]
-                        if not chunk:
+            # A. Video Title Event (Layer 2, stays visible throughout clip)
+            if show_title and hook_header:
+                wrapped_title = wrap_text_smart(hook_header.upper(), max_chars_per_line=18).replace("\n", "\\N")
+                f.write(f"Dialogue: 2,0:00:00.00,{format_ass_time(clip_duration)},Title,,0,0,0,,{wrapped_title}\n")
+                
+            # B. Subtitle Events (Layer 1)
+            if show_subtitles:
+                for segment in segments:
+                    if "words" in segment and segment["words"]:
+                        words_in_range = []
+                        for word in segment["words"]:
+                            w_start = float(word["start"])
+                            w_end = float(word["end"])
+                            w_text = word["word"].strip()
+                            if w_end > start_time and w_start < end_time and w_text:
+                                words_in_range.append({"text": w_text, "start": max(start_time, w_start), "end": min(end_time, w_end)})
+                                
+                        if not words_in_range:
                             continue
-                        
-                        chunk_start = chunk[0]["start"] - start_time
-                        chunk_end = chunk[-1]["end"] - start_time
-                        
-                        # Write an event for each word in the chunk, highlighting it
-                        for i, active_word in enumerate(chunk):
-                            if i == 0:
-                                event_start = chunk_start
-                            else:
-                                event_start = chunk[i]["start"] - start_time
-                                
-                            if i == len(chunk) - 1:
-                                event_end = chunk_end
-                            else:
-                                event_end = chunk[i+1]["start"] - start_time
-                                
-                            # Build text with custom formatting per design template
-                            formatted_words = []
-                            for j, w in enumerate(chunk):
-                                w_text = w["text"].upper()
-                                
-                                if design == "mimaros_clean":
-                                    # No active highlight, clean sentences fade in gently
-                                    formatted_words.append(w_text)
-                                elif design == "hormozi":
-                                    # Yellow/Green alternating highlights
-                                    if j == i:
-                                        hormozi_color = "&H0000FFFF&" if i % 2 == 0 else "&H0000FF00&" # yellow or green
-                                        formatted_words.append(f"{{\\c{hormozi_color}\\fs{active_font_size + 4}}}{w_text}{{\\rDefault}}")
-                                    else:
-                                        formatted_words.append(w_text)
-                                elif design == "popup_bouncy":
-                                    # Single bouncy word center
-                                    formatted_words.append(f"{{\\fs{active_font_size + 10}}}{w_text}{{\\rDefault}}")
-                                elif design == "dynamic_box":
-                                    # Bounding box is drawn behind active word or sentence. Text remains white.
-                                    # We can highlight active word color or keep all white inside the box
-                                    if j == i:
-                                        formatted_words.append(f"{{\\c{highlight_color_ass}\\fs{active_font_size}}}{w_text}{{\\rDefault}}")
-                                    else:
-                                        formatted_words.append(w_text)
-                                else: # karaoke highlight
-                                    if j == i:
-                                        formatted_words.append(f"{{\\c{highlight_color_ass}\\fs{active_font_size}}}{w_text}{{\\rDefault}}")
-                                    else:
-                                        formatted_words.append(w_text)
-                                        
-                            chunk_text = " ".join(formatted_words)
                             
-                            # Add fade effect to mimaros_clean template
-                            if design == "mimaros_clean" and i == 0:
-                                chunk_text = f"{{\\fad(250,250)}}{chunk_text}"
+                        if design == "popup_bouncy":
+                            chunk_size = 1
+                        elif design == "hormozi":
+                            chunk_size = 2
+                        elif design == "mimaros_clean":
+                            chunk_size = 4
+                        else: # karaoke / dynamic_box
+                            chunk_size = 3
+                            
+                        for chunk_idx in range(0, len(words_in_range), chunk_size):
+                            chunk = words_in_range[chunk_idx : chunk_idx + chunk_size]
+                            if not chunk:
+                                continue
                                 
-                            f.write(f"Dialogue: 0,{format_ass_time(event_start)},{format_ass_time(event_end)},Default,,0,0,0,,{chunk_text}\n")
-                            index += 1
-                else:
-                    s_start = segment["start"]
-                    s_end = segment["end"]
-                    if s_start >= start_time and s_end <= end_time:
-                        rel_start = s_start - start_time
-                        rel_end = s_end - start_time
-                        # Default fade for B2B template
-                        effect = "{\\fad(250,250)}" if design == "mimaros_clean" else ""
-                        f.write(f"Dialogue: 0,{format_ass_time(rel_start)},{format_ass_time(rel_end)},Default,,0,0,0,,{effect}{segment['text'].strip().upper()}\n")
-                        index += 1
-        print(f"ASS subtitles successfully created at {ass_path}")
+                            chunk_start = max(0.0, chunk[0]["start"] - start_time)
+                            chunk_end = max(chunk_start + 0.2, chunk[-1]["end"] - start_time)
+                            
+                            for i, active_word in enumerate(chunk):
+                                if i == 0:
+                                    event_start = chunk_start
+                                else:
+                                    event_start = max(0.0, chunk[i]["start"] - start_time)
+                                    
+                                if i == len(chunk) - 1:
+                                    event_end = chunk_end
+                                else:
+                                    event_end = max(event_start + 0.1, chunk[i+1]["start"] - start_time)
+                                    
+                                formatted_words = []
+                                for j, w in enumerate(chunk):
+                                    w_text = w["text"].upper()
+                                    if design == "mimaros_clean":
+                                        if j == i:
+                                            formatted_words.append(f"{{\\c{highlight_color_ass}}}{w_text}{{\\rDefault}}")
+                                        else:
+                                            formatted_words.append(w_text)
+                                    elif design == "hormozi":
+                                        if j == i:
+                                            h_col = highlight_color_ass if highlight_color_hex != "#D4AF37" else ("&H0000FFFF&" if i % 2 == 0 else "&H0000FF00&")
+                                            formatted_words.append(f"{{\\c{h_col}\\fscx112\\fscy112}}{w_text}{{\\rDefault}}")
+                                        else:
+                                            formatted_words.append(w_text)
+                                    elif design == "popup_bouncy":
+                                        formatted_words.append(f"{{\\t(0,60,\\fscx125\\fscy125)\\t(60,130,\\fscx100\\fscy100)\\c{highlight_color_ass}}}{w_text}{{\\rDefault}}")
+                                    elif design == "dynamic_box":
+                                        if j == i:
+                                            formatted_words.append(f"{{\\c{highlight_color_ass}\\fscx108\\fscy108}}{w_text}{{\\rDefault}}")
+                                        else:
+                                            formatted_words.append(w_text)
+                                    else: # karaoke highlight
+                                        if j == i:
+                                            formatted_words.append(f"{{\\c{highlight_color_ass}\\fscx112\\fscy112}}{w_text}{{\\rDefault}}")
+                                        else:
+                                            formatted_words.append(w_text)
+                                            
+                                chunk_text = " ".join(formatted_words)
+                                if design == "mimaros_clean":
+                                    chunk_text = f"{{\\fad(80,80)}}{chunk_text}"
+                                    
+                                f.write(f"Dialogue: 1,{format_ass_time(event_start)},{format_ass_time(event_end)},Default,,0,0,0,,{chunk_text}\n")
+                    else:
+                        # Fallback for segment-only without word timestamps
+                        s_start = float(segment.get("start", 0.0))
+                        s_end = float(segment.get("end", 0.0))
+                        s_text = segment.get("text", "").strip().upper()
+                        if s_end > start_time and s_start < end_time and s_text:
+                            rel_start = max(0.0, s_start - start_time)
+                            rel_end = min(clip_duration, s_end - start_time)
+                            fade_tag = "{\\fad(100,100)}" if design == "mimaros_clean" else ""
+                            f.write(f"Dialogue: 1,{format_ass_time(rel_start)},{format_ass_time(rel_end)},Default,,0,0,0,,{fade_tag}{s_text}\n")
     except Exception as e:
         print(f"Failed to generate ASS file: {e}")
         raise e
@@ -679,7 +643,7 @@ def process_clip(video_path: str, transcript_data: dict, start_time: float, end_
         subtitle_config = {}
     subtitle_config["resolution"] = resolution
     
-    base_dir = os.path.dirname(output_path)
+    base_dir = os.path.dirname(os.path.abspath(output_path))
     os.makedirs(base_dir, exist_ok=True)
         
     ass_path = os.path.join(base_dir, f"subtitles_{os.path.basename(output_path)}.ass")
@@ -702,13 +666,13 @@ def process_clip(video_path: str, transcript_data: dict, start_time: float, end_
         if os.path.exists(ass_path):
             try: os.remove(ass_path)
             except: pass
-        cta_img_path = os.path.join(os.path.dirname(output_path), f"cta_{os.path.basename(output_path)}.png")
+        cta_img_path = os.path.join(os.path.dirname(os.path.abspath(output_path)), f"cta_{os.path.basename(output_path)}.png")
         if os.path.exists(cta_img_path):
             try: os.remove(cta_img_path)
             except: pass
 
 def generate_preview(video_path: str, output_path: str, config: dict):
-    base_dir = os.path.dirname(output_path)
+    base_dir = os.path.dirname(os.path.abspath(output_path))
     os.makedirs(base_dir, exist_ok=True)
     dummy_ass_path = os.path.join(base_dir, f"dummy_{os.path.basename(output_path)}.ass")
     
@@ -726,9 +690,9 @@ def generate_preview(video_path: str, output_path: str, config: dict):
         }
     ]
     
+    config["resolution"] = "720p"
     generate_ass(mock_segments, 0.0, 3.0, dummy_ass_path, config)
     escaped_ass_path = dummy_ass_path.replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
-    config["resolution"] = "720p"
     
     command = build_ffmpeg_command_args(video_path, escaped_ass_path, config, output_path, start_time="0", duration="3")
     
@@ -741,7 +705,7 @@ def generate_preview(video_path: str, output_path: str, config: dict):
         if os.path.exists(dummy_ass_path):
             try: os.remove(dummy_ass_path)
             except: pass
-        cta_img_path = os.path.join(os.path.dirname(output_path), f"cta_{os.path.basename(output_path)}.png")
+        cta_img_path = os.path.join(os.path.dirname(os.path.abspath(output_path)), f"cta_{os.path.basename(output_path)}.png")
         if os.path.exists(cta_img_path):
             try: os.remove(cta_img_path)
             except: pass

@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic';
 const FullCalendar = dynamic(() => import('@fullcalendar/react'), { ssr: false });
 import dayGridPlugin from '@fullcalendar/daygrid';
 import { useState, useRef, useEffect } from 'react';
-import { Play, Scissors, Subtitles, UploadCloud, Loader2, Sparkles, Calendar, Check, Settings, X, Clock, Video, Home, Menu, Share2, Download, Edit2, TrendingUp, Flame, Type, MonitorPlay, ChevronUp, ChevronDown, Layout, Volume2, Mic } from 'lucide-react';
+import { Play, Scissors, Subtitles, UploadCloud, Loader2, Sparkles, Calendar, Check, Settings, X, Clock, Video, Home, Menu, Share2, Download, Edit2, TrendingUp, Flame, Type, MonitorPlay, ChevronUp, ChevronDown, Layout, Volume2, Mic, Palette, Layers, Sliders, Eye, RefreshCw } from 'lucide-react';
 import Logo from '../components/Logo';
 
 const LogoIcon = ({ className = "w-10 h-10 md:w-12 md:h-12 shrink-0" }: { className?: string }) => (
@@ -40,12 +40,18 @@ export default function Page() {
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
   
   // Global Design & Preview State
-  const [globalSubtitleConfig, setGlobalSubtitleConfig] = useState({ design: 'mimaros_clean', cta: 'follow', text: '', template: 'clean_lower_third', watermark_text: 'mimaros.eu' });
+  const [globalSubtitleConfig, setGlobalSubtitleConfig] = useState({ design: 'karaoke', cta: 'follow', text: '', template: 'clean_lower_third', watermark_text: 'mimaros.eu' });
   const [useMasterCi, setUseMasterCi] = useState(true);
   const [primaryColor, setPrimaryColor] = useState('#14AEEA');
   const [textColor, setTextColor] = useState('#ffffff');
   const [highlightColor, setHighlightColor] = useState('#D4AF37');
+  const [boxColor, setBoxColor] = useState('#064A63');
   const [fontName, setFontName] = useState('Work Sans');
+  const [titlePosition, setTitlePosition] = useState<'top' | 'center' | 'bottom'>('top');
+  const [titleStyle, setTitleStyle] = useState<'box' | 'outline' | 'clean'>('box');
+  const [titleFontSize, setTitleFontSize] = useState<'normal' | 'large' | 'xlarge'>('normal');
+  const [subtitleFontSize, setSubtitleFontSize] = useState<'normal' | 'large' | 'xlarge'>('normal');
+  const [previewMode, setPreviewMode] = useState<'css' | 'video'>('css');
   const [logoFile, setLogoFile] = useState<File | null>(null);
   const [logoPosition, setLogoPosition] = useState('top-left');
   const [logoPreview, setLogoPreview] = useState<string | null>(null);
@@ -358,20 +364,29 @@ export default function Page() {
       try {
           const config = {
               ...globalSubtitleConfig,
+              design: globalSubtitleConfig.design || 'karaoke',
               use_master_ci: useMasterCi,
+              useMasterCi,
               primaryColor,
               textColor,
               highlightColor,
+              boxColor,
+              titleBgColor: boxColor,
               fontName,
+              titlePosition,
+              titleStyle,
+              titleFontSize,
+              subtitleFontSize,
               logoPosition,
               logoPath: logoPath || null,
-              design: globalSubtitleConfig.design || 'minimalist',
               resolution,
               hookHeader,
               showTitle,
               showLogo,
               showSubtitles,
-              showCTA
+              showCTA,
+              cta: globalSubtitleConfig.cta || 'follow',
+              watermark_text: globalSubtitleConfig.watermark_text || 'mimaros.eu'
           };
 
           const res = await fetch(`${API_BASE}/api/preview-clip`, {
@@ -397,7 +412,7 @@ export default function Page() {
       }, 1000); // 1000ms debounce
       
       return () => clearTimeout(delayDebounce);
-  }, [globalSubtitleConfig, useMasterCi, primaryColor, textColor, highlightColor, fontName, logoPosition, logoPath, resolution, hookHeader, showTitle, showLogo, showSubtitles, showCTA]);
+  }, [globalSubtitleConfig, useMasterCi, primaryColor, textColor, highlightColor, boxColor, fontName, titlePosition, titleStyle, titleFontSize, subtitleFontSize, logoPosition, logoPath, resolution, hookHeader, showTitle, showLogo, showSubtitles, showCTA]);
 
   const handleProcess = async () => {
     if (!isSequenceMode && !youtubeUrl && !localFile) return;
@@ -410,18 +425,28 @@ export default function Page() {
     try {
       const subConfig = {
           ...globalSubtitleConfig,
+          design: globalSubtitleConfig.design || 'karaoke',
           primaryColor,
           textColor,
           highlightColor,
+          boxColor,
+          titleBgColor: boxColor,
           fontName,
+          titlePosition,
+          titleStyle,
+          titleFontSize,
+          subtitleFontSize,
           logoPosition,
           logoPath: logoPath || null,
           useMasterCi,
+          use_master_ci: useMasterCi,
           hookHeader,
           showTitle,
           showLogo,
           showSubtitles,
           showCTA,
+          cta: globalSubtitleConfig.cta || 'follow',
+          watermark_text: globalSubtitleConfig.watermark_text || 'mimaros.eu',
           enable_dubbing: enableDubbing,
           dubbing_voice: selectedVoice,
           modus1Option: selectedMode === 'standard' || !selectedMode ? modus1Option : (modus1Option || 'one_to_one'),
@@ -990,8 +1015,377 @@ export default function Page() {
                               </button>
                           </div>
 
-                          {/* Sprachen & KI Dubbing Panel */}
-                          <div className="bg-background/40 p-4 rounded-xl border border-borderGlass space-y-4">
+                          {/* 1. Untertitel-Design & Vorlagen */}
+                          <div className="bg-background/40 p-5 rounded-2xl border border-borderGlass space-y-4">
+                              <div className="flex items-center justify-between border-b border-borderGlass/40 pb-3">
+                                  <div className="flex items-center gap-2">
+                                      <Subtitles className="w-4 h-4 text-mimaros-blue" />
+                                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">Untertitel-Design & Vorlagen</h3>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                      <span className="text-[10px] text-textDim font-bold uppercase">Untertitel anzeigen:</span>
+                                      <button 
+                                          type="button"
+                                          onClick={() => setShowSubtitles(!showSubtitles)}
+                                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${showSubtitles ? 'bg-mimaros-blue shadow-blue-glow' : 'bg-background border border-borderGlass'}`}
+                                      >
+                                          <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${showSubtitles ? 'translate-x-4' : 'translate-x-0'}`} />
+                                      </button>
+                                  </div>
+                              </div>
+
+                              {showSubtitles && (
+                                  <>
+                                      <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
+                                          {[
+                                              { id: 'karaoke', name: 'Karaoke Highlight', desc: 'Standard TikTok/Shorts Highlight', badge: 'Populär' },
+                                              { id: 'dynamic_box', name: 'Dynamic Box', desc: 'Farbige CI Backdrop Box', badge: 'CI Fokus' },
+                                              { id: 'popup_bouncy', name: 'Pop-Up Bouncy', desc: '1-Wort Bouncy Text Mitte', badge: 'Dynamisch' },
+                                              { id: 'hormozi', name: 'Hormozi Style', desc: 'Ultra Bold Anton Font', badge: 'Viral' },
+                                              { id: 'mimaros_clean', name: 'MIMAROS Clean', desc: 'B2B Minimalist Fades', badge: 'Corporate' }
+                                          ].map((tpl) => (
+                                              <button 
+                                                  key={tpl.id}
+                                                  type="button"
+                                                  onClick={() => setGlobalSubtitleConfig({...globalSubtitleConfig, design: tpl.id})}
+                                                  className={`p-3.5 rounded-xl border text-left transition-all relative ${globalSubtitleConfig.design === tpl.id ? 'bg-mimaros-blue/10 border-mimaros-blue text-white shadow-blue-glow ring-1 ring-mimaros-blue' : 'bg-background/40 border-borderGlass text-textDim hover:text-white hover:border-borderGlass/80'}`}
+                                              >
+                                                  <div className="flex justify-between items-start mb-1">
+                                                      <p className="font-bold text-xs">{tpl.name}</p>
+                                                      <span className="text-[8px] bg-white/10 px-1.5 py-0.5 rounded text-mimaros-gold font-bold">{tpl.badge}</span>
+                                                  </div>
+                                                  <p className="text-[9px] opacity-70 leading-snug">{tpl.desc}</p>
+                                              </button>
+                                          ))}
+                                      </div>
+
+                                      {/* Untertitel Schriftgröße */}
+                                      <div className="flex items-center justify-between pt-2 border-t border-borderGlass/30">
+                                          <span className="text-[10px] text-textDim font-bold uppercase tracking-wider">Untertitel Schriftgröße</span>
+                                          <div className="flex bg-panel border border-borderGlass rounded-lg p-1 gap-1">
+                                              {[
+                                                  { id: 'normal', label: 'Normal' },
+                                                  { id: 'large', label: 'Groß' },
+                                                  { id: 'xlarge', label: 'Extra Groß' }
+                                              ].map((size) => (
+                                                  <button
+                                                      key={size.id}
+                                                      type="button"
+                                                      onClick={() => setSubtitleFontSize(size.id as any)}
+                                                      className={`px-2.5 py-1 text-[10px] font-bold rounded ${subtitleFontSize === size.id ? 'bg-mimaros-blue text-white shadow-sm' : 'text-textDim hover:text-white'}`}
+                                                  >
+                                                      {size.label}
+                                                  </button>
+                                              ))}
+                                          </div>
+                                      </div>
+                                  </>
+                              )}
+                          </div>
+
+                          {/* 2. Video-Titel & Hook Header Design */}
+                          <div className="bg-background/40 p-5 rounded-2xl border border-borderGlass space-y-4">
+                              <div className="flex items-center justify-between border-b border-borderGlass/40 pb-3">
+                                  <div className="flex items-center gap-2">
+                                      <Type className="w-4 h-4 text-mimaros-gold" />
+                                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">Video-Titel & Hook Header</h3>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                      <span className="text-[10px] text-textDim font-bold uppercase">Titel anzeigen:</span>
+                                      <button 
+                                          type="button"
+                                          onClick={() => setShowTitle(!showTitle)}
+                                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${showTitle ? 'bg-mimaros-gold shadow-blue-glow' : 'bg-background border border-borderGlass'}`}
+                                      >
+                                          <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${showTitle ? 'translate-x-4' : 'translate-x-0'}`} />
+                                      </button>
+                                  </div>
+                              </div>
+
+                              {showTitle && (
+                                  <>
+                                      {/* Titel Text & KI Button */}
+                                      <div className="space-y-2">
+                                          <div className="flex justify-between items-center">
+                                              <label className="text-[10px] font-bold text-textDim uppercase tracking-wider">Titel / Hook Text</label>
+                                              <button
+                                                  type="button"
+                                                  onClick={() => generateAutoTitle(hookHeader || videoMetadata?.title || 'Virales Kurzvideo')}
+                                                  className="text-[10px] text-mimaros-gold hover:text-white flex items-center gap-1 font-bold bg-mimaros-gold/10 px-2 py-0.5 rounded border border-mimaros-gold/20 hover:bg-mimaros-gold/20 transition-all"
+                                              >
+                                                  <Sparkles className="w-3 h-3 text-mimaros-gold" /> Per KI optimieren
+                                              </button>
+                                          </div>
+                                          <input 
+                                              type="text" 
+                                              value={hookHeader} 
+                                              onChange={(e) => setHookHeader(e.target.value)} 
+                                              placeholder="Titel eingeben (z.B. DER GEHEIME TRICK)..." 
+                                              className="w-full bg-panel border border-borderGlass p-3 rounded-xl text-xs font-bold text-white outline-none focus:border-mimaros-blue uppercase"
+                                          />
+                                      </div>
+
+                                      {/* Titel Stil, Position & Größe */}
+                                      <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-2">
+                                          <div>
+                                              <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-1.5">Titel Stil</label>
+                                              <select 
+                                                  value={titleStyle} 
+                                                  onChange={(e) => setTitleStyle(e.target.value as any)}
+                                                  className="w-full bg-panel border border-borderGlass p-2 rounded-xl text-xs text-white outline-none focus:border-mimaros-blue"
+                                              >
+                                                  <option value="box">CI Box Backdrop</option>
+                                                  <option value="outline">Umrandet (Stroke)</option>
+                                                  <option value="clean">Minimalistisch</option>
+                                              </select>
+                                          </div>
+
+                                          <div>
+                                              <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-1.5">Titel Position</label>
+                                              <select 
+                                                  value={titlePosition} 
+                                                  onChange={(e) => setTitlePosition(e.target.value as any)}
+                                                  className="w-full bg-panel border border-borderGlass p-2 rounded-xl text-xs text-white outline-none focus:border-mimaros-blue"
+                                              >
+                                                  <option value="top">Oben (Top Header)</option>
+                                                  <option value="center">Mitte (Center Hook)</option>
+                                                  <option value="bottom">Unten (Über Untertiteln)</option>
+                                              </select>
+                                          </div>
+
+                                          <div>
+                                              <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider mb-1.5">Titel Schriftgröße</label>
+                                              <select 
+                                                  value={titleFontSize} 
+                                                  onChange={(e) => setTitleFontSize(e.target.value as any)}
+                                                  className="w-full bg-panel border border-borderGlass p-2 rounded-xl text-xs text-white outline-none focus:border-mimaros-blue"
+                                              >
+                                                  <option value="normal">Normal (44px)</option>
+                                                  <option value="large">Groß (52px)</option>
+                                                  <option value="xlarge">Extra Groß (60px)</option>
+                                              </select>
+                                          </div>
+                                      </div>
+                                  </>
+                              )}
+                          </div>
+
+                          {/* 3. Typografie & Schriftarten */}
+                          <div className="bg-background/40 p-5 rounded-2xl border border-borderGlass space-y-3">
+                              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                  <Type className="w-4 h-4 text-mimaros-blue" /> Typografie & CI-Schriftarten
+                              </h3>
+                              <div className="grid grid-cols-2 sm:grid-cols-5 gap-2.5">
+                                  {[
+                                      { id: 'Work Sans', label: 'Work Sans', sub: 'MIMAROS Standard' },
+                                      { id: 'Montserrat', label: 'Montserrat', sub: 'Modern & Bold' },
+                                      { id: 'Anton', label: 'Anton', sub: 'Hormozi Impact' },
+                                      { id: 'Oswald', label: 'Oswald', sub: 'Condensed Tall' },
+                                      { id: 'Lato', label: 'Lato', sub: 'Clean Corporate' }
+                                  ].map((font) => (
+                                      <button
+                                          key={font.id}
+                                          type="button"
+                                          onClick={() => setFontName(font.id)}
+                                          className={`p-3 rounded-xl border text-center transition-all ${fontName === font.id ? 'bg-mimaros-blue/15 border-mimaros-blue text-white shadow-blue-glow ring-1 ring-mimaros-blue' : 'bg-background/40 border-borderGlass text-textDim hover:text-white'}`}
+                                      >
+                                          <p className="font-bold text-xs" style={{ fontFamily: font.id }}>{font.label}</p>
+                                          <p className="text-[8px] opacity-60 mt-0.5">{font.sub}</p>
+                                      </button>
+                                  ))}
+                              </div>
+                          </div>
+
+                          {/* 4. Farben & Branding (CI Master) */}
+                          <div className="bg-background/40 p-5 rounded-2xl border border-borderGlass space-y-4">
+                              <div className="flex items-center justify-between border-b border-borderGlass/40 pb-3">
+                                  <div className="flex items-center gap-2">
+                                      <Palette className="w-4 h-4 text-mimaros-blue" />
+                                      <h3 className="text-xs font-bold text-white uppercase tracking-wider">Farben & Branding (CI Master)</h3>
+                                  </div>
+                                  <div className="flex items-center gap-2">
+                                      <span className="text-[10px] text-textDim font-bold uppercase">CI-Rahmen:</span>
+                                      <button 
+                                          type="button"
+                                          onClick={() => setUseMasterCi(!useMasterCi)}
+                                          className={`relative inline-flex h-5 w-9 shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${useMasterCi ? 'bg-mimaros-blue shadow-blue-glow' : 'bg-background border border-borderGlass'}`}
+                                      >
+                                          <span className={`pointer-events-none inline-block h-4 w-4 transform rounded-full bg-white shadow transition duration-200 ease-in-out ${useMasterCi ? 'translate-x-4' : 'translate-x-0'}`} />
+                                      </button>
+                                  </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                                  {/* Primärfarbe */}
+                                  <div className="space-y-2 bg-panel/50 p-3 rounded-xl border border-borderGlass/50">
+                                      <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider">Primär- / Rahmen</label>
+                                      <div className="flex items-center gap-2">
+                                          <input 
+                                              type="color" 
+                                              value={primaryColor} 
+                                              onChange={(e) => setPrimaryColor(e.target.value)} 
+                                              className="w-8 h-8 rounded-lg bg-transparent cursor-pointer border border-white/20 shrink-0" 
+                                          />
+                                          <input 
+                                              type="text" 
+                                              value={primaryColor} 
+                                              onChange={(e) => setPrimaryColor(e.target.value)} 
+                                              className="w-full bg-background border border-borderGlass p-1.5 rounded-lg text-xs font-mono text-white text-center" 
+                                          />
+                                      </div>
+                                      <div className="flex gap-1 pt-1">
+                                          {['#14AEEA', '#00FFCC', '#FF5500', '#D4AF37'].map((col) => (
+                                              <button key={col} type="button" onClick={() => setPrimaryColor(col)} className="w-5 h-5 rounded-md border border-white/20" style={{ backgroundColor: col }} />
+                                          ))}
+                                      </div>
+                                  </div>
+
+                                  {/* Untertitel Highlight */}
+                                  <div className="space-y-2 bg-panel/50 p-3 rounded-xl border border-borderGlass/50">
+                                      <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider">Untertitel Highlight</label>
+                                      <div className="flex items-center gap-2">
+                                          <input 
+                                              type="color" 
+                                              value={highlightColor} 
+                                              onChange={(e) => setHighlightColor(e.target.value)} 
+                                              className="w-8 h-8 rounded-lg bg-transparent cursor-pointer border border-white/20 shrink-0" 
+                                          />
+                                          <input 
+                                              type="text" 
+                                              value={highlightColor} 
+                                              onChange={(e) => setHighlightColor(e.target.value)} 
+                                              className="w-full bg-background border border-borderGlass p-1.5 rounded-lg text-xs font-mono text-white text-center" 
+                                          />
+                                      </div>
+                                      <div className="flex gap-1 pt-1">
+                                          {['#D4AF37', '#14AEEA', '#FFFF00', '#00FF00', '#FF3B30'].map((col) => (
+                                              <button key={col} type="button" onClick={() => setHighlightColor(col)} className="w-5 h-5 rounded-md border border-white/20" style={{ backgroundColor: col }} />
+                                          ))}
+                                      </div>
+                                  </div>
+
+                                  {/* Textfarbe */}
+                                  <div className="space-y-2 bg-panel/50 p-3 rounded-xl border border-borderGlass/50">
+                                      <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider">Textfarbe</label>
+                                      <div className="flex items-center gap-2">
+                                          <input 
+                                              type="color" 
+                                              value={textColor} 
+                                              onChange={(e) => setTextColor(e.target.value)} 
+                                              className="w-8 h-8 rounded-lg bg-transparent cursor-pointer border border-white/20 shrink-0" 
+                                          />
+                                          <input 
+                                              type="text" 
+                                              value={textColor} 
+                                              onChange={(e) => setTextColor(e.target.value)} 
+                                              className="w-full bg-background border border-borderGlass p-1.5 rounded-lg text-xs font-mono text-white text-center" 
+                                          />
+                                      </div>
+                                      <div className="flex gap-1 pt-1">
+                                          {['#FFFFFF', '#F3F4F6', '#E5E7EB', '#000000'].map((col) => (
+                                              <button key={col} type="button" onClick={() => setTextColor(col)} className="w-5 h-5 rounded-md border border-white/20" style={{ backgroundColor: col }} />
+                                          ))}
+                                      </div>
+                                  </div>
+
+                                  {/* Box / Backdrop Farbe */}
+                                  <div className="space-y-2 bg-panel/50 p-3 rounded-xl border border-borderGlass/50">
+                                      <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider">Box Hintergrund</label>
+                                      <div className="flex items-center gap-2">
+                                          <input 
+                                              type="color" 
+                                              value={boxColor} 
+                                              onChange={(e) => setBoxColor(e.target.value)} 
+                                              className="w-8 h-8 rounded-lg bg-transparent cursor-pointer border border-white/20 shrink-0" 
+                                          />
+                                          <input 
+                                              type="text" 
+                                              value={boxColor} 
+                                              onChange={(e) => setBoxColor(e.target.value)} 
+                                              className="w-full bg-background border border-borderGlass p-1.5 rounded-lg text-xs font-mono text-white text-center" 
+                                          />
+                                      </div>
+                                      <div className="flex gap-1 pt-1">
+                                          {['#064A63', '#0B111A', '#18181B', '#000000'].map((col) => (
+                                              <button key={col} type="button" onClick={() => setBoxColor(col)} className="w-5 h-5 rounded-md border border-white/20" style={{ backgroundColor: col }} />
+                                          ))}
+                                      </div>
+                                  </div>
+                              </div>
+                          </div>
+
+                          {/* 5. Logo, Call-to-Action & Wasserzeichen */}
+                          <div className="bg-background/40 p-5 rounded-2xl border border-borderGlass space-y-4">
+                              <h3 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
+                                  <Layers className="w-4 h-4 text-mimaros-blue" /> Branding, Logo & CTA Button
+                              </h3>
+                              <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+                                  {/* Logo Position */}
+                                  <div className="space-y-2">
+                                      <div className="flex justify-between items-center">
+                                          <label className="text-[10px] font-bold text-textDim uppercase tracking-wider">Logo Overlay</label>
+                                          <button 
+                                              type="button" 
+                                              onClick={() => setShowLogo(!showLogo)} 
+                                              className="text-[10px] text-mimaros-blue font-bold"
+                                          >
+                                              {showLogo ? 'Aktiv' : 'Inaktiv'}
+                                          </button>
+                                      </div>
+                                      <select 
+                                          value={logoPosition} 
+                                          onChange={(e) => setLogoPosition(e.target.value)} 
+                                          disabled={!showLogo}
+                                          className="w-full bg-panel border border-borderGlass p-2.5 rounded-xl text-xs text-white outline-none focus:border-mimaros-blue disabled:opacity-40"
+                                      >
+                                          <option value="top-left">Oben Links</option>
+                                          <option value="top-right">Oben Rechts</option>
+                                          <option value="bottom-left">Unten Links</option>
+                                          <option value="bottom-right">Unten Rechts</option>
+                                      </select>
+                                  </div>
+
+                                  {/* CTA Button */}
+                                  <div className="space-y-2">
+                                      <div className="flex justify-between items-center">
+                                          <label className="text-[10px] font-bold text-textDim uppercase tracking-wider">Call-to-Action Button</label>
+                                          <button 
+                                              type="button" 
+                                              onClick={() => setShowCTA(!showCTA)} 
+                                              className="text-[10px] text-mimaros-blue font-bold"
+                                          >
+                                              {showCTA ? 'Aktiv' : 'Inaktiv'}
+                                          </button>
+                                      </div>
+                                      <select 
+                                          value={globalSubtitleConfig.cta} 
+                                          onChange={(e) => setGlobalSubtitleConfig({...globalSubtitleConfig, cta: e.target.value})} 
+                                          disabled={!showCTA}
+                                          className="w-full bg-panel border border-borderGlass p-2.5 rounded-xl text-xs text-white outline-none focus:border-mimaros-blue disabled:opacity-40"
+                                      >
+                                          <option value="follow">Folgen für mehr</option>
+                                          <option value="subscribe">Jetzt Abonnieren</option>
+                                          <option value="more">Mehr Videos</option>
+                                          <option value="none">Kein Button</option>
+                                      </select>
+                                  </div>
+
+                                  {/* Wasserzeichen */}
+                                  <div className="space-y-2">
+                                      <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider">Wasserzeichen / Domain</label>
+                                      <input 
+                                          type="text" 
+                                          value={globalSubtitleConfig.watermark_text} 
+                                          onChange={(e) => setGlobalSubtitleConfig({...globalSubtitleConfig, watermark_text: e.target.value})} 
+                                          placeholder="mimaros.eu" 
+                                          className="w-full bg-panel border border-borderGlass p-2.5 rounded-xl text-xs text-white outline-none focus:border-mimaros-blue"
+                                      />
+                                  </div>
+                              </div>
+                          </div>
+
+                          {/* 6. Sprachen & KI Dubbing Panel */}
+                          <div className="bg-background/40 p-5 rounded-2xl border border-borderGlass space-y-4">
                               <h4 className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-2">
                                   <Volume2 className="w-4 h-4 text-mimaros-blue" /> Sprachen & KI Video-Übersetzung (Dubbing)
                               </h4>
@@ -1016,7 +1410,7 @@ export default function Page() {
                                   </div>
                               </div>
 
-                              {/* Dubbing Toggle (Erscheint nur wenn Zielsprache sich unterscheidet) */}
+                              {/* Dubbing Toggle */}
                               {subtitleLang !== 'auto' && subtitleLang !== videoLang && (
                                   <div className="bg-panel/60 border border-mimaros-blue/40 rounded-xl p-4 space-y-3">
                                       <div className="flex items-center justify-between">
@@ -1057,45 +1451,6 @@ export default function Page() {
                               )}
                           </div>
 
-                          {/* Video-Titel Input (Echtzeit-Synchronisierung mit der Vorschau) */}
-                          <div className="bg-background/40 p-4 rounded-xl border border-borderGlass space-y-2">
-                              <label className="block text-xs font-bold text-white uppercase tracking-wider flex items-center justify-between">
-                                  <span>Video-Titel / Hook Text (Echtzeit-Vorschau)</span>
-                                  <span className="text-[10px] text-mimaros-gold font-normal">Wird im Video-Overlay angezeigt</span>
-                              </label>
-                              <input 
-                                  type="text" 
-                                  value={hookHeader} 
-                                  onChange={(e) => setHookHeader(e.target.value)} 
-                                  placeholder="Titel eingeben oder per KI generieren..." 
-                                  className="w-full bg-panel border border-borderGlass p-3 rounded-xl text-xs font-bold text-white outline-none focus:border-mimaros-blue"
-                              />
-                          </div>
-
-                          {/* Untertitel Vorlagen */}
-                          <div className="space-y-3">
-                              <label className="block text-xs font-bold text-white uppercase tracking-wider">Untertitel Template auswählen</label>
-                              <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                                  {[
-                                      { id: 'karaoke', name: 'Karaoke Highlight', desc: 'Standard TikTok/Shorts Highlight' },
-                                      { id: 'dynamic_box', name: 'Dynamic Box', desc: 'Farbige CI Backdrop Box' },
-                                      { id: 'popup_bouncy', name: 'Pop-Up Bouncy', desc: '1-Wort Bouncy Text' },
-                                      { id: 'hormozi', name: 'Hormozi Style', desc: 'Ultra Bold Anton Font' },
-                                      { id: 'mimaros_clean', name: 'MIMAROS Clean', desc: 'B2B Minimalist Fades' }
-                                  ].map((tpl) => (
-                                      <button 
-                                          key={tpl.id}
-                                          type="button"
-                                          onClick={() => setGlobalSubtitleConfig({...globalSubtitleConfig, design: tpl.id})}
-                                          className={`p-3 rounded-xl border text-left transition-all ${globalSubtitleConfig.design === tpl.id ? 'bg-mimaros-blue/10 border-mimaros-blue text-white shadow-blue-glow' : 'bg-background/40 border-borderGlass text-textDim hover:text-white'}`}
-                                      >
-                                          <p className="font-bold text-xs">{tpl.name}</p>
-                                          <p className="text-[9px] opacity-70 mt-1">{tpl.desc}</p>
-                                      </button>
-                                  ))}
-                              </div>
-                          </div>
-
                           {/* Finaler Haupt-Button */}
                           <button 
                               onClick={handleProcess}
@@ -1108,69 +1463,184 @@ export default function Page() {
                       </div>
                   </div>
 
-                  {/* Right Column: Live Handy Vorschau */}
-                  <div className="lg:col-span-1 flex flex-col items-center">
-                      <label className="block text-xs font-bold text-textDim uppercase mb-3 w-full text-center">Live Style-Vorschau</label>
-                      <div className="w-full max-w-[220px] bg-background rounded-2xl overflow-hidden shadow-2xl flex items-center justify-center aspect-[9/16] relative bg-cover bg-center" style={{
-                          backgroundImage: "url('https://images.unsplash.com/photo-1616469829941-c7200edec809?auto=format&fit=crop&w=400&q=80')",
-                          border: `4px solid ${primaryColor}`
+                  {/* Right Column: Live Handy & Video Vorschau */}
+                  <div className="lg:col-span-1 flex flex-col items-center space-y-4">
+                      {/* Preview Switcher Header */}
+                      <div className="w-full flex items-center justify-between bg-panel/60 p-1.5 rounded-xl border border-borderGlass">
+                          <button
+                              type="button"
+                              onClick={() => setPreviewMode('css')}
+                              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${previewMode === 'css' ? 'bg-mimaros-blue text-white shadow-blue-glow' : 'text-textDim hover:text-white'}`}
+                          >
+                              <Eye className="w-3.5 h-3.5" /> Live Interaktiv
+                          </button>
+                          <button
+                              type="button"
+                              onClick={() => {
+                                  setPreviewMode('video');
+                                  handleGeneratePreview();
+                              }}
+                              className={`flex-1 py-1.5 text-xs font-bold rounded-lg transition-all flex items-center justify-center gap-1.5 ${previewMode === 'video' ? 'bg-mimaros-gold text-black shadow-md' : 'text-textDim hover:text-white'}`}
+                          >
+                              <MonitorPlay className="w-3.5 h-3.5" /> Video Clip
+                          </button>
+                      </div>
+
+                      {/* Phone Container */}
+                      <div className="w-full max-w-[260px] bg-background rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center aspect-[9/16] relative bg-cover bg-center transition-all duration-300" style={{
+                          backgroundImage: previewMode === 'css' ? "url('https://images.unsplash.com/photo-1616469829941-c7200edec809?auto=format&fit=crop&w=600&q=80')" : 'none',
+                          border: useMasterCi ? `4px solid ${primaryColor}` : '2px solid rgba(255,255,255,0.1)'
                       }}>
-                          {showLogo && (
-                              <div className={`absolute z-30 ${logoPosition === 'top-left' ? 'top-3 left-3' : logoPosition === 'top-right' ? 'top-3 right-3' : logoPosition === 'bottom-left' ? 'bottom-3 left-3' : 'bottom-3 right-3'}`}>
-                                  <LogoIcon className="w-5 h-5 drop-shadow-[0_0_8px_rgba(20,174,234,0.6)]" />
+                          {previewMode === 'video' && globalPreviewUrl ? (
+                              <div className="absolute inset-0 z-20 bg-black flex items-center justify-center">
+                                  <video 
+                                      src={globalPreviewUrl} 
+                                      autoPlay 
+                                      loop 
+                                      muted 
+                                      playsInline 
+                                      className="w-full h-full object-cover" 
+                                  />
+                                  {isGlobalPreviewing && (
+                                      <div className="absolute inset-0 bg-black/60 flex items-center justify-center gap-2 text-xs font-bold text-white">
+                                          <Loader2 className="w-4 h-4 animate-spin text-mimaros-blue" /> Aktualisiere...
+                                      </div>
+                                  )}
                               </div>
-                          )}
-                          {showTitle && (
-                              <div className="absolute top-0 left-0 right-0 z-15 bg-[#064A63]/85 flex flex-col items-center justify-center pt-2 pb-2.5 px-6 border-b-2" style={{ borderColor: primaryColor }}>
-                                  <div className="text-[7px] text-white/90 font-medium tracking-wider leading-none mb-1">MIMAROS.eu</div>
-                                  <div className="text-[9px] text-white font-heading font-bold uppercase text-center px-4 max-w-[90%] w-full mx-auto break-words leading-tight">
-                                      {hookHeader ? hookHeader.toUpperCase() : (videoMetadata?.title ? videoMetadata.title.toUpperCase() : "DEIN VIDEO TITEL HIER")}
-                                  </div>
-                              </div>
-                          )}
-                          {showSubtitles && (
-                              <div className="absolute bottom-10 left-2 right-2 z-15 flex flex-col items-center justify-center text-center">
-                                  <div className="bg-[#064A63]/85 backdrop-blur-md px-3.5 py-2 rounded-xl border border-white/15 shadow-2xl flex items-center justify-center">
-                                      {globalSubtitleConfig.design === 'mimaros_clean' && (
-                                          <div className="px-3 py-1.5 rounded-lg border border-[#C89B31]/50 bg-[#064A63]/90 text-[9px] font-bold text-white tracking-widest uppercase shadow-xl backdrop-blur-md">
-                                              <span className="text-[#C89B31] font-black">MIMAROS</span> CLEAN STIL
+                          ) : (
+                              <>
+                                  {/* Watermark */}
+                                  {useMasterCi && globalSubtitleConfig.watermark_text && (
+                                      <div className={`absolute left-0 right-0 z-25 flex justify-center pointer-events-none ${showTitle && titlePosition === 'top' ? 'top-14' : 'top-3'}`}>
+                                          <div className="bg-black/60 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-[8px] text-white/90 font-mono tracking-wider">
+                                              {globalSubtitleConfig.watermark_text}
                                           </div>
-                                      )}
-                                      {globalSubtitleConfig.design === 'karaoke' && (
-                                          <div className="px-3 py-1.5 rounded-lg bg-[#064A63]/90 backdrop-blur-sm text-[10px] font-extrabold uppercase tracking-wide border border-white/10" style={{ color: textColor }}>
-                                              <span style={{ color: highlightColor || '#14AEEA' }}>KARAOKE</span> HIGHLIGHT
-                                          </div>
-                                      )}
-                                      {globalSubtitleConfig.design === 'dynamic_box' && (
-                                          <div className="px-3 py-1.5 rounded-lg font-black text-[10px] uppercase shadow-lg tracking-wider text-white bg-[#064A63]/90 backdrop-blur-sm border border-white/10" style={{ backgroundColor: primaryColor || '#14AEEA' }}>
-                                              DYNAMIC BOX STIL
-                                          </div>
-                                      )}
-                                      {globalSubtitleConfig.design === 'popup_bouncy' && (
-                                          <div className="px-3 py-1.5 rounded-lg bg-[#064A63]/90 backdrop-blur-sm border border-white/10 text-[12px] font-black uppercase text-white animate-bounce drop-shadow-[0_4px_12px_rgba(217,168,58,0.8)]">
-                                              <span style={{ color: highlightColor || '#D9A83A' }}>POP-UP</span> BOUNCY
-                                          </div>
-                                      )}
-                                      {globalSubtitleConfig.design === 'hormozi' && (
-                                          <div className="px-3 py-1.5 rounded-lg bg-[#064A63]/90 backdrop-blur-sm border border-white/10 text-[12px] font-black uppercase tracking-tighter drop-shadow-[0_2px_8px_rgba(0,0,0,0.9)]">
-                                              <span className="text-[#FFFF00]">HORMOZI</span> <span className="text-[#00FF00]">STYLE</span>
-                                          </div>
-                                      )}
-                                      {globalSubtitleConfig.design !== 'mimaros_clean' && globalSubtitleConfig.design !== 'karaoke' && globalSubtitleConfig.design !== 'dynamic_box' && globalSubtitleConfig.design !== 'popup_bouncy' && globalSubtitleConfig.design !== 'hormozi' && (
+                                      </div>
+                                  )}
+
+                                  {/* Logo */}
+                                  {showLogo && (
+                                      <div className={`absolute z-30 pointer-events-none ${logoPosition === 'top-left' ? 'top-3 left-3' : logoPosition === 'top-right' ? 'top-3 right-3' : logoPosition === 'bottom-left' ? 'bottom-3 left-3' : 'bottom-3 right-3'}`}>
+                                          <LogoIcon className="w-6 h-6 drop-shadow-[0_0_8px_rgba(20,174,234,0.6)]" />
+                                      </div>
+                                  )}
+
+                                  {/* Video Title Header */}
+                                  {showTitle && (
+                                      <div 
+                                          className={`absolute left-2 right-2 z-20 flex flex-col items-center justify-center text-center transition-all ${titlePosition === 'center' ? 'top-1/3 -translate-y-1/2' : titlePosition === 'bottom' ? 'bottom-24' : (showLogo && logoPosition.includes('top') ? 'top-8' : 'top-3')}`}
+                                      >
                                           <div 
-                                              className="px-3 py-1.5 rounded-lg font-bold uppercase text-[9px] tracking-wide shadow-lg border border-white/10 bg-[#064A63]/90 backdrop-blur-sm"
+                                              className={`px-3 py-1.5 rounded-lg max-w-[95%] w-auto mx-auto uppercase font-bold tracking-wide transition-all ${titleStyle === 'box' ? 'shadow-xl' : titleStyle === 'outline' ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]' : 'drop-shadow-[0_0_10px_rgba(20,174,234,0.5)]'}`}
                                               style={{
-                                                  color: textColor,
+                                                  backgroundColor: titleStyle === 'box' ? (boxColor || '#064A63') : 'transparent',
+                                                  color: textColor || '#FFFFFF',
+                                                  fontFamily: fontName,
+                                                  fontSize: titleFontSize === 'large' ? '12px' : titleFontSize === 'xlarge' ? '14px' : '10px',
+                                                  border: titleStyle === 'outline' ? `2px solid ${primaryColor}` : 'none',
+                                                  lineHeight: 1.2
+                                              }}
+                                          >
+                                              {hookHeader ? hookHeader.toUpperCase() : (videoMetadata?.title ? videoMetadata.title.toUpperCase() : "DER GEHEIME TRICK")}
+                                          </div>
+                                      </div>
+                                  )}
+
+                                  {/* Subtitles Overlay */}
+                                  {showSubtitles && (
+                                      <div className={`absolute left-2 right-2 z-20 flex flex-col items-center justify-center text-center ${globalSubtitleConfig.design === 'popup_bouncy' ? 'top-1/2 -translate-y-1/2' : 'bottom-10'}`}>
+                                          <div 
+                                              className="transition-all"
+                                              style={{
+                                                  fontFamily: fontName,
+                                                  fontSize: subtitleFontSize === 'large' ? '13px' : subtitleFontSize === 'xlarge' ? '15px' : '11px'
+                                              }}
+                                          >
+                                              {globalSubtitleConfig.design === 'mimaros_clean' && (
+                                                  <div 
+                                                      className="px-3.5 py-1.5 rounded-lg border border-white/20 shadow-xl backdrop-blur-md font-medium tracking-wide uppercase"
+                                                      style={{
+                                                          backgroundColor: `${boxColor}E6`,
+                                                          color: textColor
+                                                      }}
+                                                  >
+                                                      <span style={{ color: highlightColor }} className="font-bold">MIMAROS</span> CLEAN STIL
+                                                  </div>
+                                              )}
+
+                                              {globalSubtitleConfig.design === 'karaoke' && (
+                                                  <div 
+                                                      className="px-3.5 py-1.5 rounded-xl font-extrabold uppercase tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
+                                                      style={{ color: textColor }}
+                                                  >
+                                                      <span style={{ color: highlightColor }} className="drop-shadow-[0_0_8px_currentColor]">KARAOKE</span> HIGHLIGHT
+                                                  </div>
+                                              )}
+
+                                              {globalSubtitleConfig.design === 'dynamic_box' && (
+                                                  <div 
+                                                      className="px-3.5 py-1.5 rounded-lg font-black uppercase shadow-2xl tracking-wider border border-white/10"
+                                                      style={{ 
+                                                          backgroundColor: `${boxColor}EE`,
+                                                          color: textColor
+                                                      }}
+                                                  >
+                                                      <span style={{ color: highlightColor }}>DYNAMIC</span> BOX STIL
+                                                  </div>
+                                              )}
+
+                                              {globalSubtitleConfig.design === 'popup_bouncy' && (
+                                                  <div 
+                                                      className="px-4 py-2 rounded-2xl bg-black/70 backdrop-blur-md border border-white/15 font-black uppercase text-center animate-bounce shadow-2xl"
+                                                      style={{ 
+                                                          color: highlightColor,
+                                                          fontSize: subtitleFontSize === 'large' ? '16px' : subtitleFontSize === 'xlarge' ? '18px' : '14px'
+                                                      }}
+                                                  >
+                                                      BOUNCY!
+                                                  </div>
+                                              )}
+
+                                              {globalSubtitleConfig.design === 'hormozi' && (
+                                                  <div 
+                                                      className="px-3.5 py-1.5 rounded-lg font-black uppercase tracking-tighter drop-shadow-[0_3px_6px_rgba(0,0,0,1)]"
+                                                      style={{ fontFamily: 'Anton, sans-serif' }}
+                                                  >
+                                                      <span style={{ color: highlightColor }}>HORMOZI</span> <span className="text-[#00FF00]">STYLE</span>
+                                                  </div>
+                                              )}
+                                          </div>
+                                      </div>
+                                  )}
+
+                                  {/* Call-to-Action Overlay */}
+                                  {showCTA && globalSubtitleConfig.cta !== 'none' && (
+                                      <div className="absolute bottom-2 left-0 right-0 z-20 flex justify-center pointer-events-none">
+                                          <div 
+                                              className="px-3 py-1 rounded-full text-[9px] font-black uppercase shadow-lg tracking-wider text-white"
+                                              style={{ 
+                                                  backgroundColor: primaryColor,
                                                   fontFamily: fontName
                                               }}
                                           >
-                                              <span style={{ color: highlightColor }}>DYNAMISCHE</span> UNTERTITEL VORSCHAU
+                                              {globalSubtitleConfig.cta === 'subscribe' ? 'JETZT ABONNIEREN' : globalSubtitleConfig.cta === 'more' ? 'MEHR VIDEOS' : 'FOLGEN FÜR MEHR'}
                                           </div>
-                                      )}
-                                  </div>
-                              </div>
+                                      </div>
+                                  )}
+                              </>
                           )}
                       </div>
+
+                      {/* Preview Refresh Button */}
+                      <button
+                          type="button"
+                          onClick={handleGeneratePreview}
+                          disabled={isGlobalPreviewing}
+                          className="text-xs text-textDim hover:text-white bg-background/50 hover:bg-background px-4 py-2 rounded-xl border border-borderGlass flex items-center gap-2 transition-all shadow-sm"
+                      >
+                          <RefreshCw className={`w-3.5 h-3.5 ${isGlobalPreviewing ? 'animate-spin text-mimaros-blue' : ''}`} />
+                          {isGlobalPreviewing ? "Rendere Vorschau..." : "Vorschau aktualisieren"}
+                      </button>
                   </div>
               </div>
           )}
