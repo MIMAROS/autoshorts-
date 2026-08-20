@@ -206,17 +206,18 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     if show_subtitles or has_title:
         vf_filter += f",subtitles='{escaped_srt_path}':fontsdir='{escaped_fonts_dir}'"
     
-    # 3. Watermark
+    # 3. MIMAROS.EU Brand Tag (Always positioned above the title at the top)
     watermark_text = config.get("watermark_text", "mimaros.eu").replace("'", "\\'")
     if watermark_text and use_master_ci:
-        # Watermark position shifted if top title is present to avoid overlay
-        if has_title:
-            watermark_y = 380 if resolution == "1080p" else 250
-        else:
-            watermark_y = 30 if resolution == "1080p" else 20
-            
-        vf_filter += f",drawbox=x=(iw-300)/2:y={watermark_y}:w=300:h=50:color=black@0.6:t=fill"
-        vf_filter += f",drawtext=text='{watermark_text}':fontcolor=white:fontsize=22:font='{ass_font}':x=(w-text_w)/2:y={watermark_y+15}"
+        watermark_y = 40 if resolution == "1080p" else 26
+        w_width = 280 if resolution == "1080p" else 185
+        w_height = 42 if resolution == "1080p" else 28
+        w_font_size = 20 if resolution == "1080p" else 13
+        w_text_y = watermark_y + (11 if resolution == "1080p" else 7)
+        
+        vf_filter += f",drawbox=x=(iw-{w_width})/2:y={watermark_y}:w={w_width}:h={w_height}:color=#064A63@0.85:t=fill"
+        vf_filter += f",drawbox=x=(iw-{w_width})/2:y={watermark_y}:w={w_width}:h={w_height}:color={primary_color}@0.6:t=2"
+        vf_filter += f",drawtext=text='{watermark_text.upper()}':fontcolor=#D4AF37:fontsize={w_font_size}:font='{ass_font}':x=(w-text_w)/2:y={w_text_y}"
         
     vf_filter += "[v_base]"
     filter_complex = vf_filter

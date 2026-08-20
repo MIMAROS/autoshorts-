@@ -1507,44 +1507,44 @@ export default function Page() {
                                       </div>
                                   )}
                               </div>
-                          ) : (
-                              <>
-                                  {/* Watermark */}
-                                  {useMasterCi && globalSubtitleConfig.watermark_text && (
-                                      <div className={`absolute left-0 right-0 z-25 flex justify-center pointer-events-none ${showTitle && titlePosition === 'top' ? 'top-14' : 'top-3'}`}>
-                                          <div className="bg-black/60 backdrop-blur-sm px-2.5 py-0.5 rounded-full text-[8px] text-white/90 font-mono tracking-wider">
-                                              {globalSubtitleConfig.watermark_text}
-                                          </div>
-                                      </div>
-                                  )}
+                           ) : (
+                               <>
+                                   {/* MIMAROS.EU Brand Tag (Above Title) */}
+                                   {useMasterCi && globalSubtitleConfig.watermark_text && (
+                                       <div className="absolute top-2.5 left-0 right-0 z-25 flex justify-center pointer-events-none">
+                                           <div className="bg-[#064A63]/90 border border-[#14AEEA]/60 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[8px] text-[#D4AF37] font-bold tracking-widest uppercase shadow-md">
+                                               {globalSubtitleConfig.watermark_text}
+                                           </div>
+                                       </div>
+                                   )}
 
-                                  {/* Logo */}
-                                  {showLogo && (
-                                      <div className={`absolute z-30 pointer-events-none ${logoPosition === 'top-left' ? 'top-3 left-3' : logoPosition === 'top-right' ? 'top-3 right-3' : logoPosition === 'bottom-left' ? 'bottom-3 left-3' : 'bottom-3 right-3'}`}>
-                                          <LogoIcon className="w-6 h-6 drop-shadow-[0_0_8px_rgba(20,174,234,0.6)]" />
-                                      </div>
-                                  )}
+                                   {/* Logo */}
+                                   {showLogo && (
+                                       <div className={`absolute z-30 pointer-events-none ${logoPosition === 'top-left' ? 'top-2.5 left-2.5' : logoPosition === 'top-right' ? 'top-2.5 right-2.5' : logoPosition === 'bottom-left' ? 'bottom-2.5 left-2.5' : 'bottom-2.5 right-2.5'}`}>
+                                           <LogoIcon className="w-5 h-5 drop-shadow-[0_0_8px_rgba(20,174,234,0.6)]" />
+                                       </div>
+                                   )}
 
-                                  {/* Video Title Header */}
-                                  {showTitle && (
+                                   {/* Video Title Header (Positioned Below MIMAROS.EU) */}
+                                   {showTitle && (
+                                       <div 
+                                           className={`absolute left-2 right-2 z-20 flex flex-col items-center justify-center text-center transition-all ${titlePosition === 'center' ? 'top-1/3 -translate-y-1/2' : titlePosition === 'bottom' ? 'bottom-24' : 'top-8'}`}
+                                       >
                                       <div 
-                                          className={`absolute left-2 right-2 z-20 flex flex-col items-center justify-center text-center transition-all ${titlePosition === 'center' ? 'top-1/3 -translate-y-1/2' : titlePosition === 'bottom' ? 'bottom-24' : (showLogo && logoPosition.includes('top') ? 'top-8' : 'top-3')}`}
+                                          className={`px-3 py-1.5 rounded-lg max-w-[95%] w-auto mx-auto uppercase font-bold tracking-wide transition-all ${titleStyle === 'box' ? 'shadow-xl' : titleStyle === 'outline' ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]' : 'drop-shadow-[0_0_10px_rgba(20,174,234,0.5)]'}`}
+                                          style={{
+                                              backgroundColor: titleStyle === 'box' ? (boxColor || '#064A63') : 'transparent',
+                                              color: textColor || '#FFFFFF',
+                                              fontFamily: fontName,
+                                              fontSize: titleFontSize === 'large' ? '12px' : titleFontSize === 'xlarge' ? '14px' : '10px',
+                                              border: titleStyle === 'outline' ? `2px solid ${primaryColor}` : 'none',
+                                              lineHeight: 1.2
+                                          }}
                                       >
-                                          <div 
-                                              className={`px-3 py-1.5 rounded-lg max-w-[95%] w-auto mx-auto uppercase font-bold tracking-wide transition-all ${titleStyle === 'box' ? 'shadow-xl' : titleStyle === 'outline' ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]' : 'drop-shadow-[0_0_10px_rgba(20,174,234,0.5)]'}`}
-                                              style={{
-                                                  backgroundColor: titleStyle === 'box' ? (boxColor || '#064A63') : 'transparent',
-                                                  color: textColor || '#FFFFFF',
-                                                  fontFamily: fontName,
-                                                  fontSize: titleFontSize === 'large' ? '12px' : titleFontSize === 'xlarge' ? '14px' : '10px',
-                                                  border: titleStyle === 'outline' ? `2px solid ${primaryColor}` : 'none',
-                                                  lineHeight: 1.2
-                                              }}
-                                          >
-                                              {hookHeader ? hookHeader.toUpperCase() : (videoMetadata?.title ? videoMetadata.title.toUpperCase() : "DER GEHEIME TRICK")}
-                                          </div>
+                                          {hookHeader ? hookHeader.toUpperCase() : (videoMetadata?.title ? videoMetadata.title.toUpperCase() : "DER GEHEIME TRICK")}
                                       </div>
-                                  )}
+                                  </div>
+                              )}
 
                                   {/* Subtitles Overlay */}
                                   {showSubtitles && (
