@@ -107,6 +107,10 @@ class VideoRequest(BaseModel):
 class VideoInfoRequest(BaseModel):
     youtube_url: str
 
+class SearchRequest(BaseModel):
+    query: str
+    limit: int = 8
+
 class TitleRequest(BaseModel):
     text: str
 
@@ -561,10 +565,22 @@ async def generate_viral_title(request: TitleRequest):
         print(f"Error generating viral title: {e}")
         return {"title": fallback_title}
 
+@app.post("/api/search-videos")
+async def search_videos(request: SearchRequest):
+    if not request.query:
+        raise HTTPException(status_code=400, detail="Search query is required")
+    try:
+        from services.youtube_downloader import search_youtube_videos
+        results = search_youtube_videos(request.query, max_results=request.limit or 8)
+        return {"status": "success", "results": results}
+    except Exception as e:
+        print(f"Error in search_videos endpoint: {e}")
+        return {"status": "error", "results": [], "detail": str(e)}
+
 @app.post("/api/video-info")
 async def video_info(request: VideoInfoRequest):
     if not request.youtube_url:
-        raise HTTPException(status_code=400, detail="YouTube URL is required")
+        raise HTTPException(status_code=400, detail="YouTube URL or search query is required")
     try:
         info = get_video_info(request.youtube_url)
         return {"status": "success", "info": info}

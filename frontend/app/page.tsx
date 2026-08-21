@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic';
 const FullCalendar = dynamic(() => import('@fullcalendar/react'), { ssr: false });
 import dayGridPlugin from '@fullcalendar/daygrid';
 import { useState, useRef, useEffect } from 'react';
-import { Play, Scissors, Subtitles, UploadCloud, Loader2, Sparkles, Calendar, Check, Settings, X, Clock, Video, Home, Menu, Share2, Download, Edit2, TrendingUp, Flame, Type, MonitorPlay, ChevronUp, ChevronDown, Layout, Volume2, Mic, Palette, Layers, Sliders, Eye, RefreshCw } from 'lucide-react';
+import { Play, Scissors, Subtitles, UploadCloud, Loader2, Sparkles, Calendar, Check, Settings, X, Clock, Video, Home, Menu, Share2, Download, Edit2, TrendingUp, Flame, Type, MonitorPlay, ChevronUp, ChevronDown, Layout, Volume2, Mic, Palette, Layers, Sliders, Eye, RefreshCw, Search, Globe, Link2, ExternalLink } from 'lucide-react';
 import Logo from '../components/Logo';
 
 const LogoIcon = ({ className = "w-10 h-10 md:w-12 md:h-12 shrink-0" }: { className?: string }) => (
@@ -22,6 +22,20 @@ export default function Page() {
   // New Project State
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [localFile, setLocalFile] = useState<File | null>(null);
+  
+  // Web Search State
+  const [searchQuery, setSearchQuery] = useState('');
+  const [searchResults, setSearchResults] = useState<Array<{
+    id: string;
+    title: string;
+    url: string;
+    duration: number;
+    thumbnail: string;
+    channel: string;
+    view_count: number;
+  }>>([]);
+  const [isSearching, setIsSearching] = useState(false);
+  const [inputTab, setInputTab] = useState<'search' | 'url'>('search');
   
   // Sequence State
   type SequenceItem = { id: string; type: 'url' | 'local'; content: string; file?: File; name: string };
@@ -323,14 +337,65 @@ export default function Page() {
     }
   };
 
+  const handleSearchVideos = async (queryText?: string) => {
+      const q = (queryText !== undefined ? queryText : searchQuery).trim();
+      if (!q) return;
+      setIsSearching(true);
+      try {
+          const res = await fetch(`${API_BASE}/api/search-videos`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ query: q, limit: 8 })
+          });
+          if (res.ok) {
+              const data = await res.json();
+              if (data.status === 'success' && Array.isArray(data.results)) {
+                  setSearchResults(data.results);
+              } else {
+                  setSearchResults([]);
+              }
+          }
+      } catch (e) {
+          console.error("Fehler bei Websuche:", e);
+      } finally {
+          setIsSearching(false);
+      }
+  };
+
+  const handleSelectSearchResult = (item: { id: string; title: string; url: string; duration: number; thumbnail: string }) => {
+      setYoutubeUrl(item.url);
+      setVideoMetadata({
+          title: item.title,
+          duration: item.duration,
+          thumbnail: item.thumbnail
+      });
+      generateAutoTitle(item.title);
+      if (item.duration > 600) {
+          setTrimStart(0);
+          setTrimEnd(600);
+      } else {
+          setTrimStart(0);
+          setTrimEnd(Math.max(1, Math.round(item.duration)));
+      }
+  };
+
   const fetchVideoInfo = async (url: string) => {
       if (!url) return;
+      const cleanUrl = url.trim();
+      // If user typed a search term instead of URL, automatically search
+      if (!cleanUrl.startsWith('http://') && !cleanUrl.startsWith('https://') && !cleanUrl.includes('youtube.com') && !cleanUrl.includes('youtu.be')) {
+          setInputTab('search');
+          setSearchQuery(cleanUrl);
+          handleSearchVideos(cleanUrl);
+          return;
+      }
+
       setIsFetchingMetadata(true);
       try {
           const res = await fetch(`${API_BASE}/api/video-info`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ youtube_url: url })
+              body: JSON.stringify({ youtube_url: cleanUrl })
           });
           
           if (!res.ok) {
@@ -341,15 +406,18 @@ export default function Page() {
           }
           
           const data = await res.json();
-          if (data.status === 'success') {
+          if (data.status === 'success' && data.info) {
               setVideoMetadata(data.info);
+              if (data.info.url && data.info.url !== cleanUrl) {
+                  setYoutubeUrl(data.info.url);
+              }
               generateAutoTitle(data.info.title);
               if (data.info.duration > 600) {
                   setTrimStart(0);
                   setTrimEnd(600);
               } else {
-                  setTrimStart('');
-                  setTrimEnd('');
+                  setTrimStart(0);
+                  setTrimEnd(Math.max(1, Math.round(data.info.duration)));
               }
           }
       } catch (e) {
@@ -879,30 +947,186 @@ export default function Page() {
                       </div>
                   )}
 
-                  {(selectedMode === 'youtube' || selectedMode === 'reaction') && (
-                      <div className="flex gap-2">
-                          <div className="relative flex-1">
-                              <Play className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-textDim" />
-                              <input 
-                                  type="text" 
-                                  value={youtubeUrl}
-                                  onChange={(e) => { setYoutubeUrl(e.target.value); setVideoMetadata(null); }}
-                                  placeholder="YouTube-Link einfügen (z.B. https://youtube.com/watch?v=...)" 
-                                  className="w-full pl-12 pr-4 py-4 border border-borderGlass rounded-xl bg-background/50 text-white placeholder-textDim outline-none focus:border-mimaros-blue"
-                              />
-                          </div>
-                          {youtubeUrl && (
-                              <button 
-                                  onClick={() => fetchVideoInfo(youtubeUrl)}
-                                  disabled={isFetchingMetadata}
-                                  className="px-6 py-4 bg-mimaros-blue text-white rounded-xl font-bold flex items-center gap-2"
-                              >
-                                  {isFetchingMetadata ? <Loader2 className="w-5 h-5 animate-spin" /> : <Check className="w-5 h-5" />}
-                                  Laden
-                              </button>
-                          )}
-                      </div>
-                  )}
+                        {(selectedMode === 'youtube' || selectedMode === 'reaction') && (
+                        <div className="space-y-4">
+                            {/* Dual-Tab Navigation: Web-Suche vs. Direkter Link */}
+                            <div className="flex items-center gap-2 p-1 bg-background/60 rounded-xl border border-borderGlass w-fit">
+                                <button
+                                    type="button"
+                                    onClick={() => setInputTab('search')}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${inputTab === 'search' ? 'bg-mimaros-blue text-white shadow-lg' : 'text-textDim hover:text-white'}`}
+                                >
+                                    <Search className="w-3.5 h-3.5" />
+                                    YouTube & Web-Suche
+                                </button>
+                                <button
+                                    type="button"
+                                    onClick={() => setInputTab('url')}
+                                    className={`flex items-center gap-2 px-4 py-2 rounded-lg text-xs font-bold transition-all ${inputTab === 'url' ? 'bg-mimaros-blue text-white shadow-lg' : 'text-textDim hover:text-white'}`}
+                                >
+                                    <Link2 className="w-3.5 h-3.5" />
+                                    Direkter Link
+                                </button>
+                            </div>
+
+                            {/* TAB 1: Web- & YouTube-Suche */}
+                            {inputTab === 'search' && (
+                                <div className="space-y-4 bg-background/30 p-5 rounded-2xl border border-borderGlass">
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <Search className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-textDim" />
+                                            <input 
+                                                type="text" 
+                                                value={searchQuery}
+                                                onChange={(e) => setSearchQuery(e.target.value)}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        handleSearchVideos();
+                                                    }
+                                                }}
+                                                placeholder="Thema oder Suchbegriff (z.B. KI Trends 2026, Finanzen, Podcasts, Motivation)..." 
+                                                className="w-full pl-12 pr-4 py-3.5 border border-borderGlass rounded-xl bg-background/60 text-white placeholder-textDim outline-none focus:border-mimaros-blue text-sm"
+                                            />
+                                        </div>
+                                        <button 
+                                            type="button"
+                                            onClick={() => handleSearchVideos()}
+                                            disabled={isSearching || !searchQuery.trim()}
+                                            className="px-6 py-3.5 bg-mimaros-blue hover:bg-mimaros-blue/90 disabled:opacity-50 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-md shrink-0"
+                                        >
+                                            {isSearching ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />}
+                                            Suchen
+                                        </button>
+                                    </div>
+
+                                    {/* Quick Suggestion Tags */}
+                                    <div className="flex items-center gap-2 flex-wrap">
+                                        <span className="text-[11px] text-textDim font-bold uppercase tracking-wider mr-1">Vorschläge:</span>
+                                        {[
+                                            { label: '🔥 Trending', query: 'Trending viral shorts' },
+                                            { label: '🧠 KI & Tech Trends', query: 'KI Trends 2026' },
+                                            { label: '🎙️ Podcasts', query: 'Podcast Highlights Deutsch' },
+                                            { label: '📈 Finanzen & Business', query: 'Finanzen Mindset Erfolg' },
+                                            { label: '💡 Motivation', query: 'Motivation Disziplin Erfolg' },
+                                        ].map((tag, idx) => (
+                                            <button
+                                                key={idx}
+                                                type="button"
+                                                onClick={() => {
+                                                    setSearchQuery(tag.query);
+                                                    handleSearchVideos(tag.query);
+                                                }}
+                                                className="px-3 py-1 rounded-full text-xs bg-background/50 hover:bg-mimaros-blue/20 hover:text-mimaros-blue border border-borderGlass hover:border-mimaros-blue/40 text-textDim transition-all"
+                                            >
+                                                {tag.label}
+                                            </button>
+                                        ))}
+                                    </div>
+
+                                    {/* Loading State */}
+                                    {isSearching && (
+                                        <div className="py-12 flex flex-col items-center justify-center gap-3 text-textDim">
+                                            <Loader2 className="w-8 h-8 animate-spin text-mimaros-blue" />
+                                            <p className="text-xs font-medium">Durchsuche YouTube & das Web nach passenden Videos...</p>
+                                        </div>
+                                    )}
+
+                                    {/* Search Results Grid */}
+                                    {!isSearching && searchResults.length > 0 && (
+                                        <div className="space-y-2 pt-2">
+                                            <div className="flex items-center justify-between text-xs text-textDim font-medium">
+                                                <span>Gefundene Videos ({searchResults.length}):</span>
+                                                <span className="text-[10px] text-mimaros-gold font-bold uppercase tracking-wider">Klicke ein Video zum Auswählen</span>
+                                            </div>
+                                            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+                                                {searchResults.map((item) => (
+                                                    <div 
+                                                        key={item.id}
+                                                        onClick={() => handleSelectSearchResult(item)}
+                                                        className={`group relative bg-background/60 hover:bg-panel border ${youtubeUrl === item.url ? 'border-mimaros-blue ring-2 ring-mimaros-blue/30' : 'border-borderGlass hover:border-mimaros-blue/50'} rounded-xl overflow-hidden cursor-pointer transition-all duration-200 flex flex-col shadow-sm hover:shadow-lg`}
+                                                    >
+                                                        {/* Thumbnail & Duration */}
+                                                        <div className="relative aspect-video w-full bg-black/40 overflow-hidden">
+                                                            {item.thumbnail ? (
+                                                                <img src={item.thumbnail} alt={item.title} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                                                            ) : (
+                                                                <div className="w-full h-full flex items-center justify-center text-textDim">
+                                                                    <Video className="w-8 h-8" />
+                                                                </div>
+                                                            )}
+                                                            <div className="absolute bottom-1.5 right-1.5 bg-black/80 backdrop-blur-sm px-1.5 py-0.5 rounded text-[10px] font-mono font-bold text-white">
+                                                                {Math.floor(item.duration / 60)}:{String(Math.floor(item.duration % 60)).padStart(2, '0')}
+                                                            </div>
+                                                        </div>
+
+                                                        {/* Video Details */}
+                                                        <div className="p-3 flex flex-col flex-1 justify-between gap-2">
+                                                            <div>
+                                                                <h4 className="text-xs font-bold text-white line-clamp-2 leading-snug group-hover:text-mimaros-blue transition-colors">
+                                                                    {item.title}
+                                                                </h4>
+                                                                <p className="text-[10px] text-textDim mt-1 truncate">
+                                                                    {item.channel}
+                                                                </p>
+                                                            </div>
+                                                            <button 
+                                                                type="button"
+                                                                onClick={(e) => {
+                                                                    e.stopPropagation();
+                                                                    handleSelectSearchResult(item);
+                                                                }}
+                                                                className="w-full py-1.5 rounded-lg bg-mimaros-blue/10 hover:bg-mimaros-blue text-mimaros-blue hover:text-white border border-mimaros-blue/30 text-[11px] font-bold transition-all flex items-center justify-center gap-1 mt-1"
+                                                            >
+                                                                <Play className="w-3 h-3 fill-current" />
+                                                                Auswählen
+                                                            </button>
+                                                        </div>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                        </div>
+                                    )}
+                                </div>
+                            )}
+
+                            {/* TAB 2: Direkter Link */}
+                            {inputTab === 'url' && (
+                                <div className="space-y-3 bg-background/30 p-5 rounded-2xl border border-borderGlass">
+                                    <div className="flex gap-2">
+                                        <div className="relative flex-1">
+                                            <Play className="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-textDim" />
+                                            <input 
+                                                type="text" 
+                                                value={youtubeUrl}
+                                                onChange={(e) => { setYoutubeUrl(e.target.value); setVideoMetadata(null); }}
+                                                onKeyDown={(e) => {
+                                                    if (e.key === 'Enter') {
+                                                        e.preventDefault();
+                                                        fetchVideoInfo(youtubeUrl);
+                                                    }
+                                                }}
+                                                placeholder="YouTube-Link einfügen (z.B. https://youtube.com/watch?v=...)" 
+                                                className="w-full pl-12 pr-4 py-3.5 border border-borderGlass rounded-xl bg-background/60 text-white placeholder-textDim outline-none focus:border-mimaros-blue text-sm"
+                                            />
+                                        </div>
+                                        <button 
+                                            type="button"
+                                            onClick={() => fetchVideoInfo(youtubeUrl)}
+                                            disabled={isFetchingMetadata || !youtubeUrl.trim()}
+                                            className="px-6 py-3.5 bg-mimaros-blue hover:bg-mimaros-blue/90 disabled:opacity-50 text-white rounded-xl font-bold flex items-center gap-2 transition-all shadow-md shrink-0"
+                                        >
+                                            {isFetchingMetadata ? <Loader2 className="w-4 h-4 animate-spin" /> : <Check className="w-4 h-4" />}
+                                            Laden
+                                        </button>
+                                    </div>
+                                    <p className="text-[11px] text-textDim">
+                                        Tipp: Wenn du einen Suchbegriff statt eines Links eingibst, wird automatisch die YouTube & Web-Suche gestartet.
+                                    </p>
+                                </div>
+                            )}
+                        </div>
+                    )}
 
                   {/* Echter Video-Player zum Sichten */}
                   {(localFile || videoMetadata) && (
