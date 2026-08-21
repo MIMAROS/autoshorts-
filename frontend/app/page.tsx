@@ -1546,9 +1546,9 @@ export default function Page() {
                                   </div>
                               )}
 
-                                  {/* Subtitles Overlay */}
+                                  {/* Subtitles Overlay - Safe Zone well above bottom overlays */}
                                   {showSubtitles && (
-                                      <div className={`absolute left-2 right-2 z-20 flex flex-col items-center justify-center text-center ${globalSubtitleConfig.design === 'popup_bouncy' ? 'top-1/2 -translate-y-1/2' : 'bottom-10'}`}>
+                                      <div className={`absolute left-2 right-2 z-20 flex flex-col items-center justify-center text-center ${globalSubtitleConfig.design === 'popup_bouncy' ? 'top-1/2 -translate-y-1/2' : 'bottom-20'}`}>
                                           <div 
                                               className="transition-all"
                                               style={{
@@ -1558,7 +1558,7 @@ export default function Page() {
                                           >
                                               {globalSubtitleConfig.design === 'mimaros_clean' && (
                                                   <div 
-                                                      className="px-3.5 py-1.5 rounded-lg border border-white/20 shadow-xl backdrop-blur-md font-medium tracking-wide uppercase"
+                                                      className="px-4 py-2 rounded-xl border border-[#14AEEA]/60 shadow-2xl backdrop-blur-md font-bold tracking-wide uppercase"
                                                       style={{
                                                           backgroundColor: `${boxColor}E6`,
                                                           color: textColor
@@ -1570,7 +1570,7 @@ export default function Page() {
 
                                               {globalSubtitleConfig.design === 'karaoke' && (
                                                   <div 
-                                                      className="px-3.5 py-1.5 rounded-xl font-extrabold uppercase tracking-wide drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]"
+                                                      className="px-3.5 py-1.5 rounded-xl font-extrabold uppercase tracking-wide drop-shadow-[0_3px_6px_rgba(0,0,0,1)]"
                                                       style={{ color: textColor }}
                                                   >
                                                       <span style={{ color: highlightColor }} className="drop-shadow-[0_0_8px_currentColor]">KARAOKE</span> HIGHLIGHT
@@ -1579,9 +1579,9 @@ export default function Page() {
 
                                               {globalSubtitleConfig.design === 'dynamic_box' && (
                                                   <div 
-                                                      className="px-3.5 py-1.5 rounded-lg font-black uppercase shadow-2xl tracking-wider border border-white/10"
+                                                      className="px-4 py-2 rounded-xl font-black uppercase shadow-2xl tracking-wider border border-white/20"
                                                       style={{ 
-                                                          backgroundColor: `${boxColor}EE`,
+                                                          backgroundColor: `${boxColor}F2`,
                                                           color: textColor
                                                       }}
                                                   >
@@ -1591,10 +1591,10 @@ export default function Page() {
 
                                               {globalSubtitleConfig.design === 'popup_bouncy' && (
                                                   <div 
-                                                      className="px-4 py-2 rounded-2xl bg-black/70 backdrop-blur-md border border-white/15 font-black uppercase text-center animate-bounce shadow-2xl"
+                                                      className="px-4 py-2 rounded-2xl bg-[#064A63]/90 border border-[#14AEEA]/60 backdrop-blur-md font-black uppercase text-center animate-bounce shadow-2xl"
                                                       style={{ 
                                                           color: highlightColor,
-                                                          fontSize: subtitleFontSize === 'large' ? '16px' : subtitleFontSize === 'xlarge' ? '18px' : '14px'
+                                                          fontSize: subtitleFontSize === 'large' ? '15px' : subtitleFontSize === 'xlarge' ? '17px' : '13px'
                                                       }}
                                                   >
                                                       BOUNCY!

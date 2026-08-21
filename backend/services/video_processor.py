@@ -410,9 +410,9 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
     else: # normal
         title_font_size = 56 if is_1080 else 38
         
-    # Margin settings
+    # Margin settings - Safe Zone well above bottom UI (caption, audio title, action buttons)
     ass_margin_lr = 80 if is_1080 else 50
-    ass_margin_v = int(config.get("subtitleMarginV", 220 if is_1080 else 150))
+    ass_margin_v = int(config.get("subtitleMarginV", 380 if is_1080 else 250))
     
     # Title options
     show_title = config.get("showTitle", config.get("show_title", True))
@@ -427,13 +427,13 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
         title_margin_v = 0
     elif "bottom" in title_pos:
         title_alignment = 2
-        title_margin_v = 460 if is_1080 else 310
+        title_margin_v = 520 if is_1080 else 350
     else: # top (default)
         title_alignment = 8
         if show_logo and "top" in logo_pos:
-            title_margin_v = 180 if is_1080 else 120
+            title_margin_v = 150 if is_1080 else 100
         else:
-            title_margin_v = 110 if is_1080 else 75
+            title_margin_v = 140 if is_1080 else 95
             
     # Title border style
     if title_style == "outline":
@@ -446,11 +446,11 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
         title_outline_w = 1.5 if is_1080 else 1.0
         title_shadow_w = 2.0 if is_1080 else 1.5
         title_outline_col = "&H00000000"
-    else: # "box" / default CI Backdrop Box
+    else: # "box" / default CI Backdrop Box with elegant Cyan accent border
         title_border_mode = 3
-        title_outline_w = 14 if is_1080 else 9 # Box padding in pixels
+        title_outline_w = 16 if is_1080 else 11 # Generous Box padding in pixels
         title_shadow_w = 0
-        title_outline_col = title_box_ass
+        title_outline_col = primary_color_ass # Glowing border
         
     design = config.get("design", "karaoke")
     show_subtitles = config.get("showSubtitles", config.get("show_subtitles", True))
@@ -481,18 +481,25 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
             f.write("[V4+ Styles]\n")
             f.write("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n")
             
-            # Subtitle Style: Default
-            if design == "dynamic_box":
-                box_pad = 12 if is_1080 else 8
+            # Subtitle Styles mapped 1:1 to Preview
+            if design == "mimaros_clean":
+                # MIMAROS Signature: Dark Glass card with cyan accent border and gold highlight
+                card_pad = 16 if is_1080 else 11
+                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,{primary_color_ass},{box_color_ass},-1,0,0,0,100,100,1,0,3,{card_pad},0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+            elif design == "dynamic_box":
+                # Dynamic Box: Deep CI backdrop card
+                box_pad = 18 if is_1080 else 12
                 f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,{box_color_ass},{box_color_ass},-1,0,0,0,100,100,0,0,3,{box_pad},0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             elif design == "popup_bouncy":
-                f.write(f"Style: Default,{ass_font},{sub_font_size + 16},{highlight_color_ass},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,5.5,3.0,5,{ass_margin_lr},{ass_margin_lr},0,1\n")
+                # Pop-Up Bouncy: Center dark glass pill with gold pop
+                pill_pad = 16 if is_1080 else 11
+                f.write(f"Style: Default,{ass_font},{sub_font_size + 16},{highlight_color_ass},&H000000FF,&H3014AEEA,&H30000000,-1,0,0,0,100,100,0,0,3,{pill_pad},0,5,{ass_margin_lr},{ass_margin_lr},0,1\n")
             elif design == "hormozi":
-                f.write(f"Style: Default,Anton,{sub_font_size + 12},{text_color_ass},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,5.5,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
-            elif design == "mimaros_clean":
-                f.write(f"Style: Default,{ass_font},{sub_font_size - 4},{text_color_ass},&H000000FF,&H00000000,&H90000000,-1,0,0,0,100,100,2,0,1,2.5,1.5,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                # Hormozi: High impact Anton with thick black stroke
+                f.write(f"Style: Default,Anton,{sub_font_size + 14},{text_color_ass},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,6.0,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             else: # karaoke
-                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,&H00000000,&H90000000,-1,0,0,0,100,100,0,0,1,4.0,2.0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                # Karaoke Highlight: Clean white with deep outline & shadow
+                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,1,4.5,2.5,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
                 
             # Title Style
             if show_title and hook_header:
