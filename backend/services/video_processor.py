@@ -44,19 +44,12 @@ def get_font_file_path(font_name: str, fonts_dir: str = None) -> str:
 def generate_cta_button_image(text: str, bg_color_hex: str, text_color_hex: str, font_name: str, resolution: str, output_path: str) -> str:
     from PIL import Image, ImageDraw, ImageFont
     
-    # Setup dimensions based on resolution
-    if resolution == "1080p":
-        font_size = 64
-        padding_x = 90
-        padding_y = 35
-        radius = 45
-    else: # 720p / preview
-        font_size = 42
-        padding_x = 60
-        padding_y = 25
-        radius = 30
+    is_1080 = (resolution == "1080p")
+    font_size = 54 if is_1080 else 36
+    padding_x = 70 if is_1080 else 46
+    padding_y = 26 if is_1080 else 18
+    radius = 35 if is_1080 else 24
         
-    # Get the font locally
     fonts_dir = ensure_fonts()
     font_path = get_font_file_path(font_name, fonts_dir)
         
@@ -69,7 +62,6 @@ def generate_cta_button_image(text: str, bg_color_hex: str, text_color_hex: str,
         except:
             font = ImageFont.load_default()
         
-    # Measure text precisely
     try:
         left, top, right, bottom = font.getbbox(text)
         text_width = right - left
@@ -81,29 +73,188 @@ def generate_cta_button_image(text: str, bg_color_hex: str, text_color_hex: str,
     width = text_width + (padding_x * 2)
     height = text_height + (padding_y * 2)
     
-    # Create transparent image
-    image = Image.new("RGBA", (width, height), (0, 0, 0, 0))
+    oversample = 3
+    ow = width * oversample
+    oh = height * oversample
+    oradius = radius * oversample
+    try:
+        ofont = ImageFont.truetype(font_path, font_size * oversample)
+    except:
+        ofont = font
+        
+    image = Image.new("RGBA", (ow, oh), (0, 0, 0, 0))
     draw = ImageDraw.Draw(image)
     
-    # Draw rounded rectangle
-    draw.rounded_rectangle(
-        [(0, 0), (width, height)],
-        radius=radius,
-        fill=bg_color_hex
-    )
+    bg_clean = (bg_color_hex or "#14AEEA").lstrip('#')
+    txt_clean = (text_color_hex or "#FFFFFF").lstrip('#')
+    bg_rgb = (int(bg_clean[0:2], 16), int(bg_clean[2:4], 16), int(bg_clean[4:6], 16)) if len(bg_clean) == 6 else (20, 174, 234)
+    txt_rgb = (int(txt_clean[0:2], 16), int(txt_clean[2:4], 16), int(txt_clean[4:6], 16)) if len(txt_clean) == 6 else (255, 255, 255)
     
-    # Draw text centered precisely
+    draw.rounded_rectangle([(0, 0), (ow, oh)], radius=oradius, fill=(bg_rgb[0], bg_rgb[1], bg_rgb[2], 245), outline=(255, 255, 255, 120), width=int(2 * oversample))
+    
     try:
-        draw.text((width / 2, height / 2), text, fill=text_color_hex, font=font, anchor="mm")
+        draw.text((ow / 2, oh / 2), text, fill=(txt_rgb[0], txt_rgb[1], txt_rgb[2], 255), font=ofont, anchor="mm")
     except:
-        draw.text((padding_x, padding_y), text, fill=text_color_hex, font=font)
+        draw.text((padding_x * oversample, padding_y * oversample), text, fill=(txt_rgb[0], txt_rgb[1], txt_rgb[2], 255), font=ofont)
         
-    # Save to path
-    image.save(output_path, "PNG")
+    final_img = image.resize((width, height), Image.Resampling.LANCZOS)
+    final_img.save(output_path, "PNG")
+    return output_path
+
+def generate_watermark_badge_image(text: str, border_color_hex: str, font_name: str, resolution: str, output_path: str) -> str:
+    from PIL import Image, ImageDraw, ImageFont
+    
+    is_1080 = (resolution == "1080p")
+    font_size = 20 if is_1080 else 14
+    pad_x = 24 if is_1080 else 16
+    pad_y = 8 if is_1080 else 5
+    border_w = 2 if is_1080 else 1.5
+    
+    fonts_dir = ensure_fonts()
+    font_path = get_font_file_path(font_name, fonts_dir)
+    try:
+        font = ImageFont.truetype(font_path, font_size)
+    except:
+        font = ImageFont.load_default()
+        
+    text_clean = text.strip().upper()
+    try:
+        left, top, right, bottom = font.getbbox(text_clean)
+        t_w = right - left
+        t_h = bottom - top
+    except:
+        t_w = len(text_clean) * int(font_size * 0.6)
+        t_h = font_size
+        
+    w = t_w + (pad_x * 2)
+    h = t_h + (pad_y * 2)
+    radius = h // 2
+    
+    oversample = 3
+    ow = w * oversample
+    oh = h * oversample
+    oradius = radius * oversample
+    oborder_w = int(border_w * oversample)
+    
+    try:
+        ofont = ImageFont.truetype(font_path, font_size * oversample)
+    except:
+        ofont = font
+        
+    img = Image.new("RGBA", (ow, oh), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    
+    # Background: #064A63 with 92% opacity
+    bg_fill = (6, 74, 99, 235)
+    
+    bc = (border_color_hex or "#14AEEA").lstrip('#')
+    if len(bc) == 6:
+        border_rgba = (int(bc[0:2], 16), int(bc[2:4], 16), int(bc[4:6], 16), 180)
+    else:
+        border_rgba = (20, 174, 234, 180)
+        
+    draw.rounded_rectangle([(0, 0), (ow, oh)], radius=oradius, fill=bg_fill, outline=border_rgba, width=oborder_w)
+    
+    # Gold text: #D4AF37
+    text_color = (212, 175, 55, 255)
+    try:
+        draw.text((ow / 2, oh / 2), text_clean, fill=text_color, font=ofont, anchor="mm")
+    except:
+        draw.text((pad_x * oversample, pad_y * oversample), text_clean, fill=text_color, font=ofont)
+        
+    final_img = img.resize((w, h), Image.Resampling.LANCZOS)
+    final_img.save(output_path, "PNG")
+    return output_path
+
+def generate_title_banner_image(title_text: str, box_color_hex: str, text_color_hex: str, primary_color_hex: str, title_style: str, font_size_setting: str, font_name: str, resolution: str, output_path: str) -> str:
+    from PIL import Image, ImageDraw, ImageFont
+    
+    is_1080 = (resolution == "1080p")
+    
+    if is_1080:
+        base_size = 54 if font_size_setting == "large" else (64 if font_size_setting == "xlarge" else 44)
+        pad_x = 32
+        pad_y = 16
+        radius = 20
+        max_chars = 20
+        line_spacing = 8
+    else: # 720p
+        base_size = 36 if font_size_setting == "large" else (44 if font_size_setting == "xlarge" else 28)
+        pad_x = 22
+        pad_y = 11
+        radius = 14
+        max_chars = 20
+        line_spacing = 6
+        
+    fonts_dir = ensure_fonts()
+    font_path = get_font_file_path(font_name, fonts_dir)
+    
+    wrapped_lines = wrap_text_smart(title_text.upper(), max_chars_per_line=max_chars).split("\n")
+    if not wrapped_lines:
+        wrapped_lines = [title_text.upper()]
+        
+    oversample = 3
+    ofont_size = base_size * oversample
+    try:
+        ofont = ImageFont.truetype(font_path, ofont_size)
+    except:
+        try:
+            fb = get_font_file_path("Work Sans", fonts_dir)
+            ofont = ImageFont.truetype(fb, ofont_size)
+        except:
+            ofont = ImageFont.load_default()
+            
+    line_metrics = []
+    max_line_w = 0
+    total_text_h = 0
+    for line in wrapped_lines:
+        try:
+            l, t, r, b = ofont.getbbox(line)
+            lw = r - l
+            lh = b - t
+        except:
+            lw = len(line) * int(ofont_size * 0.6)
+            lh = ofont_size
+        line_metrics.append((line, lw, lh))
+        max_line_w = max(max_line_w, lw)
+        total_text_h += lh
+    total_text_h += (len(wrapped_lines) - 1) * (line_spacing * oversample)
+    
+    ow = max_line_w + (pad_x * 2 * oversample)
+    oh = total_text_h + (pad_y * 2 * oversample)
+    oradius = radius * oversample
+    
+    img = Image.new("RGBA", (ow, oh), (0, 0, 0, 0))
+    draw = ImageDraw.Draw(img)
+    
+    box_hex = (box_color_hex or "#064A63").lstrip('#')
+    txt_hex = (text_color_hex or "#FFFFFF").lstrip('#')
+    pri_hex = (primary_color_hex or "#14AEEA").lstrip('#')
+    
+    b_rgb = (int(box_hex[0:2], 16), int(box_hex[2:4], 16), int(box_hex[4:6], 16)) if len(box_hex) == 6 else (6, 74, 99)
+    t_rgb = (int(txt_hex[0:2], 16), int(txt_hex[2:4], 16), int(txt_hex[4:6], 16)) if len(txt_hex) == 6 else (255, 255, 255)
+    p_rgb = (int(pri_hex[0:2], 16), int(pri_hex[2:4], 16), int(pri_hex[4:6], 16)) if len(pri_hex) == 6 else (20, 174, 234)
+    
+    if title_style == "box":
+        draw.rounded_rectangle([(0, 0), (ow, oh)], radius=oradius, fill=(b_rgb[0], b_rgb[1], b_rgb[2], 240), outline=(p_rgb[0], p_rgb[1], p_rgb[2], 160), width=int(2 * oversample))
+    elif title_style == "outline":
+        draw.rounded_rectangle([(0, 0), (ow, oh)], radius=oradius, fill=(0, 0, 0, 0), outline=(p_rgb[0], p_rgb[1], p_rgb[2], 255), width=int(3 * oversample))
+        
+    cur_y = pad_y * oversample
+    for line, lw, lh in line_metrics:
+        cur_x = (ow - lw) / 2.0
+        # Text drop shadow
+        draw.text((cur_x + 2 * oversample, cur_y + 2 * oversample), line, fill=(0, 0, 0, 180), font=ofont)
+        draw.text((cur_x, cur_y), line, fill=(t_rgb[0], t_rgb[1], t_rgb[2], 255), font=ofont)
+        cur_y += lh + (line_spacing * oversample)
+        
+    final_w = ow // oversample
+    final_h = oh // oversample
+    final_img = img.resize((final_w, final_h), Image.Resampling.LANCZOS)
+    final_img.save(output_path, "PNG")
     return output_path
 
 def hex_to_ass_color(hex_color: str, alpha_hex: str = "00") -> str:
-    # Converts #RRGGBB to &HAABBGGRR (ASS format)
     hex_color = (hex_color or "#FFFFFF").lstrip('#')
     if len(hex_color) == 6:
         r, g, b = hex_color[0:2], hex_color[2:4], hex_color[4:6]
@@ -111,10 +262,6 @@ def hex_to_ass_color(hex_color: str, alpha_hex: str = "00") -> str:
     return f"&H{alpha_hex}FFFFFF"
 
 def wrap_text_smart(text: str, max_chars_per_line: int = 18) -> str:
-    """
-    Trennt lange Titel an Wortgrenzen in mehrere Zeilen (mit \\n),
-    damit der Text im 9:16 Video niemals über den Rand hinausragt.
-    """
     if not text:
         return ""
     words = text.strip().split()
@@ -143,117 +290,124 @@ def wrap_text_smart(text: str, max_chars_per_line: int = 18) -> str:
 def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: dict, output_path: str, start_time: str = None, duration: str = None) -> list:
     use_master_ci = config.get("use_master_ci", config.get("useMasterCi", True))
     
-    # Read Visibility Toggles (default to True)
     show_title = config.get("showTitle", config.get("show_title", True))
     show_logo = config.get("showLogo", config.get("show_logo", True))
     show_subtitles = config.get("showSubtitles", config.get("show_subtitles", True))
     show_cta = config.get("showCTA", config.get("show_cta", True))
     
-    # Fonts download & path
     fonts_dir = ensure_fonts()
     escaped_fonts_dir = fonts_dir.replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
 
     primary_color = config.get("primaryColor", "#14AEEA")
+    box_color = config.get("boxColor", config.get("titleBgColor", "#064A63"))
+    text_color = config.get("textColor", "#FFFFFF")
+    
     logo_path = config.get("logoPath", None)
     if not logo_path or not os.path.exists(logo_path):
+        mimaros_logo_candidate = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "assets", "logo_mimaros.png")
         default_logo = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "logo.png")
-        if os.path.exists(default_logo):
+        if os.path.exists(mimaros_logo_candidate):
+            logo_path = mimaros_logo_candidate
+        elif os.path.exists(default_logo):
             logo_path = default_logo
+            
     logo_pos = str(config.get("logoPosition", "top-left")).lower().replace("-", "_")
     font_name = config.get("fontName", "Work Sans")
     
-    # Mapping selected font names to families registered in TTF files
-    if font_name == "Work Sans":
-        ass_font = "Work Sans"
-    elif font_name == "Lato":
-        ass_font = "Lato"
-    elif font_name == "Montserrat":
-        ass_font = "Montserrat"
-    elif font_name == "Oswald":
-        ass_font = "Oswald"
-    elif font_name == "Anton":
-        ass_font = "Anton"
-    else:
-        ass_font = "Impact"
-        
     hook_header = config.get("hookHeader", config.get("hook_header", "")).strip()
     has_title = bool(hook_header and show_title)
     
     resolution = config.get("resolution", "720p")
-    if resolution == "1080p":
+    is_1080 = (resolution == "1080p")
+    
+    if is_1080:
         vf_scale = "scale=1080:1920:force_original_aspect_ratio=increase,crop=1080:1920"
         border_thickness = 10
-        logo_width = 180
-        margin_x = 60
-        margin_y = 30 # Logo is at the very top
-        cta_offset_y = 170
+        logo_width = 82
+        margin_x = 36
+        margin_y = 24
     else:
         vf_scale = "scale=720:1280:force_original_aspect_ratio=increase,crop=720:1280"
         border_thickness = 6
-        logo_width = 120
-        margin_x = 40
-        margin_y = 20 # Logo is at the very top
-        cta_offset_y = 113
+        logo_width = 54
+        margin_x = 24
+        margin_y = 16
 
-    # Start building filtergraph for video stream 0
+    # Base stream with scaling & CI border
     vf_filter = f"[0:v]{vf_scale}"
-    
-    # 1. CI Border around the entire video frame
     if use_master_ci:
         vf_filter += f",drawbox=x=0:y=0:w=iw:h=ih:color={primary_color}:thickness={border_thickness}"
         
-    # 2. Subtitles and Title (both rendered via ASS in a single, high-fidelity pass)
-    if show_subtitles or has_title:
+    # Subtitles rendered via ASS
+    if show_subtitles:
         vf_filter += f",subtitles='{escaped_srt_path}':fontsdir='{escaped_fonts_dir}'"
-    
-    # 3. MIMAROS.EU Brand Tag (Always positioned above the title at the top)
-    watermark_text = config.get("watermark_text", "mimaros.eu").replace("'", "\\'")
-    if watermark_text and use_master_ci:
-        watermark_y = 40 if resolution == "1080p" else 26
-        w_width = 280 if resolution == "1080p" else 185
-        w_height = 42 if resolution == "1080p" else 28
-        w_font_size = 20 if resolution == "1080p" else 13
-        w_text_y = watermark_y + (11 if resolution == "1080p" else 7)
-        
-        vf_filter += f",drawbox=x=(iw-{w_width})/2:y={watermark_y}:w={w_width}:h={w_height}:color=#064A63@0.85:t=fill"
-        vf_filter += f",drawbox=x=(iw-{w_width})/2:y={watermark_y}:w={w_width}:h={w_height}:color={primary_color}@0.6:t=2"
-        vf_filter += f",drawtext=text='{watermark_text.upper()}':fontcolor=#D4AF37:fontsize={w_font_size}:font='{ass_font}':x=(w-text_w)/2:y={w_text_y}"
         
     vf_filter += "[v_base]"
     filter_complex = vf_filter
-    
-    # Compose input files
     inputs = [video_path]
+    current_v = "[v_base]"
     
-    # 4. Overlay Logo
-    logo_input_index = -1
+    base_dir = os.path.dirname(os.path.abspath(output_path))
+    
+    # 1. Overlay Watermark / Domain Badge (Rounded Pill)
+    watermark_text = config.get("watermark_text", "mimaros.eu").strip()
+    if watermark_text and use_master_ci:
+        watermark_img_path = os.path.join(base_dir, f"wm_{os.path.basename(output_path)}.png")
+        try:
+            generate_watermark_badge_image(watermark_text, primary_color, font_name, resolution, watermark_img_path)
+            inputs.append(watermark_img_path)
+            wm_idx = len(inputs) - 1
+            wm_y = 24 if is_1080 else 16
+            filter_complex += f";[{wm_idx}:v]scale=-1:-1[wm_img];{current_v}[wm_img]overlay=x=(W-w)/2:y={wm_y}[v_wm]"
+            current_v = "[v_wm]"
+        except Exception as e:
+            print(f"Error generating watermark badge: {e}")
+
+    # 2. Overlay Logo
     if logo_path and os.path.exists(logo_path) and show_logo:
         inputs.append(logo_path)
         logo_input_index = len(inputs) - 1
         
-        # Coordinates calculation basierend auf selected position
-        if "top" in logo_pos:
-            y_pos = f"{margin_y}"
-        elif "bottom" in logo_pos:
+        if "bottom" in logo_pos:
             y_pos = f"H-h-{margin_y}"
         else:
             y_pos = f"{margin_y}"
             
-        if "left" in logo_pos:
-            x_pos = f"{margin_x}"
-        elif "right" in logo_pos:
+        if "right" in logo_pos:
             x_pos = f"W-w-{margin_x}"
         elif "center" in logo_pos or "middle" in logo_pos:
             x_pos = f"(W-w)/2"
         else:
             x_pos = f"{margin_x}"
             
-        filter_complex += f";[{logo_input_index}:v]scale={logo_width}:-2[logo];[v_base][logo]overlay=x={x_pos}:y={y_pos}[v_logo]"
+        filter_complex += f";[{logo_input_index}:v]scale={logo_width}:-2[logo];{current_v}[logo]overlay=x={x_pos}:y={y_pos}[v_logo]"
         current_v = "[v_logo]"
-    else:
-        current_v = "[v_base]"
         
-    # 5. Overlay CTA Button
+    # 3. Overlay Title Banner (Rounded Box / Outline / Clean)
+    if has_title:
+        title_style = str(config.get("titleStyle", "box")).lower()
+        title_font_size = str(config.get("titleFontSize", "normal")).lower()
+        title_pos = str(config.get("titlePosition", "top")).lower()
+        
+        title_img_path = os.path.join(base_dir, f"title_{os.path.basename(output_path)}.png")
+        try:
+            generate_title_banner_image(hook_header, box_color, text_color, primary_color, title_style, title_font_size, font_name, resolution, title_img_path)
+            inputs.append(title_img_path)
+            title_idx = len(inputs) - 1
+            
+            if "center" in title_pos or "middle" in title_pos:
+                t_y_pos = "(H-h)*0.33"
+            elif "bottom" in title_pos:
+                t_y_pos = "H-h-360" if is_1080 else "H-h-240"
+            else: # top (positioned cleanly below the watermark badge)
+                t_y_pos = "96" if is_1080 else "64"
+                
+            filter_complex += f";[{title_idx}:v]scale=-1:-1[title_img];{current_v}[title_img]overlay=x=(W-w)/2:y={t_y_pos}[v_title]"
+            current_v = "[v_title]"
+        except Exception as e:
+            print(f"Error generating title banner: {e}")
+
+    # 4. Overlay CTA Button
     cta = config.get("cta", "none")
     cta_text = ""
     if cta == "subscribe":
@@ -263,39 +417,31 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     elif cta == "more":
         cta_text = "MEHR VIDEOS"
         
-    cta_input_index = -1
     if cta_text and show_cta:
-        # Generate rounded button image dynamically
-        cta_img_path = os.path.join(os.path.dirname(os.path.abspath(output_path)), f"cta_{os.path.basename(output_path)}.png")
+        cta_img_path = os.path.join(base_dir, f"cta_{os.path.basename(output_path)}.png")
         try:
             generate_cta_button_image(cta_text, primary_color, "#FFFFFF", font_name, resolution, cta_img_path)
             inputs.append(cta_img_path)
             cta_input_index = len(inputs) - 1
             
-            # Setup dynamic intervals
             dur_val = float(duration) if duration else 0.0
             intervals = []
             if dur_val > 0.0:
                 half_time = dur_val / 2.0
-                # Trigger 1: at 50% for 4 seconds
                 intervals.append((half_time, min(half_time + 4.0, dur_val)))
-                
-                # Intervall-Option: if video > 45s, show every 30s for 4s
                 if dur_val > 45.0:
                     t = 30.0
                     while t < dur_val:
-                        # avoid overlaps with Trigger 1
                         if not (t >= half_time - 4.0 and t <= half_time + 4.0):
                             intervals.append((t, min(t + 4.0, dur_val)))
                         t += 30.0
+            else:
+                intervals.append((0.5, 3.0))
             
             if intervals:
                 enable_expr = "+".join([f"between(t,{start},{end})" for start, end in intervals])
-                
-                # Build fade chain for looped stream
                 fade_chain = f"[{cta_input_index}:v]loop=loop=-1:size=1:start=0,setpts=PTS-STARTPTS"
                 for start, end in intervals:
-                    # Fade in for 0.5s, fade out for 0.5s
                     fade_chain += f",fade=t=in:st={start}:d=0.5:alpha=1,fade=t=out:st={end-0.5}:d=0.5:alpha=1"
                 fade_chain += "[cta_faded]"
                 
@@ -304,10 +450,9 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         except Exception as e:
             print(f"Error generating CTA image button: {e}")
             
-    # KI Voiceover Audio Overlay Handling
+    # Voiceover Audio Overlay Handling
     voiceover_path = config.get("voiceover_path", None)
     if not voiceover_path and config.get("voiceoverUrl"):
-        # Resolve local file from URL
         v_url = config.get("voiceoverUrl")
         v_name = os.path.basename(v_url)
         v_local = os.path.join(os.path.dirname(output_path), "..", "Fertige_Shorts", v_name)
@@ -322,7 +467,6 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     map_v = current_v
     audio_map = f"{voiceover_input_index}:a" if voiceover_input_index != -1 else "0:a?"
     
-    # Build actual ffmpeg command
     cmd = ["ffmpeg", "-y"]
     for i, path in enumerate(inputs):
         if i == 0:
@@ -395,11 +539,11 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
     # Subtitle Font Size & Position
     sub_size_setting = str(config.get("subtitleFontSize", "normal")).lower()
     if sub_size_setting == "large":
-        sub_font_size = 78 if is_1080 else 52
+        sub_font_size = 76 if is_1080 else 50
     elif sub_size_setting in ["xlarge", "extra-large", "extra_large"]:
-        sub_font_size = 90 if is_1080 else 60
+        sub_font_size = 88 if is_1080 else 58
     else: # normal
-        sub_font_size = 68 if is_1080 else 44
+        sub_font_size = 64 if is_1080 else 42
         
     # Title Font Size
     title_size_setting = str(config.get("titleFontSize", "normal")).lower()
@@ -412,7 +556,7 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
         
     # Margin settings - Safe Zone well above bottom UI (caption, audio title, action buttons)
     ass_margin_lr = 80 if is_1080 else 50
-    ass_margin_v = int(config.get("subtitleMarginV", 380 if is_1080 else 250))
+    ass_margin_v = int(config.get("subtitleMarginV", 390 if is_1080 else 260))
     
     # Title options
     show_title = config.get("showTitle", config.get("show_title", True))
@@ -431,9 +575,9 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
     else: # top (default)
         title_alignment = 8
         if show_logo and "top" in logo_pos:
-            title_margin_v = 150 if is_1080 else 100
+            title_margin_v = 140 if is_1080 else 90
         else:
-            title_margin_v = 140 if is_1080 else 95
+            title_margin_v = 130 if is_1080 else 85
             
     # Title border style
     if title_style == "outline":
@@ -446,13 +590,13 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
         title_outline_w = 1.5 if is_1080 else 1.0
         title_shadow_w = 2.0 if is_1080 else 1.5
         title_outline_col = "&H00000000"
-    else: # "box" / default CI Backdrop Box with elegant Cyan accent border
+    else: # "box" / default MIMAROS Corporate Box
         title_border_mode = 3
         title_outline_w = 16 if is_1080 else 11 # Generous Box padding in pixels
         title_shadow_w = 0
         title_outline_col = primary_color_ass # Glowing border
         
-    design = config.get("design", "karaoke")
+    design = config.get("design", "mimaros_clean")
     show_subtitles = config.get("showSubtitles", config.get("show_subtitles", True))
     
     def format_ass_time(seconds: float) -> str:
@@ -481,42 +625,24 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
             f.write("[V4+ Styles]\n")
             f.write("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n")
             
-            # Subtitle Styles mapped 1:1 to Preview
+            # Subtitle Styles mapped 1:1 to modern social media shorts
             if design == "mimaros_clean":
-                # MIMAROS Signature: Dark Glass card with cyan accent border and gold highlight
-                card_pad = 16 if is_1080 else 11
-                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,{primary_color_ass},{box_color_ass},-1,0,0,0,100,100,1,0,3,{card_pad},0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,&H00000000,&HC0000000,-1,0,0,0,100,100,0,0,1,4.0,2.0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             elif design == "dynamic_box":
-                # Dynamic Box: Deep CI backdrop card
-                box_pad = 18 if is_1080 else 12
-                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,{box_color_ass},{box_color_ass},-1,0,0,0,100,100,0,0,3,{box_pad},0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,&H00000000,&HC0000000,-1,0,0,0,100,100,0,0,1,4.0,2.5,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             elif design == "popup_bouncy":
-                # Pop-Up Bouncy: Center dark glass pill with gold pop
-                pill_pad = 16 if is_1080 else 11
-                f.write(f"Style: Default,{ass_font},{sub_font_size + 16},{highlight_color_ass},&H000000FF,&H3014AEEA,&H30000000,-1,0,0,0,100,100,0,0,3,{pill_pad},0,5,{ass_margin_lr},{ass_margin_lr},0,1\n")
+                f.write(f"Style: Default,{ass_font},{sub_font_size + 14},{highlight_color_ass},&H000000FF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,1,4.5,2.5,5,{ass_margin_lr},{ass_margin_lr},0,1\n")
             elif design == "hormozi":
-                # Hormozi: High impact Anton with thick black stroke
-                f.write(f"Style: Default,Anton,{sub_font_size + 14},{text_color_ass},&H000000FF,&H00000000,&H00000000,-1,0,0,0,100,100,0,0,1,6.0,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                f.write(f"Style: Default,Anton,{sub_font_size + 16},{text_color_ass},&H000000FF,&H00000000,&HFF000000,-1,0,0,0,100,100,0,0,1,6.0,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             else: # karaoke
-                # Karaoke Highlight: Clean white with deep outline & shadow
                 f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,1,4.5,2.5,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
-                
-            # Title Style
-            if show_title and hook_header:
-                f.write(f"Style: Title,{ass_font},{title_font_size},{title_color_ass},&H000000FF,{title_outline_col},{title_box_ass},-1,0,0,0,100,100,0,0,{title_border_mode},{title_outline_w},{title_shadow_w},{title_alignment},{ass_margin_lr},{ass_margin_lr},{title_margin_v},1\n")
                 
             f.write("\n")
             
-            # 3. Write Events
+            # 3. Write Subtitle Events
             f.write("[Events]\n")
             f.write("Format: Layer, Start, End, Style, Name, MarginL, MarginR, MarginV, Effect, Text\n")
             
-            # A. Video Title Event (Layer 2, stays visible throughout clip)
-            if show_title and hook_header:
-                wrapped_title = wrap_text_smart(hook_header.upper(), max_chars_per_line=18).replace("\n", "\\N")
-                f.write(f"Dialogue: 2,0:00:00.00,{format_ass_time(clip_duration)},Title,,0,0,0,,{wrapped_title}\n")
-                
-            # B. Subtitle Events (Layer 1)
             if show_subtitles:
                 for segment in segments:
                     if "words" in segment and segment["words"]:
@@ -671,30 +797,37 @@ def process_clip(video_path: str, transcript_data: dict, start_time: float, end_
     except subprocess.TimeoutExpired:
         raise RuntimeError("FFmpeg hat zu lange gebraucht (Timeout).")
     finally:
-        if os.path.exists(ass_path):
-            try: os.remove(ass_path)
-            except: pass
-        cta_img_path = os.path.join(os.path.dirname(os.path.abspath(output_path)), f"cta_{os.path.basename(output_path)}.png")
-        if os.path.exists(cta_img_path):
-            try: os.remove(cta_img_path)
-            except: pass
+        for ext_p in [ass_path, os.path.join(base_dir, f"cta_{os.path.basename(output_path)}.png"), os.path.join(base_dir, f"wm_{os.path.basename(output_path)}.png"), os.path.join(base_dir, f"title_{os.path.basename(output_path)}.png")]:
+            if os.path.exists(ext_p):
+                try: os.remove(ext_p)
+                except: pass
 
 def generate_preview(video_path: str, output_path: str, config: dict):
     base_dir = os.path.dirname(os.path.abspath(output_path))
     os.makedirs(base_dir, exist_ok=True)
     dummy_ass_path = os.path.join(base_dir, f"dummy_{os.path.basename(output_path)}.ass")
     
-    # Mock segment with word timestamps for full preview emulation
+    # Mock segment with word timestamps synchronized with hookHeader/preview_text
+    preview_words_str = config.get("hookHeader") or config.get("preview_text") or "DER GEHEIME TRICK FÜR VIRALE CLIPS"
+    raw_words = preview_words_str.strip().split()
+    if not raw_words:
+        raw_words = ["DER", "GEHEIME", "TRICK", "FÜR", "VIRALE", "CLIPS"]
+        
+    dur_per_word = 3.0 / max(1, len(raw_words))
+    mock_words = []
+    for i, w in enumerate(raw_words):
+        mock_words.append({
+            "word": w.upper(),
+            "start": round(i * dur_per_word, 2),
+            "end": round((i + 1) * dur_per_word, 2)
+        })
+        
     mock_segments = [
         {
             "start": 0.0,
             "end": 3.0,
-            "text": "DEIN UNTERTITEL VORSCHAU",
-            "words": [
-                {"word": "DEIN", "start": 0.0, "end": 1.0},
-                {"word": "UNTERTITEL", "start": 1.0, "end": 2.0},
-                {"word": "VORSCHAU", "start": 2.0, "end": 3.0}
-            ]
+            "text": " ".join([w["word"] for w in mock_words]),
+            "words": mock_words
         }
     ]
     
@@ -710,13 +843,10 @@ def generate_preview(video_path: str, output_path: str, config: dict):
             error_msg = result.stderr[-1000:] if result.stderr and len(result.stderr) > 1000 else result.stderr
             raise RuntimeError(f"FFmpeg Error: {error_msg}")
     finally:
-        if os.path.exists(dummy_ass_path):
-            try: os.remove(dummy_ass_path)
-            except: pass
-        cta_img_path = os.path.join(os.path.dirname(os.path.abspath(output_path)), f"cta_{os.path.basename(output_path)}.png")
-        if os.path.exists(cta_img_path):
-            try: os.remove(cta_img_path)
-            except: pass
+        for ext_p in [dummy_ass_path, os.path.join(base_dir, f"cta_{os.path.basename(output_path)}.png"), os.path.join(base_dir, f"wm_{os.path.basename(output_path)}.png"), os.path.join(base_dir, f"title_{os.path.basename(output_path)}.png")]:
+            if os.path.exists(ext_p):
+                try: os.remove(ext_p)
+                except: pass
 
 def normalize_clip(input_path: str, output_path: str, resolution: str = "1080p"):
     """
@@ -847,10 +977,7 @@ def apply_branding_and_subs(stitched_path: str, transcript_data: dict, output_pa
             print(f"FFmpeg Fehler: {error_msg}")
             raise RuntimeError(f"FFmpeg Fehler: {error_msg}")
     finally:
-        if os.path.exists(ass_path):
-            try: os.remove(ass_path)
-            except: pass
-        cta_img_path = os.path.join(os.path.dirname(output_path), f"cta_{os.path.basename(output_path)}.png")
-        if os.path.exists(cta_img_path):
-            try: os.remove(cta_img_path)
-            except: pass
+        for ext_p in [ass_path, os.path.join(base_dir, f"cta_{os.path.basename(output_path)}.png"), os.path.join(base_dir, f"wm_{os.path.basename(output_path)}.png"), os.path.join(base_dir, f"title_{os.path.basename(output_path)}.png")]:
+            if os.path.exists(ext_p):
+                try: os.remove(ext_p)
+                except: pass

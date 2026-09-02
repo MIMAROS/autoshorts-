@@ -5,9 +5,10 @@ import signal
 import sys
 import os
 
-NEXT_CONFIG_PATH = r"C:\Users\Miguel\Projects\Sociel Meidia Auto Posting App\frontend\next.config.ts"
-FRONTEND_DIR = r"C:\Users\Miguel\Projects\Sociel Meidia Auto Posting App\frontend"
-BACKEND_DIR = r"C:\Users\Miguel\Projects\Sociel Meidia Auto Posting App\backend"
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+NEXT_CONFIG_PATH = os.path.join(BASE_DIR, "frontend", "next.config.ts")
+FRONTEND_DIR = os.path.join(BASE_DIR, "frontend")
+BACKEND_DIR = os.path.join(BASE_DIR, "backend")
 
 processes = []
 

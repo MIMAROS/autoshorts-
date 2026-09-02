@@ -1,13 +1,15 @@
 import os
-from supabase import create_client, Client
 
 SUPABASE_URL = os.environ.get("SUPABASE_URL", "")
 SUPABASE_KEY = os.environ.get("SUPABASE_KEY", "")
 
+supabase = None
 try:
-    supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)
+    if SUPABASE_URL and SUPABASE_KEY:
+        from supabase import create_client, Client
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
 except Exception as e:
-    print(f"Error initializing Supabase client: {e}")
+    print(f"Hinweis: Supabase Client nicht initialisiert: {e}")
     supabase = None
 
 def upload_file_to_supabase(local_file_path: str, bucket_name: str, remote_file_name: str) -> str:
@@ -16,7 +18,6 @@ def upload_file_to_supabase(local_file_path: str, bucket_name: str, remote_file_
     Gibt im Fehlerfall (oder wenn Supabase nicht konfiguriert ist) None zurück.
     """
     if not supabase:
-        print("Supabase client not initialized.")
         return None
     try:
         with open(local_file_path, "rb") as f:

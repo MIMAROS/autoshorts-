@@ -54,7 +54,7 @@ export default function Page() {
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
   
   // Global Design & Preview State
-  const [globalSubtitleConfig, setGlobalSubtitleConfig] = useState({ design: 'karaoke', cta: 'follow', text: '', template: 'clean_lower_third', watermark_text: 'mimaros.eu' });
+  const [globalSubtitleConfig, setGlobalSubtitleConfig] = useState({ design: 'mimaros_clean', cta: 'follow', text: '', template: 'clean_lower_third', watermark_text: 'mimaros.eu' });
   const [useMasterCi, setUseMasterCi] = useState(true);
   const [primaryColor, setPrimaryColor] = useState('#14AEEA');
   const [textColor, setTextColor] = useState('#ffffff');
@@ -103,6 +103,17 @@ export default function Page() {
       setPreviewObjectUrl('');
     }
   };
+
+  // Live Interactive Subtitle Animation Ticker
+  const [activePreviewWordIndex, setActivePreviewWordIndex] = useState(0);
+  const previewWords = (hookHeader ? hookHeader.trim().split(/\s+/) : ["DER", "GEHEIME", "TRICK", "FÜR", "VIRALE", "CLIPS"]).filter(Boolean);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setActivePreviewWordIndex((prev) => (prev + 1) % (previewWords.length || 1));
+    }, 600);
+    return () => clearInterval(interval);
+  }, [previewWords.length]);
 
   // Processing State
   const [voiceoverUrl, setVoiceoverUrl] = useState<string>('');
@@ -493,7 +504,7 @@ export default function Page() {
     try {
       const subConfig = {
           ...globalSubtitleConfig,
-          design: globalSubtitleConfig.design || 'karaoke',
+          design: globalSubtitleConfig.design || 'mimaros_clean',
           primaryColor,
           textColor,
           highlightColor,
@@ -1711,10 +1722,46 @@ export default function Page() {
                       </div>
 
                       {/* Phone Container */}
-                      <div className="w-full max-w-[260px] bg-background rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center aspect-[9/16] relative bg-cover bg-center transition-all duration-300" style={{
-                          backgroundImage: previewMode === 'css' ? "url('https://images.unsplash.com/photo-1616469829941-c7200edec809?auto=format&fit=crop&w=600&q=80')" : 'none',
-                          border: useMasterCi ? `4px solid ${primaryColor}` : '2px solid rgba(255,255,255,0.1)'
-                      }}>
+                      <div 
+                          className="w-full max-w-[260px] bg-[#0B111A] rounded-3xl overflow-hidden shadow-2xl flex items-center justify-center aspect-[9/16] relative transition-all duration-300 select-none border-2 border-borderGlass/60"
+                      >
+                          {/* Background Layer: Real Video / Thumbnail / Luxury Dark Canvas */}
+                          {previewObjectUrl ? (
+                              <video 
+                                  src={previewObjectUrl} 
+                                  autoPlay 
+                                  loop 
+                                  muted 
+                                  playsInline 
+                                  className="absolute inset-0 w-full h-full object-cover z-0" 
+                              />
+                          ) : videoMetadata?.thumbnail ? (
+                              <img 
+                                  src={videoMetadata.thumbnail} 
+                                  alt="Preview" 
+                                  className="absolute inset-0 w-full h-full object-cover z-0 opacity-80" 
+                              />
+                          ) : (
+                              <div className="absolute inset-0 bg-gradient-to-b from-[#0B111A] via-[#101A24] to-[#070B10] z-0 flex items-center justify-center">
+                                  {/* Subtle Compass & Sacred Geometry Watermark */}
+                                  <svg className="w-3/4 h-3/4 opacity-10 pointer-events-none text-mimaros-gold" viewBox="0 0 100 100" fill="none" stroke="currentColor">
+                                      <circle cx="50" cy="50" r="45" strokeWidth="0.5" strokeDasharray="3 3"/>
+                                      <circle cx="50" cy="50" r="30" strokeWidth="0.5"/>
+                                      <polygon points="50,15 80,75 20,75" strokeWidth="0.5"/>
+                                  </svg>
+                              </div>
+                          )}
+
+                          {/* Inset CI Border in CSS Mode (matches Video Clip drawbox) */}
+                          {useMasterCi && previewMode === 'css' && (
+                              <div 
+                                  className="absolute inset-0 pointer-events-none z-30"
+                                  style={{
+                                      border: `3px solid ${primaryColor}`
+                                  }}
+                              />
+                          )}
+
                           {previewMode === 'video' && globalPreviewUrl ? (
                               <div className="absolute inset-0 z-20 bg-black flex items-center justify-center">
                                   <video 
@@ -1736,7 +1783,14 @@ export default function Page() {
                                    {/* MIMAROS.EU Brand Tag (Above Title) */}
                                    {useMasterCi && globalSubtitleConfig.watermark_text && (
                                        <div className="absolute top-2.5 left-0 right-0 z-25 flex justify-center pointer-events-none">
-                                           <div className="bg-[#064A63]/90 border border-[#14AEEA]/60 backdrop-blur-md px-2.5 py-0.5 rounded-full text-[8px] text-[#D4AF37] font-bold tracking-widest uppercase shadow-md">
+                                           <div 
+                                               className="border px-2.5 py-0.5 rounded-full text-[8px] font-bold tracking-widest uppercase shadow-md backdrop-blur-md"
+                                               style={{
+                                                   backgroundColor: `${boxColor || '#064A63'}E6`,
+                                                   borderColor: `${primaryColor || '#14AEEA'}99`,
+                                                   color: highlightColor || '#D4AF37'
+                                               }}
+                                           >
                                                {globalSubtitleConfig.watermark_text}
                                            </div>
                                        </div>
@@ -1755,13 +1809,13 @@ export default function Page() {
                                            className={`absolute left-2 right-2 z-20 flex flex-col items-center justify-center text-center transition-all ${titlePosition === 'center' ? 'top-1/3 -translate-y-1/2' : titlePosition === 'bottom' ? 'bottom-24' : 'top-8'}`}
                                        >
                                       <div 
-                                          className={`px-3 py-1.5 rounded-lg max-w-[95%] w-auto mx-auto uppercase font-bold tracking-wide transition-all ${titleStyle === 'box' ? 'shadow-xl' : titleStyle === 'outline' ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]' : 'drop-shadow-[0_0_10px_rgba(20,174,234,0.5)]'}`}
+                                          className={`px-3 py-1.5 rounded-2xl max-w-[95%] w-auto mx-auto uppercase font-bold tracking-wide transition-all ${titleStyle === 'box' ? 'shadow-xl' : titleStyle === 'outline' ? 'drop-shadow-[0_2px_4px_rgba(0,0,0,0.9)]' : 'drop-shadow-[0_0_10px_rgba(20,174,234,0.5)]'}`}
                                           style={{
                                               backgroundColor: titleStyle === 'box' ? (boxColor || '#064A63') : 'transparent',
                                               color: textColor || '#FFFFFF',
                                               fontFamily: fontName,
                                               fontSize: titleFontSize === 'large' ? '12px' : titleFontSize === 'xlarge' ? '14px' : '10px',
-                                              border: titleStyle === 'outline' ? `2px solid ${primaryColor}` : 'none',
+                                              border: titleStyle === 'outline' ? `2px solid ${primaryColor}` : (titleStyle === 'box' ? `1.5px solid ${primaryColor}B3` : 'none'),
                                               lineHeight: 1.2
                                           }}
                                       >
@@ -1770,9 +1824,9 @@ export default function Page() {
                                   </div>
                               )}
 
-                                  {/* Subtitles Overlay - Safe Zone well above bottom overlays */}
+                                  {/* Subtitles Overlay - Live Word-by-Word Animated Safe Zone */}
                                   {showSubtitles && (
-                                      <div className={`absolute left-2 right-2 z-20 flex flex-col items-center justify-center text-center ${globalSubtitleConfig.design === 'popup_bouncy' ? 'top-1/2 -translate-y-1/2' : 'bottom-20'}`}>
+                                      <div className={`absolute left-2 right-2 z-20 flex flex-col items-center justify-center text-center pointer-events-none ${globalSubtitleConfig.design === 'popup_bouncy' ? 'top-1/2 -translate-y-1/2' : 'bottom-20'}`}>
                                           <div 
                                               className="transition-all"
                                               style={{
@@ -1782,13 +1836,22 @@ export default function Page() {
                                           >
                                               {globalSubtitleConfig.design === 'mimaros_clean' && (
                                                   <div 
-                                                      className="px-4 py-2 rounded-xl border border-[#14AEEA]/60 shadow-2xl backdrop-blur-md font-bold tracking-wide uppercase"
+                                                      className="px-4 py-2 rounded-2xl border shadow-2xl backdrop-blur-md font-bold tracking-wide uppercase transition-all"
                                                       style={{
                                                           backgroundColor: `${boxColor}E6`,
+                                                          borderColor: `${primaryColor}99`,
                                                           color: textColor
                                                       }}
                                                   >
-                                                      <span style={{ color: highlightColor }} className="font-bold">MIMAROS</span> CLEAN STIL
+                                                      {previewWords.map((word, idx) => (
+                                                          <span 
+                                                              key={idx} 
+                                                              className={`mr-1 inline-block transition-colors duration-200 ${idx === activePreviewWordIndex ? 'font-black scale-105' : ''}`}
+                                                              style={{ color: idx === activePreviewWordIndex ? highlightColor : textColor }}
+                                                          >
+                                                              {word}
+                                                          </span>
+                                                      ))}
                                                   </div>
                                               )}
 
@@ -1797,31 +1860,51 @@ export default function Page() {
                                                       className="px-3.5 py-1.5 rounded-xl font-extrabold uppercase tracking-wide drop-shadow-[0_3px_6px_rgba(0,0,0,1)]"
                                                       style={{ color: textColor }}
                                                   >
-                                                      <span style={{ color: highlightColor }} className="drop-shadow-[0_0_8px_currentColor]">KARAOKE</span> HIGHLIGHT
+                                                      {previewWords.map((word, idx) => (
+                                                          <span 
+                                                              key={idx} 
+                                                              className={`mr-1 inline-block transition-all duration-200 ${idx === activePreviewWordIndex ? 'scale-110 drop-shadow-[0_0_8px_currentColor]' : ''}`}
+                                                              style={{ color: idx === activePreviewWordIndex ? highlightColor : textColor }}
+                                                          >
+                                                              {word}
+                                                          </span>
+                                                      ))}
                                                   </div>
                                               )}
 
                                               {globalSubtitleConfig.design === 'dynamic_box' && (
                                                   <div 
-                                                      className="px-4 py-2 rounded-xl font-black uppercase shadow-2xl tracking-wider border border-white/20"
+                                                      className="px-4 py-2 rounded-2xl font-black uppercase shadow-2xl tracking-wider border"
                                                       style={{ 
                                                           backgroundColor: `${boxColor}F2`,
+                                                          borderColor: 'rgba(255,255,255,0.2)',
                                                           color: textColor
                                                       }}
                                                   >
-                                                      <span style={{ color: highlightColor }}>DYNAMIC</span> BOX STIL
+                                                      {previewWords.map((word, idx) => (
+                                                          <span 
+                                                              key={idx} 
+                                                              className={`mr-1 inline-block transition-colors duration-200 ${idx === activePreviewWordIndex ? 'scale-105' : ''}`}
+                                                              style={{ color: idx === activePreviewWordIndex ? highlightColor : textColor }}
+                                                          >
+                                                              {word}
+                                                          </span>
+                                                      ))}
                                                   </div>
                                               )}
 
                                               {globalSubtitleConfig.design === 'popup_bouncy' && (
                                                   <div 
-                                                      className="px-4 py-2 rounded-2xl bg-[#064A63]/90 border border-[#14AEEA]/60 backdrop-blur-md font-black uppercase text-center animate-bounce shadow-2xl"
+                                                      key={activePreviewWordIndex}
+                                                      className="px-4 py-2 rounded-2xl border backdrop-blur-md font-black uppercase text-center animate-bounce shadow-2xl"
                                                       style={{ 
+                                                          backgroundColor: `${boxColor}E6`,
+                                                          borderColor: `${primaryColor}99`,
                                                           color: highlightColor,
                                                           fontSize: subtitleFontSize === 'large' ? '15px' : subtitleFontSize === 'xlarge' ? '17px' : '13px'
                                                       }}
                                                   >
-                                                      BOUNCY!
+                                                      {previewWords[activePreviewWordIndex] || "VIRAL!"}
                                                   </div>
                                               )}
 
@@ -1830,7 +1913,18 @@ export default function Page() {
                                                       className="px-3.5 py-1.5 rounded-lg font-black uppercase tracking-tighter drop-shadow-[0_3px_6px_rgba(0,0,0,1)]"
                                                       style={{ fontFamily: 'Anton, sans-serif' }}
                                                   >
-                                                      <span style={{ color: highlightColor }}>HORMOZI</span> <span className="text-[#00FF00]">STYLE</span>
+                                                      {previewWords.slice(Math.max(0, activePreviewWordIndex - (activePreviewWordIndex % 2)), Math.max(0, activePreviewWordIndex - (activePreviewWordIndex % 2)) + 2).map((word, idx) => {
+                                                          const globalIdx = Math.max(0, activePreviewWordIndex - (activePreviewWordIndex % 2)) + idx;
+                                                          return (
+                                                              <span 
+                                                                  key={idx} 
+                                                                  className={`mr-1.5 inline-block ${globalIdx === activePreviewWordIndex ? 'scale-110' : ''}`}
+                                                                  style={{ color: globalIdx === activePreviewWordIndex ? highlightColor : (idx === 1 ? '#00FF00' : textColor) }}
+                                                              >
+                                                                  {word}
+                                                              </span>
+                                                          );
+                                                      })}
                                                   </div>
                                               )}
                                           </div>
@@ -1839,9 +1933,9 @@ export default function Page() {
 
                                   {/* Call-to-Action Overlay */}
                                   {showCTA && globalSubtitleConfig.cta !== 'none' && (
-                                      <div className="absolute bottom-2 left-0 right-0 z-20 flex justify-center pointer-events-none">
+                                      <div className="absolute bottom-2.5 left-0 right-0 z-20 flex justify-center pointer-events-none">
                                           <div 
-                                              className="px-3 py-1 rounded-full text-[9px] font-black uppercase shadow-lg tracking-wider text-white"
+                                              className="px-3.5 py-1.5 rounded-full text-[9px] font-black uppercase shadow-lg tracking-wider text-white border border-white/20"
                                               style={{ 
                                                   backgroundColor: primaryColor,
                                                   fontFamily: fontName

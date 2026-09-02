@@ -471,43 +471,52 @@ async def analyze_trimmed_section(
 ):
     """
     Transkribiert den EXAKTEN ausgewählten Video-Bereich (trim_start bis trim_end)
-    und generiert daraus kontextbezogen den Titel und die Social-Media-Beschreibung.
+    und generiert daraus vollautomatisch den Titel und die Social-Media-Beschreibung.
     """
     temp_dir = tempfile.mkdtemp()
-    temp_video = os.path.join(temp_dir, "input.mp4")
+    raw_video = os.path.join(temp_dir, "raw_input.mp4")
+    target_video = raw_video
+    
     try:
         if file:
-            with open(temp_video, "wb") as f:
+            with open(raw_video, "wb") as f:
                 f.write(await file.read())
         elif youtube_url:
             loop = asyncio.get_event_loop()
-            await loop.run_in_executor(None, download_youtube_video, youtube_url, temp_video)
+            dl_path = await loop.run_in_executor(None, download_video, youtube_url, temp_dir)
+            target_video = dl_path if dl_path and os.path.exists(dl_path) else raw_video
         else:
             raise HTTPException(status_code=400, detail="Weder Datei noch YouTube URL angegeben.")
             
+        # Falls getrimmt werden soll, erstelle getrimmte Version für präzise Audio-Analyse
+        t_start = float(trim_start) if trim_start is not None and float(trim_start) >= 0 else 0.0
+        t_end = float(trim_end) if trim_end is not None and float(trim_end) > t_start else None
+        
+        if t_end and t_end > t_start:
+            trimmed_video = os.path.join(temp_dir, "trimmed_section.mp4")
+            duration = t_end - t_start
+            try:
+                subprocess.run(
+                    ["ffmpeg", "-y", "-ss", str(t_start), "-t", str(duration), "-i", target_video, "-c", "copy", trimmed_video],
+                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
+                )
+                if os.path.exists(trimmed_video) and os.path.getsize(trimmed_video) > 100:
+                    target_video = trimmed_video
+            except Exception as trim_err:
+                print(f"Schnelles Trimming Hinweis ({trim_err}), nutze Originaldatei.")
+                
         loop = asyncio.get_event_loop()
         
-        # Audio für den Zeitbereich extrahieren/transkribieren
-        transcript_segments, lang_detected = await loop.run_in_executor(
-            None, transcribe_video, temp_video, video_lang or "auto"
+        # Audio für den Zeitbereich transkribieren
+        transcript_data = await loop.run_in_executor(
+            None, transcribe_audio, target_video, video_lang or "auto"
         )
         
-        # Filtere Segmente auf den gewählten Bereich
         full_text = ""
-        if transcript_segments:
-            relevant_texts = []
-            for seg in transcript_segments:
-                start = seg.get('start', 0.0)
-                end = seg.get('end', 0.0)
-                if trim_end and trim_end > 0:
-                    if end >= (trim_start or 0.0) and start <= trim_end:
-                        relevant_texts.append(seg.get('text', ''))
-                else:
-                    relevant_texts.append(seg.get('text', ''))
-            full_text = " ".join(relevant_texts).strip()
-            
-        if not full_text:
-            full_text = " ".join([s.get('text', '') for s in transcript_segments]).strip() if transcript_segments else ""
+        segments = []
+        if isinstance(transcript_data, dict):
+            full_text = transcript_data.get("text", "").strip()
+            segments = transcript_data.get("segments", [])
             
         from services.gemini_analyzer import generate_context_aware_title, generate_social_caption
         
@@ -517,50 +526,37 @@ async def analyze_trimmed_section(
         return {
             "status": "success",
             "transcript": full_text,
-            "title": title,
-            "caption": caption
+            "title": title.upper(),
+            "caption": caption,
+            "segments": segments
         }
     except Exception as e:
         print(f"Fehler in analyze_trimmed_section: {e}")
         return {
             "status": "fallback",
             "title": "",
-            "caption": ""
+            "caption": "",
+            "transcript": "",
+            "segments": []
         }
     finally:
-        if os.path.exists(temp_video):
-            try: os.remove(temp_video)
-            except: pass
-        try: os.rmdir(temp_dir)
-        except: pass
+        try:
+            import shutil
+            shutil.rmtree(temp_dir, ignore_errors=True)
+        except:
+            pass
 
 @app.post("/api/generate-viral-title")
 async def generate_viral_title(request: TitleRequest):
     import re
     cleaned_input = re.sub(r'\.[a-zA-Z0-9]+$', '', request.text or '').replace('_', ' ').replace('-', ' ').strip()
-    fallback_title = cleaned_input.upper() if cleaned_input else ""
+    fallback_title = cleaned_input.upper() if cleaned_input else "VIRAL SHORT"
     
     try:
-        from services.gemini_analyzer import api_key
-        import google.generativeai as genai
-        if not api_key:
-            return {"title": fallback_title}
-        
-        # Versuche Gemini Flash
-        try:
-            model = genai.GenerativeModel('gemini-2.0-flash')
-        except:
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            
-        prompt = f"""
-        Du bist ein Social-Media-Experte. Generiere aus dem folgenden Titel oder Dateinamen eines Videos einen extrem klickstarken, viralen Hook/Titel (3-5 Wörter in GROSSBUCHSTABEN, z.B. DIESEN FEHLER VERMEIDEN 🔥).
-        Antworte AUSSCHLIESSLICH mit dem nackten Titel-String ohne Anführungszeichen, Markdown oder sonstige Formatierungen.
-        Hier ist der Input:
-        {request.text}
-        """
-        response = model.generate_content(prompt)
-        title = response.text.strip().replace('"', '').replace("'", "")
-        return {"title": title if title else fallback_title}
+        from services.gemini_analyzer import generate_context_aware_title
+        loop = asyncio.get_event_loop()
+        title = await loop.run_in_executor(None, generate_context_aware_title, request.text)
+        return {"title": title.upper() if title else fallback_title}
     except Exception as e:
         print(f"Error generating viral title: {e}")
         return {"title": fallback_title}

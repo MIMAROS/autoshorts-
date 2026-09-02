@@ -1,22 +1,31 @@
 import os
 import json
-import google.generativeai as genai
+import re
 from dotenv import load_dotenv
 
 load_dotenv()
 
-# Der Nutzer muss seinen API-Key in die .env Datei eintragen: GEMINI_API_KEY=xxx
+# API Key Konfiguration
 api_key = os.getenv("GEMINI_API_KEY")
-if api_key:
-    genai.configure(api_key=api_key)
+
+def _get_genai_client():
+    if not api_key:
+        return None
+    try:
+        from google import genai
+        return genai.Client(api_key=api_key)
+    except Exception as e:
+        print(f"Fehler beim Erstellen des GenAI Clients: {e}")
+        return None
 
 def analyze_hooks(transcript_segments: list, clip_length: str = "auto") -> list:
     """
     Sendet das Transkript an Gemini und erhält die besten Passagen basierend auf clip_length.
     Erwartet wird ein JSON Array von Hooks inkl. viral_score.
     """
-    if not api_key:
-        print("GEMINI_API_KEY nicht gesetzt, nutze Standard-Hook...")
+    client = _get_genai_client()
+    if not client:
+        print("GEMINI_API_KEY nicht gesetzt oder Client nicht verfügbar, nutze Standard-Hook...")
         return [{
             "id": 1,
             "start_time_approx": 0.0,
@@ -28,11 +37,6 @@ def analyze_hooks(transcript_segments: list, clip_length: str = "auto") -> list:
         }]
         
     try:
-        try:
-            model = genai.GenerativeModel('gemini-2.5-flash')
-        except:
-            model = genai.GenerativeModel('gemini-1.5-flash')
-        
         transcript_with_times = ""
         for seg in transcript_segments:
             start_m = int(seg.get('start', 0) // 60)
@@ -46,7 +50,7 @@ def analyze_hooks(transcript_segments: list, clip_length: str = "auto") -> list:
             length_instruction = "60-90 Sekunden"
 
         prompt = f"""
-        Du bist ein Experte für virale Social-Media-Videos (TikTok, YouTube Shorts).
+        Du bist ein Experte für virale Social-Media-Videos (TikTok, YouTube Shorts, Instagram Reels).
         Analysiere das folgende Transkript und finde die 3 spannendsten Passagen (Hooks), die sich perfekt für {length_instruction} lange 9:16 Shorts eignen.
         
         Liefere die Antwort exakt und AUSSCHLIESSLICH als gültiges JSON-Array mit 3 Objekten. Die Antwort MUSS ZWINGEND ein valides JSON Array sein mit folgendem Format:
@@ -59,35 +63,42 @@ def analyze_hooks(transcript_segments: list, clip_length: str = "auto") -> list:
                 "title": "Ein stark klickbarer, viraler Hook/Titel des Clips (max. 3-5 Wörter in GROSSBUCHSTABEN, z.B. DER GEHEIME TRICK)",
                 "social_media_caption": "Virale Beschreibung mit starkem Hook, einer Frage/Call-to-Action und passenden Hashtags."
             }}
-        ] Achte darauf, dass 'viral_score' eine Zahl zwischen 0 und 100 ist, die das virale Potenzial einschätzt.
+        ]
         Hier ist das Transkript mit Zeitstempeln (nutze diese für start_time_approx und end_time_approx):
         {transcript_with_times}
         """
         
-        response = model.generate_content(prompt)
-        
-        # Extrahiere JSON (falls Gemini Markdown-Codeblöcke nutzt)
-        text = response.text.strip()
-        if text.startswith("```json"):
-            text = text.replace("```json", "").replace("```", "").strip()
-        elif text.startswith("```"):
-            text = text.replace("```", "").strip()
-            
-        raw_data = json.loads(text)
-        results = []
-        for idx, clip in enumerate(raw_data):
-            hook = {
-                "id": idx + 1,
-                "start_time_approx": clip.get("start_time_approx", 0.0),
-                "end_time_approx": clip.get("end_time_approx", 30.0),
-                "rationale": clip.get("rationale", "Spannender Ausschnitt"),
-                "viral_score": clip.get("viral_score", 90),
-                "title": clip.get("title", f"Clip {idx+1}"),
-                "social_media_caption": clip.get("social_media_caption", "Schau dir dieses virale Video an! 🔥 #viral #shorts")
-            }
-            results.append(hook)
-        if results:
-            return results
+        response = None
+        for m_name in ["gemini-2.5-flash", "gemini-flash-latest", "gemini-3.7-flash", "gemini-3.6-flash"]:
+            try:
+                response = client.models.generate_content(model=m_name, contents=prompt)
+                if response and response.text:
+                    break
+            except Exception:
+                continue
+                
+        if response and response.text:
+            text = response.text.strip()
+            if text.startswith("```json"):
+                text = text.replace("```json", "", 1).rsplit("```", 1)[0].strip()
+            elif text.startswith("```"):
+                text = text.replace("```", "", 1).rsplit("```", 1)[0].strip()
+                
+            raw_data = json.loads(text)
+            results = []
+            for idx, clip in enumerate(raw_data):
+                hook = {
+                    "id": idx + 1,
+                    "start_time_approx": float(clip.get("start_time_approx", 0.0)),
+                    "end_time_approx": float(clip.get("end_time_approx", 30.0)),
+                    "rationale": clip.get("rationale", "Spannender Ausschnitt"),
+                    "viral_score": int(clip.get("viral_score", 90)),
+                    "title": str(clip.get("title", f"CLIP {idx+1}")).upper(),
+                    "social_media_caption": clip.get("social_media_caption", "Schau dir dieses virale Video an! 🔥 #viral #shorts")
+                }
+                results.append(hook)
+            if results:
+                return results
                 
     except Exception as e:
         print("Hinweis bei Gemini Hook-Analyse:", e)
@@ -117,32 +128,46 @@ def generate_context_aware_title(transcript_text: str) -> str:
     if not transcript_text or not transcript_text.strip():
         return "VIDEO HOOK"
         
-    if not api_key:
+    client = _get_genai_client()
+    if not client:
         words = [w for w in transcript_text.strip().split() if len(w) > 2][:4]
         return " ".join(words).upper() if words else "VIDEO HOOK"
         
     try:
-        try:
-            model = genai.GenerativeModel('gemini-2.5-flash')
-        except:
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            
         prompt = f"""
-        Du bist ein Social-Media-Experte für Kurzvideos (TikTok, Shorts, Reels).
-        Hier ist das gesprochene Transkript eines Kurzvideos:
-        "{transcript_text[:1000]}"
+        Du bist ein Social-Media-Experte für Kurzvideos (TikTok, YouTube Shorts, Instagram Reels).
+        Hier ist das gesprochene Transkript eines Videos:
+        "{transcript_text[:1200]}"
         
-        Generiere basierend auf EXAKT diesem inhaltlichen Kontext einen extrem kurzen, prägnanten Hook-Titel (max. 3-5 Worte in GROSSBUCHSTABEN).
-        Der Titel MUSS sich zwingend auf das tatsächliche Thema beziehen. Keinerlei generische Clickbait-Floskeln ("DAS DARFST DU NICHT VERPASSEN", "VIRALES DING").
-        Antworte AUSSCHLIESSLICH mit dem nackten Titel-Text ohne Anführungszeichen, ohne Markdown und ohne Erklärung.
+        Generiere basierend auf EXAKT diesem inhaltlichen Kontext einen extrem kurzen, prägnanten Hook-Titel (max. 3 bis 5 Worte in GROSSBUCHSTABEN).
+        Der Titel MUSS sich zwingend auf das tatsächliche Thema beziehen (z.B. "DER GRÖSSTE VERTRIEBSFEHLER", "AUTOMATISIERE DEIN MARKETING", "3 TIPPS FÜR MEHR UMSATZ").
+        Keinerlei generische Clickbait-Floskeln ohne Themenbezug.
+        Antworte AUSSCHLIESSLICH mit dem reinen Titel in GROSSBUCHSTABEN (keine Anführungszeichen, kein Markdown, keine Erklärung).
         """
-        response = model.generate_content(prompt)
-        title = response.text.strip().replace('"', '').replace("'", "")
-        return title.upper() if title else " ".join(transcript_text.strip().split()[:4]).upper()
+        
+        response = None
+        for m_name in ["gemini-2.5-flash", "gemini-flash-latest", "gemini-3.7-flash", "gemini-3.6-flash"]:
+            try:
+                response = client.models.generate_content(model=m_name, contents=prompt)
+                if response and response.text:
+                    break
+            except Exception:
+                continue
+                
+        if response and response.text:
+            title = response.text.strip().replace('"', '').replace("'", "").replace("*", "").strip()
+            # Falls mehrzeilig, nimm die erste nicht-leere Zeile
+            lines = [l.strip() for l in title.splitlines() if l.strip()]
+            if lines:
+                title = lines[0]
+            if title:
+                return title.upper()
+                
     except Exception as e:
         print(f"Fehler bei kontextbezogener Titel-Generierung: {e}")
-        words = [w for w in transcript_text.strip().split() if len(w) > 2][:4]
-        return " ".join(words).upper() if words else "VIDEO HOOK"
+        
+    words = [w for w in transcript_text.strip().split() if len(w) > 2][:4]
+    return " ".join(words).upper() if words else "VIDEO HOOK"
 
 def generate_social_caption(transcript_text: str) -> str:
     """
@@ -150,33 +175,40 @@ def generate_social_caption(transcript_text: str) -> str:
     eine ansprechende Social-Media-Beschreibung inkl. Hook, Call-to-Action und Hashtags.
     """
     if not transcript_text or not transcript_text.strip():
-        return "🔥 Schau dir dieses virale Short an!\n\n#viral #shorts #content"
+        return "🔥 Schau dir dieses virale Short an!\n\n#viral #shorts #mimaros"
         
-    if not api_key:
-        return f"🔥 {transcript_text[:100]}...\n\n#viral #shorts #content"
+    client = _get_genai_client()
+    if not client:
+        return f"🔥 {transcript_text[:100]}...\n\n#viral #shorts #mimaros"
         
     try:
-        try:
-            model = genai.GenerativeModel('gemini-2.5-flash')
-        except:
-            model = genai.GenerativeModel('gemini-1.5-flash')
-            
         prompt = f"""
-        Du bist ein Social-Media-Manager für TikTok, Instagram Reels und YouTube Shorts.
-        Hier ist das gesprochene Transkript eines Kurzvideos:
-        "{transcript_text[:1000]}"
+        Du bist ein Social-Media-Manager für TikTok, Instagram Reels und YouTube Shorts im B2B / High-Performance Bereich.
+        Hier ist das gesprochene Transkript eines Videos:
+        "{transcript_text[:1200]}"
         
-        Schreibe eine ansprechende, hoch-konvertierende Social-Media-Beschreibung für diesen Beitrag.
+        Schreibe eine ansprechende, hoch-konvertierende Social-Media-Beschreibung für diesen Beitrag auf Deutsch.
         Sie sollte enthalten:
-        1. Einen knackigen Hook im ersten Satz.
-        2. 2-3 Sätze Zusammenfassung / Mehrwert.
-        3. Eine Frage / Call-to-Action für Kommentare.
-        4. 3-5 relevante Hashtags.
+        1. Einen knackigen Hook im ersten Satz mit passendem Emoji.
+        2. 2-3 Sätze Zusammenfassung / Kernaussage mit echtem Mehrwert.
+        3. Eine aktivierende Frage / Call-to-Action für die Kommentare.
+        4. 3-5 relevante Hashtags (z.B. #b2b #marketing #mimaros #shorts).
         
         Antworte direkt mit dem fertigen Text.
         """
-        response = model.generate_content(prompt)
-        return response.text.strip() if response.text else "🔥 Schau dir dieses Video an!\n\n#viral #shorts"
+        
+        response = None
+        for m_name in ["gemini-2.5-flash", "gemini-flash-latest", "gemini-3.7-flash", "gemini-3.6-flash"]:
+            try:
+                response = client.models.generate_content(model=m_name, contents=prompt)
+                if response and response.text:
+                    break
+            except Exception:
+                continue
+                
+        if response and response.text:
+            return response.text.strip()
     except Exception as e:
         print(f"Fehler bei Social Caption Generierung: {e}")
-        return f"🔥 {transcript_text[:150]}...\n\n#viral #shorts"
+        
+    return f"🔥 {transcript_text[:150]}...\n\n#viral #shorts #mimaros"

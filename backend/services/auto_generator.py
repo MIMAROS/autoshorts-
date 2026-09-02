@@ -51,24 +51,20 @@ async def generate_script_and_prompts(topic: str) -> list:
     Gib absolut keinen Markdown-Formatierungstext, keine Erklärungen und kein "```json" drumherum zurück. Nur das rohe JSON Array!
     """
     
-    try:
-        response = client.models.generate_content(
-            model='gemini-2.5-flash',
-            contents=prompt,
-        )
-    except Exception as e:
-        print(f"Fehler mit gemini-2.5-flash: {e}. Versuche Fallback auf gemini-2.0-flash...")
+    response = None
+    for model_name in ['gemini-2.5-flash', 'gemini-flash-latest', 'gemini-3.7-flash', 'gemini-3.6-flash']:
         try:
             response = client.models.generate_content(
-                model='gemini-2.0-flash',
+                model=model_name,
                 contents=prompt,
             )
-        except Exception as e2:
-            print(f"Fehler mit gemini-2.0-flash: {e2}. Versuche Fallback auf gemini-3.1-flash-lite...")
-            response = client.models.generate_content(
-                model='gemini-3.1-flash-lite',
-                contents=prompt,
-            )
+            if response and response.text:
+                break
+        except Exception as e:
+            print(f"Fehler mit {model_name}: {e}. Versuche nächstes Modell...")
+    
+    if not response or not response.text:
+        raise RuntimeError("Konnte kein Skript über Gemini generieren.")
     
     text = response.text.strip()
     if text.startswith("```json"):
