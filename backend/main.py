@@ -874,9 +874,26 @@ async def disconnect_platform(platform: str):
         return {"status": "success", "message": "TikTok getrennt."}
     raise HTTPException(status_code=400, detail="Ungültige Plattform")
 
+class UploadSecretRequest(BaseModel):
+    client_secret_json: str
+
+@app.post("/api/auth/youtube/upload-secret")
+async def upload_youtube_secret(req: UploadSecretRequest):
+    try:
+        youtube_uploader.save_client_secret_json(req.client_secret_json)
+        return {"status": "success", "message": "client_secret.json erfolgreich gespeichert!"}
+    except Exception as e:
+        raise HTTPException(status_code=400, detail=f"Ungültiges JSON-Format: {str(e)}")
+
 @app.post("/api/auth/{platform}/manual-token")
 async def save_manual_token_endpoint(platform: str, req: ManualTokenRequest):
-    if platform == "instagram":
+    if platform == "youtube":
+        try:
+            youtube_uploader.save_client_secret_json(req.token)
+            return {"status": "success", "message": "YouTube client_secret.json erfolgreich gespeichert!"}
+        except Exception as e:
+            raise HTTPException(status_code=400, detail=f"Ungültige client_secret.json: {str(e)}")
+    elif platform == "instagram":
         instagram_uploader.save_manual_token(req.token, req.user_id or "")
         return {"status": "success", "message": "Instagram Token manuell gespeichert!"}
     elif platform == "tiktok":

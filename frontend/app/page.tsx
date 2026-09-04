@@ -2219,15 +2219,20 @@ export default function Page() {
                           Automatischer Upload direkt auf deinen YouTube-Kanal mit optimierten Titeln, Tags & Beschreibungen.
                       </p>
                   </div>
-                  <div className="pt-2 flex items-center gap-2">
+                  <div className="pt-2 flex flex-col gap-2">
                       {authStatus.youtube ? (
                           <button onClick={() => handleDisconnect('youtube')} className="w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl font-bold text-xs transition-all">
                               Trennen
                           </button>
                       ) : (
-                          <button onClick={() => handleOAuthConnect('youtube')} className="w-full py-2.5 bg-mimaros-blue hover:bg-[#42c6ff] text-white rounded-xl font-bold text-xs shadow-blue-glow transition-all">
-                              Mit Google verbinden
-                          </button>
+                          <>
+                              <button onClick={() => handleOAuthConnect('youtube')} className="w-full py-2.5 bg-mimaros-blue hover:bg-[#42c6ff] text-white rounded-xl font-bold text-xs shadow-blue-glow transition-all">
+                                  Mit Google verbinden
+                              </button>
+                              <button onClick={() => setShowManualModal('youtube')} className="w-full py-1.5 bg-background/50 hover:bg-background text-textDim hover:text-white rounded-lg text-[10px] font-mono border border-borderGlass transition-all">
+                                  client_secret.json einfügen
+                              </button>
+                          </>
                       )}
                   </div>
               </div>
@@ -2307,19 +2312,25 @@ export default function Page() {
                   <div className="bg-panel border border-borderGlass rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
                       <button onClick={() => setShowManualModal(null)} className="absolute top-4 right-4 text-textDim hover:text-white"><X className="w-5 h-5"/></button>
                       <h3 className="text-lg font-bold font-heading text-white mb-2">
-                          Manuelles Token für {showManualModal === 'instagram' ? 'Instagram Reels' : 'TikTok'}
+                          {showManualModal === 'youtube' && 'YouTube client_secret.json Konfiguration'}
+                          {showManualModal === 'instagram' && 'Instagram Access-Token'}
+                          {showManualModal === 'tiktok' && 'TikTok Access-Token'}
                       </h3>
                       <p className="text-xs text-textDim mb-4">
-                          Falls du ein Access-Token aus dem Developer Portal (z.B. Meta Graph API Explorer) nutzen möchtest:
+                          {showManualModal === 'youtube' && 'Füge hier den Inhalt deiner Google Cloud client_secret.json Datei ein:'}
+                          {showManualModal === 'instagram' && 'Füge hier dein Access-Token aus dem Meta Graph API Explorer ein:'}
+                          {showManualModal === 'tiktok' && 'Füge hier dein TikTok Access-Token ein:'}
                       </p>
                       <div className="space-y-3">
                           <div>
-                              <label className="block text-[10px] font-bold text-textDim uppercase mb-1">Access Token</label>
+                              <label className="block text-[10px] font-bold text-textDim uppercase mb-1">
+                                  {showManualModal === 'youtube' ? 'JSON Content' : 'Access Token'}
+                              </label>
                               <textarea 
                                   value={manualToken} 
                                   onChange={(e) => setManualToken(e.target.value)} 
-                                  placeholder="EAAG..." 
-                                  className="w-full h-24 bg-background border border-borderGlass p-2.5 rounded-xl text-xs font-mono text-white outline-none focus:border-mimaros-blue"
+                                  placeholder={showManualModal === 'youtube' ? '{"web": {"client_id": "...", ...}}' : 'EAAG...'} 
+                                  className="w-full h-28 bg-background border border-borderGlass p-2.5 rounded-xl text-xs font-mono text-white outline-none focus:border-mimaros-blue"
                               />
                           </div>
                           {showManualModal === 'instagram' && (
@@ -2338,7 +2349,7 @@ export default function Page() {
                               onClick={() => handleSaveManualToken(showManualModal)} 
                               className="w-full mt-2 py-3 bg-mimaros-blue hover:bg-[#42c6ff] text-white font-bold rounded-xl text-xs shadow-blue-glow transition-all"
                           >
-                              Token Speichern & Aktivieren
+                              {showManualModal === 'youtube' ? 'Client Secret Speichern' : 'Token Speichern & Aktivieren'}
                           </button>
                       </div>
                   </div>
