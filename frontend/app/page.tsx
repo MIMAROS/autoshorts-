@@ -161,7 +161,7 @@ export default function Page() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [authStatus, setAuthStatus] = useState({ youtube: false, tiktok: false, instagram: false });
+  const [authStatus, setAuthStatus] = useState({ youtube: false, tiktok: false, instagram: false, linkedin: false });
 
   useEffect(() => {
     fetchSchedules();
@@ -176,7 +176,8 @@ export default function Page() {
         setAuthStatus({
             youtube: !!data.youtube,
             tiktok: !!data.tiktok,
-            instagram: !!data.instagram
+            instagram: !!data.instagram,
+            linkedin: !!data.linkedin
         });
     } catch (e) {
         console.error("Error fetching auth status:", e);
@@ -2189,7 +2190,7 @@ export default function Page() {
   };
 
   const renderIntegrations = () => (
-      <div className="flex-1 max-w-5xl mx-auto w-full flex flex-col gap-6">
+      <div className="flex-1 max-w-6xl mx-auto w-full flex flex-col gap-6">
           <div>
               <span className="text-[10px] font-display uppercase tracking-[0.2em] text-mimaros-gold font-bold">
                   MULTI-PLATFORM AUTO-POSTING
@@ -2198,39 +2199,39 @@ export default function Page() {
                   <Share2 className="w-8 h-8 text-mimaros-blue" /> Social Media Verknüpfungen
               </h2>
               <p className="text-textDim text-sm mt-1">
-                  Verbinde deine Social-Media-Kanäle, um gerenderte Kurzvideos vollautomatisch als YouTube Shorts, Instagram Reels und TikToks zu veröffentlichen.
+                  Verbinde deine Social-Media-Kanäle mit 1 Klick, um gerenderte Kurzvideos vollautomatisch als YouTube Shorts, Instagram Reels, TikToks und LinkedIn Posts zu veröffentlichen.
               </p>
           </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
               {/* 1. YouTube Shorts */}
-              <div className="bg-panel/40 backdrop-blur-lg p-6 rounded-2xl border border-borderGlass flex flex-col justify-between space-y-5 shadow-glass hover:border-red-500/50 transition-all">
+              <div className="bg-panel/40 backdrop-blur-lg p-5 rounded-2xl border border-borderGlass flex flex-col justify-between space-y-4 shadow-glass hover:border-red-500/50 transition-all">
                   <div className="flex items-center justify-between">
-                      <div className="w-12 h-12 bg-red-500/15 border border-red-500/30 text-red-500 rounded-xl flex items-center justify-center">
-                          <Video className="w-6 h-6" />
+                      <div className="w-11 h-11 bg-red-500/15 border border-red-500/30 text-red-500 rounded-xl flex items-center justify-center">
+                          <Video className="w-5 h-5" />
                       </div>
-                      <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border ${authStatus.youtube ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-background text-textDim border-borderGlass'}`}>
+                      <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${authStatus.youtube ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-background text-textDim border-borderGlass'}`}>
                           {authStatus.youtube ? '● Verbunden' : '○ Getrennt'}
                       </span>
                   </div>
                   <div>
-                      <h3 className="font-heading font-bold text-lg text-white">YouTube Shorts</h3>
-                      <p className="text-xs text-textDim mt-1 leading-relaxed">
-                          Automatischer Upload direkt auf deinen YouTube-Kanal mit optimierten Titeln, Tags & Beschreibungen.
+                      <h3 className="font-heading font-bold text-base text-white">YouTube Shorts</h3>
+                      <p className="text-[11px] text-textDim mt-1 leading-relaxed">
+                          Automatischer Upload auf deinen YouTube-Kanal mit optimierten Titeln & Tags.
                       </p>
                   </div>
-                  <div className="pt-2 flex flex-col gap-2">
+                  <div className="pt-2 flex flex-col gap-1.5">
                       {authStatus.youtube ? (
-                          <button onClick={() => handleDisconnect('youtube')} className="w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl font-bold text-xs transition-all">
+                          <button onClick={() => handleDisconnect('youtube')} className="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl font-bold text-xs transition-all">
                               Trennen
                           </button>
                       ) : (
                           <>
-                              <button onClick={() => handleOAuthConnect('youtube')} className="w-full py-2.5 bg-mimaros-blue hover:bg-[#42c6ff] text-white rounded-xl font-bold text-xs shadow-blue-glow transition-all">
+                              <button onClick={() => handleOAuthConnect('youtube')} className="w-full py-2 bg-mimaros-blue hover:bg-[#42c6ff] text-white rounded-xl font-bold text-xs shadow-blue-glow transition-all">
                                   Mit Google verbinden
                               </button>
-                              <button onClick={() => setShowManualModal('youtube')} className="w-full py-1.5 bg-background/50 hover:bg-background text-textDim hover:text-white rounded-lg text-[10px] font-mono border border-borderGlass transition-all">
-                                  client_secret.json einfügen
+                              <button onClick={() => setShowManualModal('youtube')} className="w-full py-1 bg-background/50 hover:bg-background text-textDim hover:text-white rounded-lg text-[9px] font-mono border border-borderGlass transition-all">
+                                  client_secret.json
                               </button>
                           </>
                       )}
@@ -2238,33 +2239,33 @@ export default function Page() {
               </div>
               
               {/* 2. Instagram Reels */}
-              <div className="bg-panel/40 backdrop-blur-lg p-6 rounded-2xl border border-borderGlass flex flex-col justify-between space-y-5 shadow-glass hover:border-pink-500/50 transition-all">
+              <div className="bg-panel/40 backdrop-blur-lg p-5 rounded-2xl border border-borderGlass flex flex-col justify-between space-y-4 shadow-glass hover:border-pink-500/50 transition-all">
                   <div className="flex items-center justify-between">
-                      <div className="w-12 h-12 bg-pink-500/15 border border-pink-500/30 text-pink-500 rounded-xl flex items-center justify-center">
-                          <Flame className="w-6 h-6" />
+                      <div className="w-11 h-11 bg-pink-500/15 border border-pink-500/30 text-pink-500 rounded-xl flex items-center justify-center">
+                          <Flame className="w-5 h-5" />
                       </div>
-                      <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border ${authStatus.instagram ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-background text-textDim border-borderGlass'}`}>
+                      <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${authStatus.instagram ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-background text-textDim border-borderGlass'}`}>
                           {authStatus.instagram ? '● Verbunden' : '○ Getrennt'}
                       </span>
                   </div>
                   <div>
-                      <h3 className="font-heading font-bold text-lg text-white">Instagram Reels</h3>
-                      <p className="text-xs text-textDim mt-1 leading-relaxed">
-                          Direkte Veröffentlichung von Reels über die offizielle Meta Graph API (Professional & Creator Accounts).
+                      <h3 className="font-heading font-bold text-base text-white">Instagram Reels</h3>
+                      <p className="text-[11px] text-textDim mt-1 leading-relaxed">
+                          Reels Veröffentlichung über die offizielle Meta Graph API.
                       </p>
                   </div>
-                  <div className="pt-2 flex flex-col gap-2">
+                  <div className="pt-2 flex flex-col gap-1.5">
                       {authStatus.instagram ? (
-                          <button onClick={() => handleDisconnect('instagram')} className="w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl font-bold text-xs transition-all">
+                          <button onClick={() => handleDisconnect('instagram')} className="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl font-bold text-xs transition-all">
                               Trennen
                           </button>
                       ) : (
                           <>
-                              <button onClick={() => handleOAuthConnect('instagram')} className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white rounded-xl font-bold text-xs shadow-md transition-all">
+                              <button onClick={() => handleOAuthConnect('instagram')} className="w-full py-2 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white rounded-xl font-bold text-xs shadow-md transition-all">
                                   Mit Meta verbinden
                               </button>
-                              <button onClick={() => setShowManualModal('instagram')} className="w-full py-1.5 bg-background/50 hover:bg-background text-textDim hover:text-white rounded-lg text-[10px] font-mono border border-borderGlass transition-all">
-                                  Token manuell eingeben
+                              <button onClick={() => setShowManualModal('instagram')} className="w-full py-1 bg-background/50 hover:bg-background text-textDim hover:text-white rounded-lg text-[9px] font-mono border border-borderGlass transition-all">
+                                  Token manuell
                               </button>
                           </>
                       )}
@@ -2272,33 +2273,67 @@ export default function Page() {
               </div>
 
               {/* 3. TikTok */}
-              <div className="bg-panel/40 backdrop-blur-lg p-6 rounded-2xl border border-borderGlass flex flex-col justify-between space-y-5 shadow-glass hover:border-cyan-400/50 transition-all">
+              <div className="bg-panel/40 backdrop-blur-lg p-5 rounded-2xl border border-borderGlass flex flex-col justify-between space-y-4 shadow-glass hover:border-cyan-400/50 transition-all">
                   <div className="flex items-center justify-between">
-                      <div className="w-12 h-12 bg-black/50 border border-white/20 text-white rounded-xl flex items-center justify-center">
-                          <Share2 className="w-6 h-6 text-cyan-400" />
+                      <div className="w-11 h-11 bg-black/50 border border-white/20 text-white rounded-xl flex items-center justify-center">
+                          <Share2 className="w-5 h-5 text-cyan-400" />
                       </div>
-                      <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border ${authStatus.tiktok ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-background text-textDim border-borderGlass'}`}>
+                      <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${authStatus.tiktok ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-background text-textDim border-borderGlass'}`}>
                           {authStatus.tiktok ? '● Verbunden' : '○ Getrennt'}
                       </span>
                   </div>
                   <div>
-                      <h3 className="font-heading font-bold text-lg text-white">TikTok</h3>
-                      <p className="text-xs text-textDim mt-1 leading-relaxed">
-                          Autonomes Posten in den TikTok-Feed über die offizielle TikTok Content Posting API.
+                      <h3 className="font-heading font-bold text-base text-white">TikTok</h3>
+                      <p className="text-[11px] text-textDim mt-1 leading-relaxed">
+                          Posten in den TikTok-Feed über die offizielle Content Posting API.
                       </p>
                   </div>
-                  <div className="pt-2 flex flex-col gap-2">
+                  <div className="pt-2 flex flex-col gap-1.5">
                       {authStatus.tiktok ? (
-                          <button onClick={() => handleDisconnect('tiktok')} className="w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl font-bold text-xs transition-all">
+                          <button onClick={() => handleDisconnect('tiktok')} className="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl font-bold text-xs transition-all">
                               Trennen
                           </button>
                       ) : (
                           <>
-                              <button onClick={() => handleOAuthConnect('tiktok')} className="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl font-bold text-xs shadow-md transition-all">
+                              <button onClick={() => handleOAuthConnect('tiktok')} className="w-full py-2 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl font-bold text-xs shadow-md transition-all">
                                   Mit TikTok verbinden
                               </button>
-                              <button onClick={() => setShowManualModal('tiktok')} className="w-full py-1.5 bg-background/50 hover:bg-background text-textDim hover:text-white rounded-lg text-[10px] font-mono border border-borderGlass transition-all">
-                                  Token manuell eingeben
+                              <button onClick={() => setShowManualModal('tiktok')} className="w-full py-1 bg-background/50 hover:bg-background text-textDim hover:text-white rounded-lg text-[9px] font-mono border border-borderGlass transition-all">
+                                  Token manuell
+                              </button>
+                          </>
+                      )}
+                  </div>
+              </div>
+
+              {/* 4. LinkedIn */}
+              <div className="bg-panel/40 backdrop-blur-lg p-5 rounded-2xl border border-borderGlass flex flex-col justify-between space-y-4 shadow-glass hover:border-blue-500/50 transition-all">
+                  <div className="flex items-center justify-between">
+                      <div className="w-11 h-11 bg-[#0A66C2]/15 border border-[#0A66C2]/30 text-[#0A66C2] rounded-xl flex items-center justify-center">
+                          <Share2 className="w-5 h-5 text-[#0A66C2]" />
+                      </div>
+                      <span className={`text-[9px] font-bold uppercase px-2 py-0.5 rounded-full border ${authStatus.linkedin ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-background text-textDim border-borderGlass'}`}>
+                          {authStatus.linkedin ? '● Verbunden' : '○ Getrennt'}
+                      </span>
+                  </div>
+                  <div>
+                      <h3 className="font-heading font-bold text-base text-white">LinkedIn</h3>
+                      <p className="text-[11px] text-textDim mt-1 leading-relaxed">
+                          Video-Posts & Shorts auf deinem LinkedIn-Profil oder Unternehmensseite.
+                      </p>
+                  </div>
+                  <div className="pt-2 flex flex-col gap-1.5">
+                      {authStatus.linkedin ? (
+                          <button onClick={() => handleDisconnect('linkedin')} className="w-full py-2 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl font-bold text-xs transition-all">
+                              Trennen
+                          </button>
+                      ) : (
+                          <>
+                              <button onClick={() => handleOAuthConnect('linkedin')} className="w-full py-2 bg-[#0A66C2] hover:bg-[#084e96] text-white rounded-xl font-bold text-xs shadow-md transition-all">
+                                  Mit LinkedIn verbinden
+                              </button>
+                              <button onClick={() => setShowManualModal('linkedin')} className="w-full py-1 bg-background/50 hover:bg-background text-textDim hover:text-white rounded-lg text-[9px] font-mono border border-borderGlass transition-all">
+                                  Token manuell
                               </button>
                           </>
                       )}
@@ -2315,11 +2350,13 @@ export default function Page() {
                           {showManualModal === 'youtube' && 'YouTube client_secret.json Konfiguration'}
                           {showManualModal === 'instagram' && 'Instagram Access-Token'}
                           {showManualModal === 'tiktok' && 'TikTok Access-Token'}
+                          {showManualModal === 'linkedin' && 'LinkedIn Access-Token'}
                       </h3>
                       <p className="text-xs text-textDim mb-4">
                           {showManualModal === 'youtube' && 'Füge hier den Inhalt deiner Google Cloud client_secret.json Datei ein:'}
                           {showManualModal === 'instagram' && 'Füge hier dein Access-Token aus dem Meta Graph API Explorer ein:'}
                           {showManualModal === 'tiktok' && 'Füge hier dein TikTok Access-Token ein:'}
+                          {showManualModal === 'linkedin' && 'Füge hier dein LinkedIn Access-Token ein:'}
                       </p>
                       <div className="space-y-3">
                           <div>
@@ -2329,7 +2366,7 @@ export default function Page() {
                               <textarea 
                                   value={manualToken} 
                                   onChange={(e) => setManualToken(e.target.value)} 
-                                  placeholder={showManualModal === 'youtube' ? '{"web": {"client_id": "...", ...}}' : 'EAAG...'} 
+                                  placeholder={showManualModal === 'youtube' ? '{"web": {"client_id": "...", ...}}' : 'AQV... / EAAG...'} 
                                   className="w-full h-28 bg-background border border-borderGlass p-2.5 rounded-xl text-xs font-mono text-white outline-none focus:border-mimaros-blue"
                               />
                           </div>
@@ -2341,6 +2378,18 @@ export default function Page() {
                                       value={manualUserId} 
                                       onChange={(e) => setManualUserId(e.target.value)} 
                                       placeholder="17841400000000000" 
+                                      className="w-full bg-background border border-borderGlass p-2.5 rounded-xl text-xs font-mono text-white outline-none focus:border-mimaros-blue"
+                                  />
+                              </div>
+                          )}
+                          {showManualModal === 'linkedin' && (
+                              <div>
+                                  <label className="block text-[10px] font-bold text-textDim uppercase mb-1">Person ID / Sub (Optional)</label>
+                                  <input 
+                                      type="text" 
+                                      value={manualUserId} 
+                                      onChange={(e) => setManualUserId(e.target.value)} 
+                                      placeholder="urn:li:person:..." 
                                       className="w-full bg-background border border-borderGlass p-2.5 rounded-xl text-xs font-mono text-white outline-none focus:border-mimaros-blue"
                                   />
                               </div>
@@ -2435,7 +2484,7 @@ export default function Page() {
                       <div>
                           <label className="block text-xs font-bold text-textDim uppercase mb-3">Plattformen (Mehrfachauswahl)</label>
                           <div className="flex flex-wrap gap-3">
-                              {['YouTube Shorts', 'TikTok', 'Instagram Reels'].map(plat => (
+                              {['YouTube Shorts', 'TikTok', 'Instagram Reels', 'LinkedIn'].map(plat => (
                                   <label key={plat} className="flex items-center gap-2 bg-background border border-borderGlass px-4 py-2 rounded-xl cursor-pointer hover:border-mimaros-blue/50 transition-all">
                                       <input 
                                         type="checkbox" 

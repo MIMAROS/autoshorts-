@@ -15,7 +15,7 @@ from services.youtube_downloader import download_video, get_video_info
 from services.transcriber import transcribe_audio
 from services.gemini_analyzer import analyze_hooks
 from services.video_processor import process_clip, normalize_clip, stitch_clips, apply_branding_and_subs
-from services import youtube_uploader, instagram_uploader, tiktok_uploader
+from services import youtube_uploader, instagram_uploader, tiktok_uploader, linkedin_uploader
 from services.supabase_client import upload_file_to_supabase
 
 app = FastAPI(title="MIMAROS Multi-Platform Auto Posting API")
@@ -84,6 +84,17 @@ async def background_uploader_task():
                                         print(f"Fehler bei TikTok Upload: {te}")
                                 else:
                                     print("TikTok nicht authentifiziert. Überspringe TikTok.")
+
+                            # 4. LinkedIn
+                            if "LinkedIn" in platforms:
+                                if linkedin_uploader.is_authenticated():
+                                    try:
+                                        linkedin_uploader.upload_video(local_path, caption, s.get("title", "MIMAROS Video"))
+                                        print("LinkedIn Video Upload erfolgreich!")
+                                    except Exception as le:
+                                        print(f"Fehler bei LinkedIn Upload: {le}")
+                                else:
+                                    print("LinkedIn nicht authentifiziert. Überspringe LinkedIn.")
                                     
                             s["uploaded"] = True
                     except ValueError:
@@ -790,12 +801,13 @@ class ManualTokenRequest(BaseModel):
 @app.get("/api/auth/status")
 async def auth_status():
     """
-    Liefert den Verbindungsstatus für YouTube, Instagram und TikTok zurück.
+    Liefert den Verbindungsstatus für YouTube, Instagram, TikTok und LinkedIn zurück.
     """
     return {
         "youtube": youtube_uploader.is_authenticated(),
         "instagram": instagram_uploader.is_authenticated(),
-        "tiktok": tiktok_uploader.is_authenticated()
+        "tiktok": tiktok_uploader.is_authenticated(),
+        "linkedin": linkedin_uploader.is_authenticated()
     }
 
 @app.post("/api/auth/{platform}")
@@ -824,6 +836,13 @@ async def auth_platform(platform: str, request: Request):
         auth_url, err = tiktok_uploader.get_auth_url(redirect_uri)
         if not auth_url:
             raise HTTPException(status_code=400, detail="TIKTOK_CLIENT_KEY fehlt in der .env")
+        return {"auth_url": auth_url}
+
+    elif platform == "linkedin":
+        redirect_uri = f"{base_url}/api/auth/linkedin/callback"
+        auth_url, err = linkedin_uploader.get_auth_url(redirect_uri)
+        if not auth_url:
+            raise HTTPException(status_code=400, detail="LINKEDIN_CLIENT_ID fehlt in der .env")
         return {"auth_url": auth_url}
         
     raise HTTPException(status_code=400, detail=f"Ungültige Plattform: {platform}")
@@ -858,6 +877,16 @@ async def tiktok_auth_callback(code: str, request: Request):
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"TikTok Authentifizierung fehlgeschlagen: {str(e)}")
 
+@app.get("/api/auth/linkedin/callback")
+async def linkedin_auth_callback(code: str, request: Request):
+    base_url = str(request.base_url).rstrip('/')
+    redirect_uri = f"{base_url}/api/auth/linkedin/callback"
+    try:
+        linkedin_uploader.fetch_token_from_code(code, redirect_uri)
+        return RedirectResponse(url="/?connected=linkedin")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"LinkedIn Authentifizierung fehlgeschlagen: {str(e)}")
+
 @app.post("/api/auth/{platform}/disconnect")
 async def disconnect_platform(platform: str):
     if platform == "youtube":
@@ -872,6 +901,9 @@ async def disconnect_platform(platform: str):
     elif platform == "tiktok":
         tiktok_uploader.disconnect()
         return {"status": "success", "message": "TikTok getrennt."}
+    elif platform == "linkedin":
+        linkedin_uploader.disconnect()
+        return {"status": "success", "message": "LinkedIn getrennt."}
     raise HTTPException(status_code=400, detail="Ungültige Plattform")
 
 class UploadSecretRequest(BaseModel):
@@ -899,4 +931,7 @@ async def save_manual_token_endpoint(platform: str, req: ManualTokenRequest):
     elif platform == "tiktok":
         tiktok_uploader.save_manual_token(req.token, req.user_id or "")
         return {"status": "success", "message": "TikTok Token manuell gespeichert!"}
+    elif platform == "linkedin":
+        linkedin_uploader.save_manual_token(req.token, req.user_id or "")
+        return {"status": "success", "message": "LinkedIn Token manuell gespeichert!"}
     raise HTTPException(status_code=400, detail="Manuelles Token für diese Plattform nicht unterstützt.")
