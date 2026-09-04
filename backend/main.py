@@ -15,10 +15,10 @@ from services.youtube_downloader import download_video, get_video_info
 from services.transcriber import transcribe_audio
 from services.gemini_analyzer import analyze_hooks
 from services.video_processor import process_clip, normalize_clip, stitch_clips, apply_branding_and_subs
-from services import youtube_uploader
+from services import youtube_uploader, instagram_uploader, tiktok_uploader
 from services.supabase_client import upload_file_to_supabase
 
-app = FastAPI(title="YouTube to Shorts AI Automation API")
+app = FastAPI(title="MIMAROS Multi-Platform Auto Posting API")
 
 # Ordner bereitstellen
 export_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Fertige_Shorts")
@@ -37,35 +37,61 @@ async def background_uploader_task():
         try:
             now = datetime.now()
             for s in schedules:
-                if not s.get("uploaded") and "YouTube Shorts" in s.get("platforms", []):
-                    # parse YYYY-MM-DD HH:MM
+                if not s.get("uploaded"):
                     try:
                         scheduled_time = datetime.strptime(s["schedule_date"], "%Y-%m-%d %H:%M")
                         if now >= scheduled_time:
-                            print(f"Uploading scheduled video: {s['video_url']}")
+                            platforms = s.get("platforms", [])
+                            print(f"Verarbeite Multi-Plattform Upload: {s.get('video_url')} für {platforms}")
                             
-                            # Wandle URL in lokalen Dateipfad um
-                            # video_url is like http://127.0.0.1:8000/videos/job_123_clip.mp4
-                            # local path is in Fertige_Shorts/job_123_clip.mp4
-                            filename = s["video_url"].split("/videos/")[-1]
+                            filename = s["video_url"].split("/videos/")[-1] if "/videos/" in s.get("video_url", "") else os.path.basename(s.get("video_url", ""))
                             local_path = os.path.join(export_dir, filename)
                             
-                            if os.path.exists(local_path):
+                            caption = s.get("caption", "MIMAROS AutoShorts Video #shorts #viral")
+                            
+                            # 1. YouTube Shorts
+                            if "YouTube Shorts" in platforms:
                                 if youtube_uploader.is_authenticated():
-                                    youtube_uploader.upload_short(local_path, s.get("caption", "AutoShorts Video"), s.get("caption", ""), "private")
-                                    s["uploaded"] = True
-                                    print("Upload successful!")
+                                    try:
+                                        youtube_uploader.upload_short(local_path, s.get("title", caption.split("\n")[0][:60]), caption, "public")
+                                        print("YouTube Shorts Upload erfolgreich!")
+                                    except Exception as ye:
+                                        print(f"Fehler bei YouTube Upload: {ye}")
                                 else:
-                                    print("YouTube is not authenticated. Skipping upload.")
-                            else:
-                                print(f"File not found: {local_path}")
-                                s["uploaded"] = True # mark as uploaded to avoid infinite retry
+                                    print("YouTube nicht authentifiziert. Überspringe YouTube.")
+                                    
+                            # 2. Instagram Reels
+                            if "Instagram Reels" in platforms or "Instagram" in platforms:
+                                if instagram_uploader.is_authenticated():
+                                    try:
+                                        public_vid_url = s.get("video_url")
+                                        if not public_vid_url.startswith("http"):
+                                            public_vid_url = upload_file_to_supabase(local_path, "autoshorts-storage", filename) or f"http://127.0.0.1:8000/videos/{filename}"
+                                        instagram_uploader.upload_reel(public_vid_url, caption)
+                                        print("Instagram Reel Upload erfolgreich!")
+                                    except Exception as ie:
+                                        print(f"Fehler bei Instagram Upload: {ie}")
+                                else:
+                                    print("Instagram nicht authentifiziert. Überspringe Instagram.")
+                                    
+                            # 3. TikTok
+                            if "TikTok" in platforms:
+                                if tiktok_uploader.is_authenticated():
+                                    try:
+                                        tiktok_uploader.upload_video(local_path, caption[:150])
+                                        print("TikTok Upload erfolgreich!")
+                                    except Exception as te:
+                                        print(f"Fehler bei TikTok Upload: {te}")
+                                else:
+                                    print("TikTok nicht authentifiziert. Überspringe TikTok.")
+                                    
+                            s["uploaded"] = True
                     except ValueError:
                         pass
         except Exception as e:
             print(f"Error in background uploader: {e}")
         
-        await asyncio.sleep(60)
+        await asyncio.sleep(30)
 
 app.add_middleware(
     CORSMiddleware,
@@ -755,45 +781,105 @@ if __name__ == "__main__":
 
 
 from fastapi.responses import RedirectResponse
+from fastapi import Request
+
+class ManualTokenRequest(BaseModel):
+    token: str
+    user_id: Optional[str] = ""
 
 @app.get("/api/auth/status")
 async def auth_status():
     """
-    Returns the auth status for all platforms.
+    Liefert den Verbindungsstatus für YouTube, Instagram und TikTok zurück.
     """
-    youtube_connected = youtube_uploader.is_authenticated()
     return {
-        "youtube": youtube_connected,
-        "tiktok": False
+        "youtube": youtube_uploader.is_authenticated(),
+        "instagram": instagram_uploader.is_authenticated(),
+        "tiktok": tiktok_uploader.is_authenticated()
     }
 
 @app.post("/api/auth/{platform}")
-async def auth_platform(platform: str):
+async def auth_platform(platform: str, request: Request):
     """
-    Initiates OAuth flow.
+    Initiiert den OAuth-Flow für die jeweilige Plattform.
     """
-    if platform == "youtube":
-        # Redirect URI für den Callback
-        redirect_uri = "http://localhost:3000/api/auth/youtube/callback" # We'll handle this in Next.js later or direct to backend
-        # Let's direct to backend callback directly to keep it simple:
-        redirect_uri = "http://127.0.0.1:8000/api/auth/youtube/callback"
-        
-        auth_url, _ = youtube_uploader.get_auth_url(redirect_uri)
-        if not auth_url:
-            raise HTTPException(status_code=400, detail="client_secret.json is missing. Please download it from Google Cloud Console.")
-        return {"auth_url": auth_url}
+    base_url = str(request.base_url).rstrip('/')
     
-    raise HTTPException(status_code=400, detail="Invalid or unsupported platform")
+    if platform == "youtube":
+        redirect_uri = f"{base_url}/api/auth/youtube/callback"
+        auth_url, err = youtube_uploader.get_auth_url(redirect_uri)
+        if not auth_url:
+            raise HTTPException(status_code=400, detail="client_secret.json fehlt oder ist unvollständig.")
+        return {"auth_url": auth_url}
+        
+    elif platform == "instagram":
+        redirect_uri = f"{base_url}/api/auth/instagram/callback"
+        auth_url, err = instagram_uploader.get_auth_url(redirect_uri)
+        if not auth_url:
+            raise HTTPException(status_code=400, detail="INSTAGRAM_APP_ID fehlt in der .env")
+        return {"auth_url": auth_url}
+        
+    elif platform == "tiktok":
+        redirect_uri = f"{base_url}/api/auth/tiktok/callback"
+        auth_url, err = tiktok_uploader.get_auth_url(redirect_uri)
+        if not auth_url:
+            raise HTTPException(status_code=400, detail="TIKTOK_CLIENT_KEY fehlt in der .env")
+        return {"auth_url": auth_url}
+        
+    raise HTTPException(status_code=400, detail=f"Ungültige Plattform: {platform}")
 
 @app.get("/api/auth/youtube/callback")
-async def youtube_auth_callback(code: str):
-    """
-    Handles the Google OAuth redirect.
-    """
-    redirect_uri = "http://127.0.0.1:8000/api/auth/youtube/callback"
+async def youtube_auth_callback(code: str, request: Request):
+    base_url = str(request.base_url).rstrip('/')
+    redirect_uri = f"{base_url}/api/auth/youtube/callback"
     try:
         youtube_uploader.fetch_token_from_code(code, redirect_uri)
-        # Redirect back to frontend
-        return RedirectResponse(url="http://localhost:3000/")
+        return RedirectResponse(url="/?connected=youtube")
     except Exception as e:
-        raise HTTPException(status_code=500, detail=str(e))
+        raise HTTPException(status_code=500, detail=f"YouTube Authentifizierung fehlgeschlagen: {str(e)}")
+
+@app.get("/api/auth/instagram/callback")
+async def instagram_auth_callback(code: str, request: Request):
+    base_url = str(request.base_url).rstrip('/')
+    redirect_uri = f"{base_url}/api/auth/instagram/callback"
+    try:
+        instagram_uploader.fetch_token_from_code(code, redirect_uri)
+        return RedirectResponse(url="/?connected=instagram")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Instagram Authentifizierung fehlgeschlagen: {str(e)}")
+
+@app.get("/api/auth/tiktok/callback")
+async def tiktok_auth_callback(code: str, request: Request):
+    base_url = str(request.base_url).rstrip('/')
+    redirect_uri = f"{base_url}/api/auth/tiktok/callback"
+    try:
+        tiktok_uploader.fetch_token_from_code(code, redirect_uri)
+        return RedirectResponse(url="/?connected=tiktok")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"TikTok Authentifizierung fehlgeschlagen: {str(e)}")
+
+@app.post("/api/auth/{platform}/disconnect")
+async def disconnect_platform(platform: str):
+    if platform == "youtube":
+        token_file = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "youtube_token.json")
+        if os.path.exists(token_file):
+            try: os.remove(token_file)
+            except: pass
+        return {"status": "success", "message": "YouTube getrennt."}
+    elif platform == "instagram":
+        instagram_uploader.disconnect()
+        return {"status": "success", "message": "Instagram getrennt."}
+    elif platform == "tiktok":
+        tiktok_uploader.disconnect()
+        return {"status": "success", "message": "TikTok getrennt."}
+    raise HTTPException(status_code=400, detail="Ungültige Plattform")
+
+@app.post("/api/auth/{platform}/manual-token")
+async def save_manual_token_endpoint(platform: str, req: ManualTokenRequest):
+    if platform == "instagram":
+        instagram_uploader.save_manual_token(req.token, req.user_id or "")
+        return {"status": "success", "message": "Instagram Token manuell gespeichert!"}
+    elif platform == "tiktok":
+        tiktok_uploader.save_manual_token(req.token, req.user_id or "")
+        return {"status": "success", "message": "TikTok Token manuell gespeichert!"}
+    raise HTTPException(status_code=400, detail="Manuelles Token für diese Plattform nicht unterstützt.")

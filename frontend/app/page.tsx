@@ -161,7 +161,7 @@ export default function Page() {
 
   const fileInputRef = useRef<HTMLInputElement>(null);
 
-  const [authStatus, setAuthStatus] = useState({ youtube: false, tiktok: false });
+  const [authStatus, setAuthStatus] = useState({ youtube: false, tiktok: false, instagram: false });
 
   useEffect(() => {
     fetchSchedules();
@@ -173,7 +173,11 @@ export default function Page() {
     try {
         const res = await fetch(`${API_BASE}/api/auth/status`);
         const data = await res.json();
-        setAuthStatus({ youtube: data.youtube, tiktok: data.tiktok });
+        setAuthStatus({
+            youtube: !!data.youtube,
+            tiktok: !!data.tiktok,
+            instagram: !!data.instagram
+        });
     } catch (e) {
         console.error("Error fetching auth status:", e);
     }
@@ -2121,6 +2125,10 @@ export default function Page() {
       </div>
   );
 
+  const [showManualModal, setShowManualModal] = useState<string | null>(null);
+  const [manualToken, setManualToken] = useState('');
+  const [manualUserId, setManualUserId] = useState('');
+
   const handleOAuthConnect = async (platform: string) => {
       try {
           const res = await fetch(`${API_BASE}/api/auth/${platform}`, { method: 'POST' });
@@ -2130,6 +2138,7 @@ export default function Page() {
                   window.location.href = data.auth_url;
               } else {
                   alert(data.message || `Erfolgreich mit ${platform} verbunden!`);
+                  fetchAuthStatus();
               }
           } else {
               const error = await res.json();
@@ -2140,46 +2149,201 @@ export default function Page() {
       }
   };
 
+  const handleDisconnect = async (platform: string) => {
+      if (!confirm(`Möchtest du die Verknüpfung mit ${platform} wirklich trennen?`)) return;
+      try {
+          const res = await fetch(`${API_BASE}/api/auth/${platform}/disconnect`, { method: 'POST' });
+          if (res.ok) {
+              alert(`${platform} erfolgreich getrennt.`);
+              fetchAuthStatus();
+          }
+      } catch (e) {
+          console.error(e);
+      }
+  };
+
+  const handleSaveManualToken = async (platform: string) => {
+      if (!manualToken.trim()) {
+          alert("Bitte gib ein gültiges Access-Token ein.");
+          return;
+      }
+      try {
+          const res = await fetch(`${API_BASE}/api/auth/${platform}/manual-token`, {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ token: manualToken, user_id: manualUserId })
+          });
+          if (res.ok) {
+              alert(`${platform} Token erfolgreich gespeichert!`);
+              setShowManualModal(null);
+              setManualToken('');
+              setManualUserId('');
+              fetchAuthStatus();
+          } else {
+              const err = await res.json();
+              alert(`Fehler: ${err.detail}`);
+          }
+      } catch (e) {
+          console.error(e);
+      }
+  };
+
   const renderIntegrations = () => (
       <div className="flex-1 max-w-5xl mx-auto w-full flex flex-col gap-6">
-          <h2 className="font-heading text-3xl font-bold text-white tracking-tight flex items-center gap-3">
-              <Share2 className="w-8 h-8 text-mimaros-blue" /> Verknüpfungen
-          </h2>
-          <p className="text-textDim mb-4">Verbinde deine Social Media Accounts für Auto-Posting.</p>
+          <div>
+              <span className="text-[10px] font-display uppercase tracking-[0.2em] text-mimaros-gold font-bold">
+                  MULTI-PLATFORM AUTO-POSTING
+              </span>
+              <h2 className="font-heading text-3xl font-bold text-white tracking-tight flex items-center gap-3 mt-1">
+                  <Share2 className="w-8 h-8 text-mimaros-blue" /> Social Media Verknüpfungen
+              </h2>
+              <p className="text-textDim text-sm mt-1">
+                  Verbinde deine Social-Media-Kanäle, um gerenderte Kurzvideos vollautomatisch als YouTube Shorts, Instagram Reels und TikToks zu veröffentlichen.
+              </p>
+          </div>
           
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-              <div className="bg-panel/40 p-6 rounded-2xl border border-borderGlass flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-red-500/20 text-red-500 rounded-xl flex items-center justify-center">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+              {/* 1. YouTube Shorts */}
+              <div className="bg-panel/40 backdrop-blur-lg p-6 rounded-2xl border border-borderGlass flex flex-col justify-between space-y-5 shadow-glass hover:border-red-500/50 transition-all">
+                  <div className="flex items-center justify-between">
+                      <div className="w-12 h-12 bg-red-500/15 border border-red-500/30 text-red-500 rounded-xl flex items-center justify-center">
                           <Video className="w-6 h-6" />
                       </div>
-                      <div>
-                          <h3 className="font-bold text-white">YouTube</h3>
-                          <p className={`text-xs ${authStatus.youtube ? 'text-green-400' : 'text-textDim'}`}>
-                              Status: {authStatus.youtube ? 'Verbunden' : 'Nicht verbunden'}
-                          </p>
-                      </div>
+                      <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border ${authStatus.youtube ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-background text-textDim border-borderGlass'}`}>
+                          {authStatus.youtube ? '● Verbunden' : '○ Getrennt'}
+                      </span>
                   </div>
-                  {authStatus.youtube ? (
-                      <button className="bg-green-500/20 text-green-400 px-4 py-2 rounded-lg font-bold text-sm" disabled>Verbunden</button>
-                  ) : (
-                      <button onClick={() => handleOAuthConnect('youtube')} className="bg-mimaros-blue text-white px-4 py-2 rounded-lg font-bold text-sm hover:bg-[#42c6ff] transition-all">Verbinden</button>
-                  )}
+                  <div>
+                      <h3 className="font-heading font-bold text-lg text-white">YouTube Shorts</h3>
+                      <p className="text-xs text-textDim mt-1 leading-relaxed">
+                          Automatischer Upload direkt auf deinen YouTube-Kanal mit optimierten Titeln, Tags & Beschreibungen.
+                      </p>
+                  </div>
+                  <div className="pt-2 flex items-center gap-2">
+                      {authStatus.youtube ? (
+                          <button onClick={() => handleDisconnect('youtube')} className="w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl font-bold text-xs transition-all">
+                              Trennen
+                          </button>
+                      ) : (
+                          <button onClick={() => handleOAuthConnect('youtube')} className="w-full py-2.5 bg-mimaros-blue hover:bg-[#42c6ff] text-white rounded-xl font-bold text-xs shadow-blue-glow transition-all">
+                              Mit Google verbinden
+                          </button>
+                      )}
+                  </div>
               </div>
               
-              <div className="bg-panel/40 p-6 rounded-2xl border border-borderGlass flex items-center justify-between">
-                  <div className="flex items-center gap-4">
-                      <div className="w-12 h-12 bg-black/40 text-white rounded-xl flex items-center justify-center border border-borderGlass">
-                          <Video className="w-6 h-6" />
+              {/* 2. Instagram Reels */}
+              <div className="bg-panel/40 backdrop-blur-lg p-6 rounded-2xl border border-borderGlass flex flex-col justify-between space-y-5 shadow-glass hover:border-pink-500/50 transition-all">
+                  <div className="flex items-center justify-between">
+                      <div className="w-12 h-12 bg-pink-500/15 border border-pink-500/30 text-pink-500 rounded-xl flex items-center justify-center">
+                          <Flame className="w-6 h-6" />
                       </div>
-                      <div>
-                          <h3 className="font-bold text-white">TikTok</h3>
-                          <p className="text-xs text-textDim">Status: Nicht verbunden</p>
-                      </div>
+                      <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border ${authStatus.instagram ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-background text-textDim border-borderGlass'}`}>
+                          {authStatus.instagram ? '● Verbunden' : '○ Getrennt'}
+                      </span>
                   </div>
-                  <button onClick={() => handleOAuthConnect('tiktok')} className="bg-mimaros-blue text-white px-4 py-2 rounded-lg font-bold text-sm">Verbinden</button>
+                  <div>
+                      <h3 className="font-heading font-bold text-lg text-white">Instagram Reels</h3>
+                      <p className="text-xs text-textDim mt-1 leading-relaxed">
+                          Direkte Veröffentlichung von Reels über die offizielle Meta Graph API (Professional & Creator Accounts).
+                      </p>
+                  </div>
+                  <div className="pt-2 flex flex-col gap-2">
+                      {authStatus.instagram ? (
+                          <button onClick={() => handleDisconnect('instagram')} className="w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl font-bold text-xs transition-all">
+                              Trennen
+                          </button>
+                      ) : (
+                          <>
+                              <button onClick={() => handleOAuthConnect('instagram')} className="w-full py-2.5 bg-gradient-to-r from-purple-600 to-pink-600 hover:opacity-90 text-white rounded-xl font-bold text-xs shadow-md transition-all">
+                                  Mit Meta verbinden
+                              </button>
+                              <button onClick={() => setShowManualModal('instagram')} className="w-full py-1.5 bg-background/50 hover:bg-background text-textDim hover:text-white rounded-lg text-[10px] font-mono border border-borderGlass transition-all">
+                                  Token manuell eingeben
+                              </button>
+                          </>
+                      )}
+                  </div>
+              </div>
+
+              {/* 3. TikTok */}
+              <div className="bg-panel/40 backdrop-blur-lg p-6 rounded-2xl border border-borderGlass flex flex-col justify-between space-y-5 shadow-glass hover:border-cyan-400/50 transition-all">
+                  <div className="flex items-center justify-between">
+                      <div className="w-12 h-12 bg-black/50 border border-white/20 text-white rounded-xl flex items-center justify-center">
+                          <Share2 className="w-6 h-6 text-cyan-400" />
+                      </div>
+                      <span className={`text-[10px] font-bold uppercase px-2.5 py-1 rounded-full border ${authStatus.tiktok ? 'bg-green-500/20 text-green-400 border-green-500/30' : 'bg-background text-textDim border-borderGlass'}`}>
+                          {authStatus.tiktok ? '● Verbunden' : '○ Getrennt'}
+                      </span>
+                  </div>
+                  <div>
+                      <h3 className="font-heading font-bold text-lg text-white">TikTok</h3>
+                      <p className="text-xs text-textDim mt-1 leading-relaxed">
+                          Autonomes Posten in den TikTok-Feed über die offizielle TikTok Content Posting API.
+                      </p>
+                  </div>
+                  <div className="pt-2 flex flex-col gap-2">
+                      {authStatus.tiktok ? (
+                          <button onClick={() => handleDisconnect('tiktok')} className="w-full py-2.5 bg-red-500/10 hover:bg-red-500/20 text-red-400 border border-red-500/20 rounded-xl font-bold text-xs transition-all">
+                              Trennen
+                          </button>
+                      ) : (
+                          <>
+                              <button onClick={() => handleOAuthConnect('tiktok')} className="w-full py-2.5 bg-cyan-600 hover:bg-cyan-500 text-white rounded-xl font-bold text-xs shadow-md transition-all">
+                                  Mit TikTok verbinden
+                              </button>
+                              <button onClick={() => setShowManualModal('tiktok')} className="w-full py-1.5 bg-background/50 hover:bg-background text-textDim hover:text-white rounded-lg text-[10px] font-mono border border-borderGlass transition-all">
+                                  Token manuell eingeben
+                              </button>
+                          </>
+                      )}
+                  </div>
               </div>
           </div>
+
+          {/* Manuelles Token Modal */}
+          {showManualModal && (
+              <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4">
+                  <div className="bg-panel border border-borderGlass rounded-2xl p-6 w-full max-w-md shadow-2xl relative">
+                      <button onClick={() => setShowManualModal(null)} className="absolute top-4 right-4 text-textDim hover:text-white"><X className="w-5 h-5"/></button>
+                      <h3 className="text-lg font-bold font-heading text-white mb-2">
+                          Manuelles Token für {showManualModal === 'instagram' ? 'Instagram Reels' : 'TikTok'}
+                      </h3>
+                      <p className="text-xs text-textDim mb-4">
+                          Falls du ein Access-Token aus dem Developer Portal (z.B. Meta Graph API Explorer) nutzen möchtest:
+                      </p>
+                      <div className="space-y-3">
+                          <div>
+                              <label className="block text-[10px] font-bold text-textDim uppercase mb-1">Access Token</label>
+                              <textarea 
+                                  value={manualToken} 
+                                  onChange={(e) => setManualToken(e.target.value)} 
+                                  placeholder="EAAG..." 
+                                  className="w-full h-24 bg-background border border-borderGlass p-2.5 rounded-xl text-xs font-mono text-white outline-none focus:border-mimaros-blue"
+                              />
+                          </div>
+                          {showManualModal === 'instagram' && (
+                              <div>
+                                  <label className="block text-[10px] font-bold text-textDim uppercase mb-1">Instagram Business Account ID</label>
+                                  <input 
+                                      type="text" 
+                                      value={manualUserId} 
+                                      onChange={(e) => setManualUserId(e.target.value)} 
+                                      placeholder="17841400000000000" 
+                                      className="w-full bg-background border border-borderGlass p-2.5 rounded-xl text-xs font-mono text-white outline-none focus:border-mimaros-blue"
+                                  />
+                              </div>
+                          )}
+                          <button 
+                              onClick={() => handleSaveManualToken(showManualModal)} 
+                              className="w-full mt-2 py-3 bg-mimaros-blue hover:bg-[#42c6ff] text-white font-bold rounded-xl text-xs shadow-blue-glow transition-all"
+                          >
+                              Token Speichern & Aktivieren
+                          </button>
+                      </div>
+                  </div>
+              </div>
+          )}
       </div>
   );
 
