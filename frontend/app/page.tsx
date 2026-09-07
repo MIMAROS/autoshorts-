@@ -807,9 +807,8 @@ export default function Page() {
               </button>
               <div className="hidden lg:block h-px bg-borderGlass flex-1 mx-2" />
               <button 
-                  disabled={wizardStep < 3} 
                   onClick={() => setWizardStep(3)} 
-                  className={`flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex-1 min-w-[130px] sm:min-w-[160px] ${wizardStep === 3 ? 'bg-mimaros-blue text-white shadow-blue-glow' : 'bg-background/40 text-textDim hover:text-white disabled:opacity-40'}`}
+                  className={`flex items-center justify-center gap-2 sm:gap-3 px-3 sm:px-4 py-2.5 rounded-xl font-bold text-xs transition-all flex-1 min-w-[130px] sm:min-w-[160px] ${wizardStep === 3 ? 'bg-mimaros-blue text-white shadow-blue-glow' : 'bg-background/40 text-textDim hover:text-white'}`}
               >
                   <span className="w-5 h-5 rounded-full bg-white/20 flex items-center justify-center text-[10px] shrink-0">3</span>
                   <span className="truncate">3. Design & Generierung</span>
@@ -825,6 +824,59 @@ export default function Page() {
                       </span>
                       <h2 className="font-heading text-3xl font-bold text-white tracking-tight">Wähle deinen Verarbeitungs-Modus</h2>
                       <p className="text-sm text-textDim max-w-xl mx-auto">Wähle eine der drei Workflows, um dein Video automatisch in virale Shorts zu verwandeln.</p>
+                  </div>
+
+                  {/* Schnellauswahl Video-Design / Theme (Hell & Dunkel) */}
+                  <div className="bg-background/60 p-4 rounded-2xl border border-borderGlass flex flex-col md:flex-row items-center justify-between gap-4">
+                      <div className="flex items-center gap-3">
+                          <div className="w-9 h-9 rounded-xl bg-mimaros-blue/10 border border-mimaros-blue/30 flex items-center justify-center text-mimaros-blue shrink-0">
+                              <Palette className="w-4 h-4" />
+                          </div>
+                          <div>
+                              <p className="text-xs font-bold text-white flex items-center gap-2">
+                                  Aktives Video- & Untertitel-Theme: 
+                                  <span className="text-mimaros-gold font-bold">
+                                      {boxColor.toLowerCase() === '#ffffff' ? '☀️ MIMAROS Pure Light (Hell)' : boxColor.toLowerCase() === '#fffdf5' ? '✨ Gold Luxury Light (Hell)' : boxColor.toLowerCase() === '#f1f5f9' ? '❄️ Minimal Frost (Hell)' : '💎 MIMAROS Dark CI (Dunkel)'}
+                                  </span>
+                              </p>
+                              <p className="text-[10px] text-textDim">Wähle jetzt dein Design vorab oder passe es in Schritt 3 live im Video an.</p>
+                          </div>
+                      </div>
+                      <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
+                          <button
+                              type="button"
+                              onClick={() => {
+                                  setBoxColor('#064A63');
+                                  setTextColor('#FFFFFF');
+                                  setPrimaryColor('#14AEEA');
+                                  setHighlightColor('#D4AF37');
+                                  setGlobalSubtitleConfig(prev => ({ ...prev, design: 'mimaros_clean' }));
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${boxColor.toLowerCase() === '#064a63' ? 'bg-mimaros-blue text-white shadow-blue-glow border-mimaros-blue' : 'bg-panel/60 text-textDim border-borderGlass hover:text-white'}`}
+                          >
+                              <span>💎 Dark CI</span>
+                          </button>
+                          <button
+                              type="button"
+                              onClick={() => {
+                                  setBoxColor('#FFFFFF');
+                                  setTextColor('#0A192F');
+                                  setPrimaryColor('#14AEEA');
+                                  setHighlightColor('#0284C7');
+                                  setGlobalSubtitleConfig(prev => ({ ...prev, design: 'mimaros_light' }));
+                              }}
+                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${boxColor.toLowerCase() === '#ffffff' ? 'bg-amber-400/20 text-amber-300 border-amber-400/50 shadow-sm' : 'bg-panel/60 text-textDim border-borderGlass hover:text-white'}`}
+                          >
+                              <span>☀️ Pure Light (Hell)</span>
+                          </button>
+                          <button
+                              type="button"
+                              onClick={() => setWizardStep(3)}
+                              className="px-3 py-1.5 rounded-xl text-xs font-bold text-mimaros-gold bg-mimaros-gold/10 hover:bg-mimaros-gold/20 border border-mimaros-gold/30 transition-all flex items-center gap-1"
+                          >
+                              <span>🎨 Design Studio öffnen →</span>
+                          </button>
+                      </div>
                   </div>
 
                   {/* 3 Große Auswahl-Kacheln */}
@@ -2488,6 +2540,38 @@ export default function Page() {
                  </div>
              </div>
              <div className="flex items-center gap-3">
+                 {/* Schnell-Umschalter für CI-Theme (Dunkel / Hell) */}
+                 <div className="hidden sm:flex items-center gap-1 bg-background/60 p-1 rounded-xl border border-borderGlass">
+                     <button
+                         type="button"
+                         title="MIMAROS Dark CI Theme aktivieren"
+                         onClick={() => {
+                             setBoxColor('#064A63');
+                             setTextColor('#FFFFFF');
+                             setPrimaryColor('#14AEEA');
+                             setHighlightColor('#D4AF37');
+                             setGlobalSubtitleConfig(prev => ({ ...prev, design: 'mimaros_clean' }));
+                         }}
+                         className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${boxColor.toLowerCase() === '#064a63' ? 'bg-mimaros-blue text-white shadow-sm' : 'text-textDim hover:text-white'}`}
+                     >
+                         💎 Dark CI
+                     </button>
+                     <button
+                         type="button"
+                         title="MIMAROS Pure Light Theme (Helles Design) aktivieren"
+                         onClick={() => {
+                             setBoxColor('#FFFFFF');
+                             setTextColor('#0A192F');
+                             setPrimaryColor('#14AEEA');
+                             setHighlightColor('#0284C7');
+                             setGlobalSubtitleConfig(prev => ({ ...prev, design: 'mimaros_light' }));
+                         }}
+                         className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${boxColor.toLowerCase() === '#ffffff' ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40 shadow-sm' : 'text-textDim hover:text-white'}`}
+                     >
+                         ☀️ Pure Light
+                     </button>
+                 </div>
+
                  <span className="hidden sm:inline-flex text-[10px] font-mono font-bold text-mimaros-gold bg-mimaros-gold/10 px-3 py-1 rounded-full border border-mimaros-gold/30">
                      PRO v3.0
                  </span>
