@@ -101,7 +101,7 @@ def generate_cta_button_image(text: str, bg_color_hex: str, text_color_hex: str,
     final_img.save(output_path, "PNG")
     return output_path
 
-def generate_watermark_badge_image(text: str, border_color_hex: str, font_name: str, resolution: str, output_path: str) -> str:
+def generate_watermark_badge_image(text: str, border_color_hex: str, font_name: str, resolution: str, output_path: str, box_color_hex: str = "#064A63", text_color_hex: str = "#D4AF37") -> str:
     from PIL import Image, ImageDraw, ImageFont
     
     is_1080 = (resolution == "1080p")
@@ -144,8 +144,12 @@ def generate_watermark_badge_image(text: str, border_color_hex: str, font_name: 
     img = Image.new("RGBA", (ow, oh), (0, 0, 0, 0))
     draw = ImageDraw.Draw(img)
     
-    # Background: #064A63 with 92% opacity
-    bg_fill = (6, 74, 99, 235)
+    # Background color with 92% opacity
+    bg_clean = (box_color_hex or "#064A63").lstrip('#')
+    if len(bg_clean) == 6:
+        bg_fill = (int(bg_clean[0:2], 16), int(bg_clean[2:4], 16), int(bg_clean[4:6], 16), 235)
+    else:
+        bg_fill = (6, 74, 99, 235)
     
     bc = (border_color_hex or "#14AEEA").lstrip('#')
     if len(bc) == 6:
@@ -155,8 +159,12 @@ def generate_watermark_badge_image(text: str, border_color_hex: str, font_name: 
         
     draw.rounded_rectangle([(0, 0), (ow, oh)], radius=oradius, fill=bg_fill, outline=border_rgba, width=oborder_w)
     
-    # Gold text: #D4AF37
-    text_color = (212, 175, 55, 255)
+    txt_c = (text_color_hex or "#D4AF37").lstrip('#')
+    if len(txt_c) == 6:
+        text_color = (int(txt_c[0:2], 16), int(txt_c[2:4], 16), int(txt_c[4:6], 16), 255)
+    else:
+        text_color = (212, 175, 55, 255)
+        
     try:
         draw.text((ow / 2, oh / 2), text_clean, fill=text_color, font=ofont, anchor="mm")
     except:
@@ -235,6 +243,9 @@ def generate_title_banner_image(title_text: str, box_color_hex: str, text_color_
     t_rgb = (int(txt_hex[0:2], 16), int(txt_hex[2:4], 16), int(txt_hex[4:6], 16)) if len(txt_hex) == 6 else (255, 255, 255)
     p_rgb = (int(pri_hex[0:2], 16), int(pri_hex[2:4], 16), int(pri_hex[4:6], 16)) if len(pri_hex) == 6 else (20, 174, 234)
     
+    bg_luminance = (b_rgb[0] * 0.299 + b_rgb[1] * 0.587 + b_rgb[2] * 0.114)
+    is_light_bg = bg_luminance > 150
+    
     if title_style == "box":
         draw.rounded_rectangle([(0, 0), (ow, oh)], radius=oradius, fill=(b_rgb[0], b_rgb[1], b_rgb[2], 235), outline=(p_rgb[0], p_rgb[1], p_rgb[2], 180), width=int(1.5 * oversample))
     elif title_style == "outline":
@@ -243,8 +254,9 @@ def generate_title_banner_image(title_text: str, box_color_hex: str, text_color_
     cur_y = pad_y * oversample
     for line, lw, lh in line_metrics:
         cur_x = (ow - lw) / 2.0
-        # Text drop shadow
-        draw.text((cur_x + 2 * oversample, cur_y + 2 * oversample), line, fill=(0, 0, 0, 180), font=ofont)
+        # Text drop shadow only on darker backgrounds to keep light themes crisp
+        if not is_light_bg:
+            draw.text((cur_x + 2 * oversample, cur_y + 2 * oversample), line, fill=(0, 0, 0, 180), font=ofont)
         draw.text((cur_x, cur_y), line, fill=(t_rgb[0], t_rgb[1], t_rgb[2], 255), font=ofont)
         cur_y += lh + (line_spacing * oversample)
         
@@ -351,10 +363,11 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     
     # 1. Overlay Watermark / Domain Badge (Rounded Pill)
     watermark_text = config.get("watermark_text", "mimaros.eu").strip()
+    highlight_color = config.get("highlightColor", "#D4AF37")
     if watermark_text and use_master_ci:
         watermark_img_path = os.path.join(base_dir, f"wm_{os.path.basename(output_path)}.png")
         try:
-            generate_watermark_badge_image(watermark_text, primary_color, font_name, resolution, watermark_img_path)
+            generate_watermark_badge_image(watermark_text, primary_color, font_name, resolution, watermark_img_path, box_color, highlight_color)
             inputs.append(watermark_img_path)
             wm_idx = len(inputs) - 1
             wm_y = 24 if is_1080 else 16
@@ -626,7 +639,7 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
             f.write("Format: Name, Fontname, Fontsize, PrimaryColour, SecondaryColour, OutlineColour, BackColour, Bold, Italic, Underline, StrikeOut, ScaleX, ScaleY, Spacing, Angle, BorderStyle, Outline, Shadow, Alignment, MarginL, MarginR, MarginV, Encoding\n")
             
             # Subtitle Styles mapped 1:1 to modern social media shorts
-            if design == "mimaros_clean":
+            if design in ["mimaros_clean", "mimaros_light"]:
                 box_pad = 12.0 if is_1080 else 8.0
                 f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,{primary_color_ass},{box_color_ass},-1,0,0,0,100,100,0,0,3,{box_pad},0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             elif design == "dynamic_box":
@@ -668,7 +681,7 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
                             chunk_size = 1
                         elif design == "hormozi":
                             chunk_size = 2
-                        elif design == "mimaros_clean":
+                        elif design in ["mimaros_clean", "mimaros_light"]:
                             chunk_size = 4
                         else: # karaoke / dynamic_box
                             chunk_size = 3
@@ -695,7 +708,7 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
                                 formatted_words = []
                                 for j, w in enumerate(chunk):
                                     w_text = w["text"].upper()
-                                    if design == "mimaros_clean":
+                                    if design in ["mimaros_clean", "mimaros_light"]:
                                         if j == i:
                                             formatted_words.append(f"{{\\c{highlight_color_ass}}}{w_text}{{\\rDefault}}")
                                         else:
@@ -720,7 +733,7 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
                                             formatted_words.append(w_text)
                                             
                                 chunk_text = " ".join(formatted_words)
-                                if design == "mimaros_clean":
+                                if design in ["mimaros_clean", "mimaros_light"]:
                                     chunk_text = f"{{\\fad(80,80)}}{chunk_text}"
                                     
                                 f.write(f"Dialogue: 1,{format_ass_time(event_start)},{format_ass_time(event_end)},Default,,0,0,0,,{chunk_text}\n")

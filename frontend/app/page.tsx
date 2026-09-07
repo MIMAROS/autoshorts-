@@ -1278,11 +1278,12 @@ export default function Page() {
                                   <>
                                       <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                                           {[
+                                              { id: 'mimaros_clean', name: 'MIMAROS Clean', desc: 'B2B Minimalist Fades (Dark)', badge: 'Corporate' },
+                                              { id: 'mimaros_light', name: 'MIMAROS Pure Light', desc: 'Helles B2B Pearl-Design', badge: 'Neu / Hell' },
                                               { id: 'karaoke', name: 'Karaoke Highlight', desc: 'Standard TikTok/Shorts Highlight', badge: 'Populär' },
                                               { id: 'dynamic_box', name: 'Dynamic Box', desc: 'Farbige CI Backdrop Box', badge: 'CI Fokus' },
                                               { id: 'popup_bouncy', name: 'Pop-Up Bouncy', desc: '1-Wort Bouncy Text Mitte', badge: 'Dynamisch' },
-                                              { id: 'hormozi', name: 'Hormozi Style', desc: 'Ultra Bold Anton Font', badge: 'Viral' },
-                                              { id: 'mimaros_clean', name: 'MIMAROS Clean', desc: 'B2B Minimalist Fades', badge: 'Corporate' }
+                                              { id: 'hormozi', name: 'Hormozi Style', desc: 'Ultra Bold Anton Font', badge: 'Viral' }
                                           ].map((tpl) => (
                                               <button 
                                                   key={tpl.id}
@@ -1292,7 +1293,7 @@ export default function Page() {
                                               >
                                                   <div className="flex justify-between items-start mb-1">
                                                       <p className="font-bold text-xs">{tpl.name}</p>
-                                                      <span className="text-[8px] bg-white/10 px-1.5 py-0.5 rounded text-mimaros-gold font-bold">{tpl.badge}</span>
+                                                      <span className={`text-[8px] px-1.5 py-0.5 rounded font-bold ${tpl.id === 'mimaros_light' ? 'bg-amber-400/20 text-amber-300 border border-amber-400/30' : 'bg-white/10 text-mimaros-gold'}`}>{tpl.badge}</span>
                                                   </div>
                                                   <p className="text-[9px] opacity-70 leading-snug">{tpl.desc}</p>
                                               </button>
@@ -1455,7 +1456,47 @@ export default function Page() {
                                   </div>
                               </div>
 
-                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+                              {/* 1-Klick Theme-Presets (Hell / Dunkel) */}
+                              <div className="space-y-2">
+                                  <div className="flex justify-between items-center">
+                                      <span className="text-[10px] text-textDim font-bold uppercase tracking-wider">Schnellauswahl: Design- & Farb-Themen</span>
+                                  </div>
+                                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                                      {[
+                                          { id: 'mimaros_dark', name: 'MIMAROS Dark CI', badge: 'Standard', box: '#064A63', text: '#FFFFFF', pri: '#14AEEA', hl: '#D4AF37', design: 'mimaros_clean' },
+                                          { id: 'mimaros_light', name: 'MIMAROS Pure Light', badge: 'Neu / Hell', box: '#FFFFFF', text: '#0A192F', pri: '#14AEEA', hl: '#0284C7', design: 'mimaros_light' },
+                                          { id: 'gold_light', name: 'Gold Luxury Light', badge: 'Edel / Hell', box: '#FFFDF5', text: '#1C1917', pri: '#D4AF37', hl: '#B45309', design: 'mimaros_light' },
+                                          { id: 'frost_light', name: 'Minimal Frost Light', badge: 'Eisweiß', box: '#F1F5F9', text: '#0F172A', pri: '#38BDF8', hl: '#2563EB', design: 'mimaros_light' }
+                                      ].map((theme) => {
+                                          const isSelected = boxColor.toLowerCase() === theme.box.toLowerCase() && textColor.toLowerCase() === theme.text.toLowerCase();
+                                          return (
+                                              <button
+                                                  key={theme.id}
+                                                  type="button"
+                                                  onClick={() => {
+                                                      setBoxColor(theme.box);
+                                                      setTextColor(theme.text);
+                                                      setPrimaryColor(theme.pri);
+                                                      setHighlightColor(theme.hl);
+                                                      setGlobalSubtitleConfig(prev => ({ ...prev, design: theme.design }));
+                                                  }}
+                                                  className={`p-2.5 rounded-xl border text-left transition-all relative ${isSelected ? 'ring-2 ring-mimaros-blue shadow-blue-glow border-mimaros-blue' : 'border-borderGlass hover:border-borderGlass/80 bg-panel/40'}`}
+                                              >
+                                                  <div className="flex justify-between items-center mb-1.5">
+                                                      <div className="flex items-center gap-1.5">
+                                                          <span className="w-3 h-3 rounded-full border border-black/20 shadow-sm" style={{ backgroundColor: theme.box }} />
+                                                          <span className="w-3 h-3 rounded-full border border-black/20 shadow-sm" style={{ backgroundColor: theme.hl }} />
+                                                      </div>
+                                                      <span className={`text-[8px] px-1 py-0.2 rounded font-bold ${theme.id.includes('light') ? 'bg-amber-400/20 text-amber-300' : 'bg-white/10 text-mimaros-gold'}`}>{theme.badge}</span>
+                                                  </div>
+                                                  <p className="font-bold text-[11px] text-white truncate">{theme.name}</p>
+                                              </button>
+                                          );
+                                      })}
+                                  </div>
+                              </div>
+
+                              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4 pt-2">
                                   {/* Primärfarbe */}
                                   <div className="space-y-2 bg-panel/50 p-3 rounded-xl border border-borderGlass/50">
                                       <label className="block text-[10px] font-bold text-textDim uppercase tracking-wider">Primär- / Rahmen</label>
@@ -1474,7 +1515,7 @@ export default function Page() {
                                           />
                                       </div>
                                       <div className="flex gap-1 pt-1">
-                                          {['#14AEEA', '#00FFCC', '#FF5500', '#D4AF37'].map((col) => (
+                                          {['#14AEEA', '#0284C7', '#38BDF8', '#D4AF37', '#00FFCC', '#FF5500'].map((col) => (
                                               <button key={col} type="button" onClick={() => setPrimaryColor(col)} className="w-5 h-5 rounded-md border border-white/20" style={{ backgroundColor: col }} />
                                           ))}
                                       </div>
@@ -1498,7 +1539,7 @@ export default function Page() {
                                           />
                                       </div>
                                       <div className="flex gap-1 pt-1">
-                                          {['#D4AF37', '#14AEEA', '#FFFF00', '#00FF00', '#FF3B30'].map((col) => (
+                                          {['#D4AF37', '#0284C7', '#B45309', '#2563EB', '#FFFF00', '#00FF00'].map((col) => (
                                               <button key={col} type="button" onClick={() => setHighlightColor(col)} className="w-5 h-5 rounded-md border border-white/20" style={{ backgroundColor: col }} />
                                           ))}
                                       </div>
@@ -1522,7 +1563,7 @@ export default function Page() {
                                           />
                                       </div>
                                       <div className="flex gap-1 pt-1">
-                                          {['#FFFFFF', '#F3F4F6', '#E5E7EB', '#000000'].map((col) => (
+                                          {['#FFFFFF', '#0A192F', '#1C1917', '#0F172A', '#F3F4F6', '#000000'].map((col) => (
                                               <button key={col} type="button" onClick={() => setTextColor(col)} className="w-5 h-5 rounded-md border border-white/20" style={{ backgroundColor: col }} />
                                           ))}
                                       </div>
@@ -1546,7 +1587,7 @@ export default function Page() {
                                           />
                                       </div>
                                       <div className="flex gap-1 pt-1">
-                                          {['#064A63', '#0B111A', '#18181B', '#000000'].map((col) => (
+                                          {['#064A63', '#FFFFFF', '#FFFDF5', '#F1F5F9', '#0B111A', '#000000'].map((col) => (
                                               <button key={col} type="button" onClick={() => setBoxColor(col)} className="w-5 h-5 rounded-md border border-white/20" style={{ backgroundColor: col }} />
                                           ))}
                                       </div>
@@ -1859,6 +1900,27 @@ export default function Page() {
                                                       ))}
                                                   </div>
                                               )}
+
+                                               {globalSubtitleConfig.design === 'mimaros_light' && (
+                                                   <div 
+                                                       className="px-4 py-2 rounded-2xl border shadow-2xl backdrop-blur-md font-extrabold tracking-wide uppercase transition-all"
+                                                       style={{
+                                                           backgroundColor: `${boxColor || '#FFFFFF'}F0`,
+                                                           borderColor: `${primaryColor || '#14AEEA'}80`,
+                                                           color: textColor || '#0A192F'
+                                                       }}
+                                                   >
+                                                       {previewWords.map((word, idx) => (
+                                                           <span 
+                                                               key={idx} 
+                                                               className={`mr-1 inline-block transition-colors duration-200 ${idx === activePreviewWordIndex ? 'font-black scale-105' : ''}`}
+                                                               style={{ color: idx === activePreviewWordIndex ? highlightColor : textColor }}
+                                                           >
+                                                               {word}
+                                                           </span>
+                                                       ))}
+                                                   </div>
+                                               )}
 
                                               {globalSubtitleConfig.design === 'karaoke' && (
                                                   <div 
