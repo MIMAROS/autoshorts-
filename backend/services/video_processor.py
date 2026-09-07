@@ -173,17 +173,17 @@ def generate_title_banner_image(title_text: str, box_color_hex: str, text_color_
     
     if is_1080:
         base_size = 54 if font_size_setting == "large" else (64 if font_size_setting == "xlarge" else 44)
-        pad_x = 32
-        pad_y = 16
-        radius = 20
-        max_chars = 20
+        pad_x = 36
+        pad_y = 18
+        radius = 24
+        max_chars = 22
         line_spacing = 8
     else: # 720p
         base_size = 36 if font_size_setting == "large" else (44 if font_size_setting == "xlarge" else 28)
-        pad_x = 22
-        pad_y = 11
-        radius = 14
-        max_chars = 20
+        pad_x = 24
+        pad_y = 12
+        radius = 16
+        max_chars = 22
         line_spacing = 6
         
     fonts_dir = ensure_fonts()
@@ -236,9 +236,9 @@ def generate_title_banner_image(title_text: str, box_color_hex: str, text_color_
     p_rgb = (int(pri_hex[0:2], 16), int(pri_hex[2:4], 16), int(pri_hex[4:6], 16)) if len(pri_hex) == 6 else (20, 174, 234)
     
     if title_style == "box":
-        draw.rounded_rectangle([(0, 0), (ow, oh)], radius=oradius, fill=(b_rgb[0], b_rgb[1], b_rgb[2], 240), outline=(p_rgb[0], p_rgb[1], p_rgb[2], 160), width=int(2 * oversample))
+        draw.rounded_rectangle([(0, 0), (ow, oh)], radius=oradius, fill=(b_rgb[0], b_rgb[1], b_rgb[2], 235), outline=(p_rgb[0], p_rgb[1], p_rgb[2], 180), width=int(1.5 * oversample))
     elif title_style == "outline":
-        draw.rounded_rectangle([(0, 0), (ow, oh)], radius=oradius, fill=(0, 0, 0, 0), outline=(p_rgb[0], p_rgb[1], p_rgb[2], 255), width=int(3 * oversample))
+        draw.rounded_rectangle([(0, 0), (ow, oh)], radius=oradius, fill=(0, 0, 0, 0), outline=(p_rgb[0], p_rgb[1], p_rgb[2], 255), width=int(2 * oversample))
         
     cur_y = pad_y * oversample
     for line, lw, lh in line_metrics:
@@ -400,7 +400,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
             elif "bottom" in title_pos:
                 t_y_pos = "H-h-360" if is_1080 else "H-h-240"
             else: # top (positioned cleanly below the watermark badge)
-                t_y_pos = "96" if is_1080 else "64"
+                t_y_pos = "88" if is_1080 else "58"
                 
             filter_complex += f";[{title_idx}:v]scale=-1:-1[title_img];{current_v}[title_img]overlay=x=(W-w)/2:y={t_y_pos}[v_title]"
             current_v = "[v_title]"
@@ -519,9 +519,9 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
     highlight_color_ass = hex_to_ass_color(highlight_color_hex, "00") + "&"
     text_color_ass = hex_to_ass_color(text_color_hex, "00")
     primary_color_ass = hex_to_ass_color(primary_color_hex, "00")
-    box_color_ass = hex_to_ass_color(box_color_hex, "26") # 85% opacity
+    box_color_ass = hex_to_ass_color(box_color_hex, "1A") # ~90% opacity
     title_color_ass = hex_to_ass_color(title_color_hex, "00")
-    title_box_ass = hex_to_ass_color(box_color_hex, "26")
+    title_box_ass = hex_to_ass_color(box_color_hex, "1A")
     
     # 2. Font configuration
     font_name = config.get("fontName", "Work Sans")
@@ -539,11 +539,11 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
     # Subtitle Font Size & Position
     sub_size_setting = str(config.get("subtitleFontSize", "normal")).lower()
     if sub_size_setting == "large":
-        sub_font_size = 76 if is_1080 else 50
-    elif sub_size_setting in ["xlarge", "extra-large", "extra_large"]:
-        sub_font_size = 88 if is_1080 else 58
-    else: # normal
         sub_font_size = 64 if is_1080 else 42
+    elif sub_size_setting in ["xlarge", "extra-large", "extra_large"]:
+        sub_font_size = 76 if is_1080 else 50
+    else: # normal
+        sub_font_size = 54 if is_1080 else 36
         
     # Title Font Size
     title_size_setting = str(config.get("titleFontSize", "normal")).lower()
@@ -556,7 +556,7 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
         
     # Margin settings - Safe Zone well above bottom UI (caption, audio title, action buttons)
     ass_margin_lr = 80 if is_1080 else 50
-    ass_margin_v = int(config.get("subtitleMarginV", 390 if is_1080 else 260))
+    ass_margin_v = int(config.get("subtitleMarginV", 315 if is_1080 else 210))
     
     # Title options
     show_title = config.get("showTitle", config.get("show_title", True))
@@ -627,15 +627,22 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
             
             # Subtitle Styles mapped 1:1 to modern social media shorts
             if design == "mimaros_clean":
-                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,&H00000000,&HC0000000,-1,0,0,0,100,100,0,0,1,4.0,2.0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                box_pad = 12.0 if is_1080 else 8.0
+                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,{primary_color_ass},{box_color_ass},-1,0,0,0,100,100,0,0,3,{box_pad},0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             elif design == "dynamic_box":
-                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,&H00000000,&HC0000000,-1,0,0,0,100,100,0,0,1,4.0,2.5,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                box_pad = 12.0 if is_1080 else 8.0
+                dyn_box_ass = hex_to_ass_color(box_color_hex, "0D")
+                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,&H40FFFFFF,{dyn_box_ass},-1,0,0,0,100,100,0,0,3,{box_pad},0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             elif design == "popup_bouncy":
-                f.write(f"Style: Default,{ass_font},{sub_font_size + 14},{highlight_color_ass},&H000000FF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,1,4.5,2.5,5,{ass_margin_lr},{ass_margin_lr},0,1\n")
+                box_pad = 14.0 if is_1080 else 10.0
+                f.write(f"Style: Default,{ass_font},{sub_font_size + 8},{highlight_color_ass},&H000000FF,{primary_color_ass},{box_color_ass},-1,0,0,0,100,100,0,0,3,{box_pad},0,5,{ass_margin_lr},{ass_margin_lr},0,1\n")
             elif design == "hormozi":
-                f.write(f"Style: Default,Anton,{sub_font_size + 16},{text_color_ass},&H000000FF,&H00000000,&HFF000000,-1,0,0,0,100,100,0,0,1,6.0,0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                outline_w = 9.0 if is_1080 else 6.0
+                f.write(f"Style: Default,Anton,{sub_font_size + 10},{text_color_ass},&H000000FF,&H00000000,&HFF000000,-1,0,0,0,100,100,0,0,1,{outline_w},0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             else: # karaoke
-                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,1,4.5,2.5,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                outline_w = 5.0 if is_1080 else 3.5
+                shadow_w = 3.0 if is_1080 else 2.0
+                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,&H00000000,&HA0000000,-1,0,0,0,100,100,0,0,1,{outline_w},{shadow_w},2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
                 
             f.write("\n")
             
