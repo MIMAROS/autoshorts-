@@ -1,6 +1,7 @@
 import type { Config } from 'tailwindcss'
 
 const config: Config = {
+  darkMode: 'class',
   content: [
     './pages/**/*.{js,ts,jsx,tsx,mdx}',
     './components/**/*.{js,ts,jsx,tsx,mdx}',
@@ -9,11 +10,16 @@ const config: Config = {
   theme: {
     extend: {
       colors: {
-        background: '#0B111A',
-        panel: '#101A24',
-        textMain: '#EEF3F8',
-        textDim: '#8BA5BA',
-        borderGlass: 'rgba(255,255,255,0.07)',
+        background: 'var(--bg-app)',
+        panel: 'var(--bg-panel)',
+        panelSubtle: 'var(--bg-panel-subtle)',
+        card: 'var(--bg-card)',
+        inputBg: 'var(--bg-input)',
+        textMain: 'var(--text-main)',
+        textHeading: 'var(--text-heading)',
+        textDim: 'var(--text-dim)',
+        borderGlass: 'var(--border-glass)',
+        borderGlassStrong: 'var(--border-glass-strong)',
         mimaros: {
           blue: '#14AEEA',
           blueMid: '#0B7FA8',
@@ -28,10 +34,10 @@ const config: Config = {
         metric: ['var(--font-poppins)', 'sans-serif'],
       },
       boxShadow: {
-        'glass': '0 12px 32px rgba(0,0,0,0.4), inset 0 0 0 1px rgba(255,255,255,0.05)',
+        'glass': 'var(--shadow-glass)',
         'glass-hover': '0 20px 48px rgba(200,155,49,0.1), inset 0 0 0 1px rgba(200,155,49,0.4)',
-        'blue-glow': '0 4px 20px rgba(27,181,247,.25)',
-        'blue-glow-hover': '0 8px 32px rgba(27,181,247,.5), 0 0 15px rgba(27,181,247,.3)',
+        'blue-glow': '0 4px 20px var(--glow-blue)',
+        'blue-glow-hover': '0 8px 32px var(--glow-blue), 0 0 15px var(--glow-blue)',
       }
     },
   },

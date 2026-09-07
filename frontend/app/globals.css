@@ -1,20 +1,104 @@
-@import "tailwindcss";
 @import url('https://fonts.googleapis.com/css2?family=Anton&family=Lato+Sans:wght@400;600;700&family=Lato:wght@300;400;700;900&family=Montserrat:wght@400;600;700;800;900&family=Oswald:wght@500;600;700&family=Poppins:wght@400;600;700;800&family=Work+Sans:wght@400;600;700;800;900&display=swap');
+@import "tailwindcss";
 
 @config "../tailwind.config.ts";
 
 :root {
-  --foreground-rgb: 238, 243, 248;
-  --background-start-rgb: 11, 17, 26;
-  --background-end-rgb: 11, 17, 26;
+  --bg-app: #0B111A;
+  --bg-panel: #101A24;
+  --bg-panel-subtle: #16222F;
+  --bg-card: rgba(16, 26, 36, 0.7);
+  --bg-input: #070B10;
+  --text-main: #EEF3F8;
+  --text-heading: #FFFFFF;
+  --text-dim: #8BA5BA;
+  --text-muted: #64748B;
+  --border-glass: rgba(255, 255, 255, 0.08);
+  --border-glass-strong: rgba(255, 255, 255, 0.18);
+  --glow-blue: rgba(27, 181, 247, 0.25);
+  --shadow-glass: 0 12px 32px rgba(0, 0, 0, 0.4), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
+}
+
+.light {
+  --bg-app: #F4F7FB;
+  --bg-panel: #FFFFFF;
+  --bg-panel-subtle: #EDF2F7;
+  --bg-card: #FFFFFF;
+  --bg-input: #FFFFFF;
+  --text-main: #0F172A;
+  --text-heading: #0A192F;
+  --text-dim: #475569;
+  --text-muted: #64748B;
+  --border-glass: #E2E8F0;
+  --border-glass-strong: #CBD5E1;
+  --glow-blue: rgba(20, 174, 234, 0.15);
+  --shadow-glass: 0 4px 20px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.04);
 }
 
 body {
-  color: rgb(var(--foreground-rgb));
-  background: #0B111A;
+  color: var(--text-main);
+  background: var(--bg-app);
   font-family: var(--font-lato), sans-serif;
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+
+/* Light mode high-contrast & accessibility rules (Barrier-Free WCAG AAA / AA compliant) */
+.light .text-white {
+  color: #0F172A !important;
+}
+
+.light .text-white\/90,
+.light .text-white\/80 {
+  color: #1E293B !important;
+}
+
+.light .text-white\/70,
+.light .text-white\/60 {
+  color: #334155 !important;
+}
+
+.light .bg-background\/40,
+.light .bg-background\/50,
+.light .bg-background\/60 {
+  background-color: #EDF2F7 !important;
+}
+
+.light .bg-panel\/40,
+.light .bg-panel\/50,
+.light .bg-panel\/60,
+.light .bg-panel\/80,
+.light .bg-panel\/85,
+.light .bg-panel\/90,
+.light .bg-panel\/95 {
+  background-color: #FFFFFF !important;
+}
+
+.light input[type="text"],
+.light input[type="number"],
+.light input[type="date"],
+.light input[type="time"],
+.light textarea,
+.light select {
+  background-color: #FFFFFF !important;
+  color: #0F172A !important;
+  border-color: #CBD5E1 !important;
+}
+
+.light input::placeholder,
+.light textarea::placeholder {
+  color: #94A3B8 !important;
+}
+
+/* Preserve bright white text on solid brand action buttons */
+.light .bg-mimaros-blue,
+.light button.bg-mimaros-blue,
+.light .bg-mimaros-blue .text-white,
+.light button.bg-mimaros-blue .text-white,
+.light button.bg-mimaros-blue span,
+.light .bg-gradient-to-r {
+  color: #FFFFFF !important;
 }
 

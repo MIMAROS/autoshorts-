@@ -3,7 +3,7 @@ import dynamic from 'next/dynamic';
 const FullCalendar = dynamic(() => import('@fullcalendar/react'), { ssr: false });
 import dayGridPlugin from '@fullcalendar/daygrid';
 import { useState, useRef, useEffect } from 'react';
-import { Play, Scissors, Subtitles, UploadCloud, Loader2, Sparkles, Calendar, Check, Settings, X, Clock, Video, Home, Menu, Share2, Download, Edit2, TrendingUp, Flame, Type, MonitorPlay, ChevronUp, ChevronDown, Layout, Volume2, Mic, Palette, Layers, Sliders, Eye, RefreshCw, Search, Globe, Link2, ExternalLink } from 'lucide-react';
+import { Sun, Moon, Play, Scissors, Subtitles, UploadCloud, Loader2, Sparkles, Calendar, Check, Settings, X, Clock, Video, Home, Menu, Share2, Download, Edit2, TrendingUp, Flame, Type, MonitorPlay, ChevronUp, ChevronDown, Layout, Volume2, Mic, Palette, Layers, Sliders, Eye, RefreshCw, Search, Globe, Link2, ExternalLink } from 'lucide-react';
 import Logo from '../components/Logo';
 
 const LogoIcon = ({ className = "w-10 h-10 md:w-12 md:h-12 shrink-0" }: { className?: string }) => (
@@ -53,6 +53,41 @@ export default function Page() {
   const [trimEnd, setTrimEnd] = useState<number | ''>('');
   const [isFetchingMetadata, setIsFetchingMetadata] = useState(false);
   
+  // App UI Mode (Light / Dark - Barrier-Free High Contrast)
+  const [uiTheme, setUiTheme] = useState<'dark' | 'light'>('dark');
+
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('mimaros_ui_theme') as 'dark' | 'light' | null;
+      if (saved === 'light' || saved === 'dark') {
+        setUiTheme(saved);
+        if (saved === 'light') {
+          document.documentElement.classList.add('light');
+        } else {
+          document.documentElement.classList.remove('light');
+        }
+      } else if (typeof window !== 'undefined' && window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+        setUiTheme('light');
+        document.documentElement.classList.add('light');
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }, []);
+
+  const toggleUiTheme = () => {
+    const next = uiTheme === 'dark' ? 'light' : 'dark';
+    setUiTheme(next);
+    try {
+      localStorage.setItem('mimaros_ui_theme', next);
+    } catch (e) {}
+    if (next === 'light') {
+      document.documentElement.classList.add('light');
+    } else {
+      document.documentElement.classList.remove('light');
+    }
+  };
+
   // Global Design & Preview State
   const [globalSubtitleConfig, setGlobalSubtitleConfig] = useState({ design: 'mimaros_clean', cta: 'follow', text: '', template: 'clean_lower_third', watermark_text: 'mimaros.eu' });
   const [useMasterCi, setUseMasterCi] = useState(true);
@@ -727,6 +762,23 @@ export default function Page() {
                 <Share2 className="w-5 h-5" /> Verknüpfungen
             </button>
         </nav>
+
+        {/* Barrierefreier UI Theme Switcher (Sidebar Footer) */}
+        <div className="p-4 border-t border-borderGlass">
+            <button
+                type="button"
+                onClick={toggleUiTheme}
+                className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-xl font-bold text-xs bg-panelSubtle hover:bg-background border border-borderGlass transition-all shadow-sm group"
+            >
+                <span className="flex items-center gap-2">
+                    {uiTheme === 'light' ? <Sun className="w-4 h-4 text-amber-500 fill-amber-500" /> : <Moon className="w-4 h-4 text-mimaros-blue" />}
+                    <span className="text-textMain">Oberfläche: {uiTheme === 'light' ? 'Hell' : 'Dunkel'}</span>
+                </span>
+                <span className="text-[10px] text-textDim uppercase font-mono px-2 py-0.5 rounded bg-background border border-borderGlass group-hover:border-mimaros-blue/40">
+                    {uiTheme === 'light' ? '☀️ Light' : '🌙 Dark'}
+                </span>
+            </button>
+        </div>
     </div>
     
     {/* Mobile Bottom Navigation */}
@@ -2540,37 +2592,31 @@ export default function Page() {
                  </div>
              </div>
              <div className="flex items-center gap-3">
-                 {/* Schnell-Umschalter für CI-Theme (Dunkel / Hell) */}
-                 <div className="hidden sm:flex items-center gap-1 bg-background/60 p-1 rounded-xl border border-borderGlass">
-                     <button
-                         type="button"
-                         title="MIMAROS Dark CI Theme aktivieren"
-                         onClick={() => {
-                             setBoxColor('#064A63');
-                             setTextColor('#FFFFFF');
-                             setPrimaryColor('#14AEEA');
-                             setHighlightColor('#D4AF37');
-                             setGlobalSubtitleConfig(prev => ({ ...prev, design: 'mimaros_clean' }));
-                         }}
-                         className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${boxColor.toLowerCase() === '#064a63' ? 'bg-mimaros-blue text-white shadow-sm' : 'text-textDim hover:text-white'}`}
-                     >
-                         💎 Dark CI
-                     </button>
-                     <button
-                         type="button"
-                         title="MIMAROS Pure Light Theme (Helles Design) aktivieren"
-                         onClick={() => {
-                             setBoxColor('#FFFFFF');
-                             setTextColor('#0A192F');
-                             setPrimaryColor('#14AEEA');
-                             setHighlightColor('#0284C7');
-                             setGlobalSubtitleConfig(prev => ({ ...prev, design: 'mimaros_light' }));
-                         }}
-                         className={`px-2.5 py-1 rounded-lg text-[10px] font-bold transition-all ${boxColor.toLowerCase() === '#ffffff' ? 'bg-amber-400/20 text-amber-300 border border-amber-400/40 shadow-sm' : 'text-textDim hover:text-white'}`}
-                     >
-                         ☀️ Pure Light
-                     </button>
-                 </div>
+                 {/* Barrierefreier UI Theme Switcher (Hell / Dunkel) */}
+                 <button
+                     type="button"
+                     onClick={toggleUiTheme}
+                     title={uiTheme === 'dark' ? "Zu hellem Oberflächen-Modus wechseln (Barrierefrei: Heller Hintergrund, dunkle Schrift)" : "Zu dunklem Oberflächen-Modus wechseln (Dark Mode)"}
+                     className={`flex items-center gap-2 px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all border shadow-sm ${
+                         uiTheme === 'light' 
+                         ? 'bg-amber-500/10 border-amber-500/30 text-amber-700 hover:bg-amber-500/20' 
+                         : 'bg-panelSubtle border-borderGlass text-textMain hover:text-white hover:border-mimaros-blue/40'
+                     }`}
+                 >
+                     {uiTheme === 'light' ? (
+                         <>
+                             <Sun className="w-4 h-4 text-amber-500 fill-amber-500 shrink-0" />
+                             <span className="hidden sm:inline">Oberfläche:</span>
+                             <span>Hell</span>
+                         </>
+                     ) : (
+                         <>
+                             <Moon className="w-4 h-4 text-mimaros-blue shrink-0" />
+                             <span className="hidden sm:inline">Oberfläche:</span>
+                             <span>Dunkel</span>
+                         </>
+                     )}
+                 </button>
 
                  <span className="hidden sm:inline-flex text-[10px] font-mono font-bold text-mimaros-gold bg-mimaros-gold/10 px-3 py-1 rounded-full border border-mimaros-gold/30">
                      PRO v3.0

@@ -32,7 +32,7 @@ export default function RootLayout({
         <link rel="apple-touch-icon-precomposed" href="/apple-touch-icon-precomposed.png?v=7.0.0" />
         <link rel="shortcut icon" href="/favicon.ico?v=7.0.0" />
       </head>
-      <body className={`${workSans.variable} ${lato.variable} ${josefin.variable} ${poppins.variable} font-sans bg-[#0B111A] text-[#EEF3F8]`}>
+      <body className={`${workSans.variable} ${lato.variable} ${josefin.variable} ${poppins.variable} font-sans bg-background text-textMain`}>
         {children}
         <script dangerouslySetInnerHTML={{__html: `
           if ('serviceWorker' in navigator) {
