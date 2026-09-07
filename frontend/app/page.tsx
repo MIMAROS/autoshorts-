@@ -761,6 +761,9 @@ export default function Page() {
             <button onClick={() => setCurrentView('integrations')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${currentView === 'integrations' ? 'bg-mimaros-blue/10 text-mimaros-blue' : 'text-textDim hover:text-white hover:bg-background/50'}`}>
                 <Share2 className="w-5 h-5" /> Verknüpfungen
             </button>
+            <button onClick={() => setCurrentView('settings')} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${currentView === 'settings' ? 'bg-mimaros-blue/10 text-mimaros-blue' : 'text-textDim hover:text-white hover:bg-background/50'}`}>
+                <Settings className="w-5 h-5" /> Einstellungen
+            </button>
         </nav>
 
         {/* Barrierefreier UI Theme Switcher (Sidebar Footer) */}
@@ -829,6 +832,9 @@ export default function Page() {
                     <button onClick={() => { setCurrentView('integrations'); setIsMobileMenuOpen(false); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${currentView === 'integrations' ? 'bg-mimaros-blue/10 text-mimaros-blue' : 'text-textDim hover:text-white hover:bg-background/50'}`}>
                         <Share2 className="w-5 h-5" /> Verknüpfungen
                     </button>
+                    <button onClick={() => { setCurrentView('settings'); setIsMobileMenuOpen(false); }} className={`flex items-center gap-3 px-4 py-3 rounded-xl font-bold transition-all ${currentView === 'settings' ? 'bg-mimaros-blue/10 text-mimaros-blue' : 'text-textDim hover:text-white hover:bg-background/50'}`}>
+                        <Settings className="w-5 h-5" /> Einstellungen
+                    </button>
                 </nav>
             </div>
             <div className="flex-1" onClick={() => setIsMobileMenuOpen(false)} />
@@ -878,58 +884,7 @@ export default function Page() {
                       <p className="text-sm text-textDim max-w-xl mx-auto">Wähle eine der drei Workflows, um dein Video automatisch in virale Shorts zu verwandeln.</p>
                   </div>
 
-                  {/* Schnellauswahl Video-Design / Theme (Hell & Dunkel) */}
-                  <div className="bg-background/60 p-4 rounded-2xl border border-borderGlass flex flex-col md:flex-row items-center justify-between gap-4">
-                      <div className="flex items-center gap-3">
-                          <div className="w-9 h-9 rounded-xl bg-mimaros-blue/10 border border-mimaros-blue/30 flex items-center justify-center text-mimaros-blue shrink-0">
-                              <Palette className="w-4 h-4" />
-                          </div>
-                          <div>
-                              <p className="text-xs font-bold text-white flex items-center gap-2">
-                                  Aktives Video- & Untertitel-Theme: 
-                                  <span className="text-mimaros-gold font-bold">
-                                      {boxColor.toLowerCase() === '#ffffff' ? '☀️ MIMAROS Pure Light (Hell)' : boxColor.toLowerCase() === '#fffdf5' ? '✨ Gold Luxury Light (Hell)' : boxColor.toLowerCase() === '#f1f5f9' ? '❄️ Minimal Frost (Hell)' : '💎 MIMAROS Dark CI (Dunkel)'}
-                                  </span>
-                              </p>
-                              <p className="text-[10px] text-textDim">Wähle jetzt dein Design vorab oder passe es in Schritt 3 live im Video an.</p>
-                          </div>
-                      </div>
-                      <div className="flex flex-wrap items-center gap-2 w-full md:w-auto justify-end">
-                          <button
-                              type="button"
-                              onClick={() => {
-                                  setBoxColor('#064A63');
-                                  setTextColor('#FFFFFF');
-                                  setPrimaryColor('#14AEEA');
-                                  setHighlightColor('#D4AF37');
-                                  setGlobalSubtitleConfig(prev => ({ ...prev, design: 'mimaros_clean' }));
-                              }}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${boxColor.toLowerCase() === '#064a63' ? 'bg-mimaros-blue text-white shadow-blue-glow border-mimaros-blue' : 'bg-panel/60 text-textDim border-borderGlass hover:text-white'}`}
-                          >
-                              <span>💎 Dark CI</span>
-                          </button>
-                          <button
-                              type="button"
-                              onClick={() => {
-                                  setBoxColor('#FFFFFF');
-                                  setTextColor('#0A192F');
-                                  setPrimaryColor('#14AEEA');
-                                  setHighlightColor('#0284C7');
-                                  setGlobalSubtitleConfig(prev => ({ ...prev, design: 'mimaros_light' }));
-                              }}
-                              className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 border ${boxColor.toLowerCase() === '#ffffff' ? 'bg-amber-400/20 text-amber-300 border-amber-400/50 shadow-sm' : 'bg-panel/60 text-textDim border-borderGlass hover:text-white'}`}
-                          >
-                              <span>☀️ Pure Light (Hell)</span>
-                          </button>
-                          <button
-                              type="button"
-                              onClick={() => setWizardStep(3)}
-                              className="px-3 py-1.5 rounded-xl text-xs font-bold text-mimaros-gold bg-mimaros-gold/10 hover:bg-mimaros-gold/20 border border-mimaros-gold/30 transition-all flex items-center gap-1"
-                          >
-                              <span>🎨 Design Studio öffnen →</span>
-                          </button>
-                      </div>
-                  </div>
+
 
                   {/* 3 Große Auswahl-Kacheln */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -2355,6 +2310,302 @@ export default function Page() {
       }
   };
 
+
+  const renderSettings = () => (
+      <div className="flex-1 max-w-5xl mx-auto w-full flex flex-col gap-8">
+          {/* Header */}
+          <div className="bg-panel/40 backdrop-blur-lg rounded-2xl border border-borderGlass shadow-glass p-8">
+              <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-borderGlass pb-6">
+                  <div>
+                      <span className="font-display text-[10px] uppercase tracking-[0.2em] text-mimaros-gold font-bold flex items-center gap-2">
+                          <Settings className="w-3.5 h-3.5" /> SYSTEM & CI EINSTELLUNGEN
+                      </span>
+                      <h2 className="font-heading text-3xl font-bold text-white tracking-tight mt-1">Einstellungen & Standards</h2>
+                      <p className="text-sm text-textDim mt-1">Konfiguriere deine standardmäßigen Video-Brandings, Untertitel-Themes und Dashboard-Präferenzen.</p>
+                  </div>
+                  <div className="flex items-center gap-2">
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-mono font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                          <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+                          API Verbunden
+                      </span>
+                  </div>
+              </div>
+
+              {/* Grid with Setting Cards */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mt-6">
+                  {/* Card 1: Video & Untertitel Standard-Design */}
+                  <div className="bg-background/50 rounded-2xl p-6 border border-borderGlass flex flex-col justify-between space-y-6">
+                      <div className="space-y-4">
+                          <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-mimaros-blue/10 border border-mimaros-blue/30 flex items-center justify-center text-mimaros-blue shrink-0">
+                                  <Palette className="w-5 h-5" />
+                              </div>
+                              <div>
+                                  <h3 className="font-heading font-bold text-base text-white">Video & Untertitel Theme</h3>
+                                  <p className="text-xs text-textDim">Standard-Design für neu generierte Videos</p>
+                              </div>
+                          </div>
+
+                          <div className="space-y-2">
+                              <label className="text-xs font-bold text-textDim uppercase tracking-wider block">Schnell-Vorlagen</label>
+                              <div className="grid grid-cols-2 gap-2">
+                                  <button
+                                      type="button"
+                                      onClick={() => {
+                                          setBoxColor('#064A63');
+                                          setTextColor('#FFFFFF');
+                                          setPrimaryColor('#14AEEA');
+                                          setHighlightColor('#D4AF37');
+                                          setGlobalSubtitleConfig(prev => ({ ...prev, design: 'mimaros_clean' }));
+                                      }}
+                                      className={`p-3 rounded-xl text-left border transition-all ${boxColor.toLowerCase() === '#064a63' ? 'bg-mimaros-blue/15 border-mimaros-blue text-white shadow-blue-glow' : 'bg-panel/60 border-borderGlass text-textDim hover:text-white'}`}
+                                  >
+                                      <p className="font-bold text-xs">💎 MIMAROS Dark CI</p>
+                                      <p className="text-[10px] opacity-75 mt-0.5">Dunkler Box-Hintergrund</p>
+                                  </button>
+
+                                  <button
+                                      type="button"
+                                      onClick={() => {
+                                          setBoxColor('#FFFFFF');
+                                          setTextColor('#0A192F');
+                                          setPrimaryColor('#14AEEA');
+                                          setHighlightColor('#0284C7');
+                                          setGlobalSubtitleConfig(prev => ({ ...prev, design: 'mimaros_light' }));
+                                      }}
+                                      className={`p-3 rounded-xl text-left border transition-all ${boxColor.toLowerCase() === '#ffffff' ? 'bg-amber-400/20 border-amber-400/60 text-amber-300 shadow-sm' : 'bg-panel/60 border-borderGlass text-textDim hover:text-white'}`}
+                                  >
+                                      <p className="font-bold text-xs">☀️ MIMAROS Pure Light</p>
+                                      <p className="text-[10px] opacity-75 mt-0.5">Heller Box-Hintergrund</p>
+                                  </button>
+
+                                  <button
+                                      type="button"
+                                      onClick={() => {
+                                          setBoxColor('#FFFDF5');
+                                          setTextColor('#1E293B');
+                                          setPrimaryColor('#D4AF37');
+                                          setHighlightColor('#B45309');
+                                          setGlobalSubtitleConfig(prev => ({ ...prev, design: 'mimaros_light' }));
+                                      }}
+                                      className={`p-3 rounded-xl text-left border transition-all ${boxColor.toLowerCase() === '#fffdf5' ? 'bg-amber-400/20 border-amber-400/60 text-amber-300 shadow-sm' : 'bg-panel/60 border-borderGlass text-textDim hover:text-white'}`}
+                                  >
+                                      <p className="font-bold text-xs">✨ Gold Luxury Light</p>
+                                      <p className="text-[10px] opacity-75 mt-0.5">Warmes Premium-Gold</p>
+                                  </button>
+
+                                  <button
+                                      type="button"
+                                      onClick={() => {
+                                          setBoxColor('#F1F5F9');
+                                          setTextColor('#0F172A');
+                                          setPrimaryColor('#0284C7');
+                                          setHighlightColor('#2563EB');
+                                          setGlobalSubtitleConfig(prev => ({ ...prev, design: 'mimaros_clean' }));
+                                      }}
+                                      className={`p-3 rounded-xl text-left border transition-all ${boxColor.toLowerCase() === '#f1f5f9' ? 'bg-blue-400/20 border-blue-400/60 text-blue-300 shadow-sm' : 'bg-panel/60 border-borderGlass text-textDim hover:text-white'}`}
+                                  >
+                                      <p className="font-bold text-xs">❄️ Minimal Frost</p>
+                                      <p className="text-[10px] opacity-75 mt-0.5">Kühler Slate-Ton</p>
+                                  </button>
+                              </div>
+                          </div>
+
+                          {/* Farb-Feinjustierung */}
+                          <div className="grid grid-cols-2 gap-3 pt-2">
+                              <div>
+                                  <label className="text-[10px] font-bold text-textDim uppercase block mb-1">Text-Farbe</label>
+                                  <div className="flex items-center gap-2 bg-panel p-1.5 rounded-xl border border-borderGlass">
+                                      <input type="color" value={textColor} onChange={(e) => setTextColor(e.target.value)} className="w-7 h-7 rounded cursor-pointer bg-transparent border-0" />
+                                      <span className="text-xs font-mono font-bold text-white uppercase">{textColor}</span>
+                                  </div>
+                              </div>
+                              <div>
+                                  <label className="text-[10px] font-bold text-textDim uppercase block mb-1">Box / Backdrop</label>
+                                  <div className="flex items-center gap-2 bg-panel p-1.5 rounded-xl border border-borderGlass">
+                                      <input type="color" value={boxColor} onChange={(e) => setBoxColor(e.target.value)} className="w-7 h-7 rounded cursor-pointer bg-transparent border-0" />
+                                      <span className="text-xs font-mono font-bold text-white uppercase">{boxColor}</span>
+                                  </div>
+                              </div>
+                              <div>
+                                  <label className="text-[10px] font-bold text-textDim uppercase block mb-1">Primärfarbe (CI)</label>
+                                  <div className="flex items-center gap-2 bg-panel p-1.5 rounded-xl border border-borderGlass">
+                                      <input type="color" value={primaryColor} onChange={(e) => setPrimaryColor(e.target.value)} className="w-7 h-7 rounded cursor-pointer bg-transparent border-0" />
+                                      <span className="text-xs font-mono font-bold text-white uppercase">{primaryColor}</span>
+                                  </div>
+                              </div>
+                              <div>
+                                  <label className="text-[10px] font-bold text-textDim uppercase block mb-1">Highlight-Farbe</label>
+                                  <div className="flex items-center gap-2 bg-panel p-1.5 rounded-xl border border-borderGlass">
+                                      <input type="color" value={highlightColor} onChange={(e) => setHighlightColor(e.target.value)} className="w-7 h-7 rounded cursor-pointer bg-transparent border-0" />
+                                      <span className="text-xs font-mono font-bold text-white uppercase">{highlightColor}</span>
+                                  </div>
+                              </div>
+                          </div>
+                      </div>
+
+                      {/* Live Mini Preview */}
+                      <div className="p-3.5 rounded-xl border border-borderGlass bg-panel/70 flex items-center justify-between">
+                          <span className="text-xs font-bold text-textDim">Theme-Vorschau:</span>
+                          <div 
+                              className="px-3 py-1.5 rounded-lg text-xs font-bold shadow-sm flex items-center gap-2" 
+                              style={{ backgroundColor: boxColor, color: textColor }}
+                          >
+                              <span>Untertitel</span>
+                              <span style={{ color: highlightColor }}>Highlight</span>
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* Card 2: App Benutzeroberfläche & Barrierefreiheit */}
+                  <div className="bg-background/50 rounded-2xl p-6 border border-borderGlass flex flex-col justify-between space-y-6">
+                      <div className="space-y-4">
+                          <div className="flex items-center gap-3">
+                              <div className="w-10 h-10 rounded-xl bg-amber-500/10 border border-amber-500/30 flex items-center justify-center text-amber-500 shrink-0">
+                                  {uiTheme === 'light' ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+                              </div>
+                              <div>
+                                  <h3 className="font-heading font-bold text-base text-white">App UI Modus</h3>
+                                  <p className="text-xs text-textDim">Design der Weboberfläche & Barrierefreiheit</p>
+                              </div>
+                          </div>
+
+                          <p className="text-xs text-textDim leading-relaxed">
+                              Wähle zwischen dem dunklen Standard-Design oder dem barrierefreien, kontraststarken hellen Modus (schwarzer/dunkler Text auf weißem/hellem Hintergrund).
+                          </p>
+
+                          <div className="grid grid-cols-2 gap-3">
+                              <button
+                                  type="button"
+                                  onClick={() => {
+                                      if (uiTheme !== 'dark') toggleUiTheme();
+                                  }}
+                                  className={`p-4 rounded-xl text-left border transition-all flex flex-col items-center justify-center text-center gap-2 ${uiTheme === 'dark' ? 'bg-mimaros-blue/15 border-mimaros-blue text-white shadow-blue-glow ring-1 ring-mimaros-blue' : 'bg-panel/60 border-borderGlass text-textDim hover:text-white'}`}
+                              >
+                                  <Moon className="w-6 h-6 text-mimaros-blue" />
+                                  <div>
+                                      <p className="font-bold text-xs">🌙 Dunkler Modus</p>
+                                      <p className="text-[10px] opacity-75 mt-0.5">Dark Canvas (#0B111A)</p>
+                                  </div>
+                              </button>
+
+                              <button
+                                  type="button"
+                                  onClick={() => {
+                                      if (uiTheme !== 'light') toggleUiTheme();
+                                  }}
+                                  className={`p-4 rounded-xl text-left border transition-all flex flex-col items-center justify-center text-center gap-2 ${uiTheme === 'light' ? 'bg-amber-400/20 border-amber-400 text-amber-700 shadow-sm ring-1 ring-amber-400' : 'bg-panel/60 border-borderGlass text-textDim hover:text-white'}`}
+                              >
+                                  <Sun className="w-6 h-6 text-amber-500 fill-amber-500" />
+                                  <div>
+                                      <p className="font-bold text-xs">☀️ Heller Modus</p>
+                                      <p className="text-[10px] opacity-75 mt-0.5">Barrierefrei (WCAG AAA/AA)</p>
+                                  </div>
+                              </button>
+                          </div>
+                      </div>
+
+                      <div className="p-3.5 rounded-xl border border-borderGlass bg-panel/70 flex items-center justify-between">
+                          <span className="text-xs font-bold text-textDim">Aktiver Modus:</span>
+                          <span className="text-xs font-bold text-mimaros-gold">
+                              {uiTheme === 'light' ? '☀️ Heller Modus (Aktiv)' : '🌙 Dunkler Modus (Aktiv)'}
+                          </span>
+                      </div>
+                  </div>
+
+                  {/* Card 3: Standard-Export & Rendering */}
+                  <div className="bg-background/50 rounded-2xl p-6 border border-borderGlass space-y-4">
+                      <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-mimaros-gold/10 border border-mimaros-gold/30 flex items-center justify-center text-mimaros-gold shrink-0">
+                              <Sliders className="w-5 h-5" />
+                          </div>
+                          <div>
+                              <h3 className="font-heading font-bold text-base text-white">Export & Video-Vorgaben</h3>
+                              <p className="text-xs text-textDim">Standardwerte für Dauer und Format</p>
+                          </div>
+                      </div>
+
+                      <div className="space-y-3">
+                          <div>
+                              <label className="text-[10px] font-bold text-textDim uppercase block mb-1">Standard Auflösung</label>
+                              <div className="grid grid-cols-2 gap-2">
+                                  {['720p', '1080p'].map(res => (
+                                      <button
+                                          key={res}
+                                          type="button"
+                                          onClick={() => setResolution(res)}
+                                          className={`py-2 rounded-xl text-xs font-bold border transition-all ${resolution === res ? 'bg-mimaros-blue text-white shadow-blue-glow border-mimaros-blue' : 'bg-panel/60 border-borderGlass text-textDim hover:text-white'}`}
+                                      >
+                                          {res === '720p' ? '720p HD (Schnell)' : '1080p Full HD'}
+                                      </button>
+                                  ))}
+                              </div>
+                          </div>
+
+                          <div>
+                              <label className="text-[10px] font-bold text-textDim uppercase block mb-1">Standard Cliplänge</label>
+                              <div className="grid grid-cols-4 gap-2">
+                                  {['auto', '15', '30', '60'].map(len => (
+                                      <button
+                                          key={len}
+                                          type="button"
+                                          onClick={() => setClipLength(len)}
+                                          className={`py-2 rounded-xl text-xs font-bold border transition-all ${clipLength === len ? 'bg-mimaros-blue text-white shadow-blue-glow border-mimaros-blue' : 'bg-panel/60 border-borderGlass text-textDim hover:text-white'}`}
+                                      >
+                                          {len === 'auto' ? 'Auto' : `${len}s`}
+                                      </button>
+                                  ))}
+                              </div>
+                          </div>
+                      </div>
+                  </div>
+
+                  {/* Card 4: Branding & Wasserzeichen */}
+                  <div className="bg-background/50 rounded-2xl p-6 border border-borderGlass space-y-4">
+                      <div className="flex items-center gap-3">
+                          <div className="w-10 h-10 rounded-xl bg-purple-500/10 border border-purple-500/30 flex items-center justify-center text-purple-400 shrink-0">
+                              <Globe className="w-5 h-5" />
+                          </div>
+                          <div>
+                              <h3 className="font-heading font-bold text-base text-white">Branding & Wasserzeichen</h3>
+                              <p className="text-xs text-textDim">Globaler Text & Web-Link für Video-Corner</p>
+                          </div>
+                      </div>
+
+                      <div className="space-y-3">
+                          <div>
+                              <label className="text-[10px] font-bold text-textDim uppercase block mb-1">Wasserzeichen Text</label>
+                              <input 
+                                  type="text" 
+                                  value={globalSubtitleConfig.watermark_text || 'mimaros.eu'} 
+                                  onChange={(e) => setGlobalSubtitleConfig(prev => ({ ...prev, watermark_text: e.target.value }))}
+                                  placeholder="mimaros.eu"
+                                  className="w-full bg-panel border border-borderGlass p-2.5 rounded-xl text-xs font-mono text-white outline-none focus:border-mimaros-blue"
+                              />
+                          </div>
+
+                          <div>
+                              <label className="text-[10px] font-bold text-textDim uppercase block mb-1">Standard Schriftart</label>
+                              <select 
+                                  value={fontName} 
+                                  onChange={(e) => setFontName(e.target.value)}
+                                  className="w-full bg-panel border border-borderGlass p-2.5 rounded-xl text-xs font-bold text-white outline-none focus:border-mimaros-blue"
+                              >
+                                  <option value="Work Sans">Work Sans (Modern B2B)</option>
+                                  <option value="Anton">Anton (Bold Viral)</option>
+                                  <option value="Poppins">Poppins (Clean & Soft)</option>
+                                  <option value="Montserrat">Montserrat (Geometric)</option>
+                                  <option value="Oswald">Oswald (Tall & Condensed)</option>
+                                  <option value="Lato">Lato (Balanced)</option>
+                              </select>
+                          </div>
+                      </div>
+                  </div>
+              </div>
+          </div>
+      </div>
+  );
+
   const renderIntegrations = () => (
       <div className="flex-1 max-w-6xl mx-auto w-full flex flex-col gap-6">
           <div>
@@ -2633,6 +2884,7 @@ export default function Page() {
               {currentView === 'history' && renderHistory()}
               {currentView === 'calendar' && renderCalendar()}
               {currentView === 'integrations' && renderIntegrations()}
+              {currentView === 'settings' && renderSettings()}
           </div>
       </main>
 
