@@ -1,51 +1,113 @@
 import yt_dlp
 import os
+import subprocess
 
 def download_video(url: str, output_path: str = "temp", trim_start: int = None, trim_end: int = None) -> str:
     """
     Lädt ein YouTube Video herunter und speichert es in bestmöglicher Qualität (max 1080p).
-    Wenn trim_start und trim_end angegeben sind, wird nur dieser Bereich heruntergeladen.
-    Gibt den Dateipfad zum heruntergeladenen Video zurück.
+    Robuste Multi-Client-Strategie (Android, iOS, Web, MWeb) für Cloud- und Lokal-Umgebungen.
     """
     if not os.path.exists(output_path):
-        os.makedirs(output_path)
+        os.makedirs(output_path, exist_ok=True)
         
-    ydl_opts = {
-        'format': 'bestvideo[ext=mp4][height<=720]+bestaudio[ext=m4a]/best[ext=mp4]/best',
-        'merge_output_format': 'mp4',
-        'outtmpl': f'{output_path}/%(id)s.%(ext)s',
-        'quiet': False,
-        'no_warnings': True,
-        'nocheckcertificate': True,
-        'geo_bypass': True,
-        'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+    clean_url = (url or "").strip()
+    if not clean_url.startswith(('http://', 'https://', 'www.', 'youtube.com', 'youtu.be')):
+        search_res = search_youtube_videos(clean_url, max_results=1)
+        if search_res:
+            clean_url = search_res[0].get("url", clean_url)
+            
+    # Primary resilient options
+    ydl_opts_list = [
+        # Strategy 1: Multi-client fallback with best mp4/webm up to 1080p
+        {
+            'format': 'bestvideo[ext=mp4][height<=1080]+bestaudio[ext=m4a]/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best',
+            'merge_output_format': 'mp4',
+            'outtmpl': f'{output_path}/%(id)s.%(ext)s',
+            'quiet': False,
+            'no_warnings': True,
+            'nocheckcertificate': True,
+            'geo_bypass': True,
+            'http_headers': {
+                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36',
+                'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
+            },
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['android', 'ios', 'web', 'mweb']
+                }
+            }
         },
-        'extractor_args': {'youtube': ['player_client=android']}
-    }
+        # Strategy 2: iOS client fallback
+        {
+            'format': 'best[height<=720]/best',
+            'merge_output_format': 'mp4',
+            'outtmpl': f'{output_path}/%(id)s.%(ext)s',
+            'quiet': True,
+            'no_warnings': True,
+            'nocheckcertificate': True,
+            'geo_bypass': True,
+            'http_headers': {
+                'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1'
+            },
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['ios']
+                }
+            }
+        }
+    ]
 
-    if trim_start is not None and trim_end is not None:
-        # We need ffmpeg to download specific sections from YouTube.
-        # Syntax: *start_time-end_time
-        ydl_opts['download_ranges'] = lambda info, ydl: [{'start_time': trim_start, 'end_time': trim_end}]
-        ydl_opts['force_keyframes_at_cuts'] = True
+    downloaded_file = None
+    last_err = None
 
-    try:
-        with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-            info = ydl.extract_info(url, download=True)
-            filename = ydl.prepare_filename(info)
-            # Falls Format zusammengeführt wird, ändert sich ggf. die Extension
-            if not os.path.exists(filename):
-                # Check for .mkv or other formats if ffmpeg merged them differently
-                base, _ = os.path.splitext(filename)
-                for ext in ['.mp4', '.mkv', '.webm']:
-                    if os.path.exists(base + ext):
-                        filename = base + ext
-                        break
-            return filename
-    except Exception as e:
-        print(f"Fehler beim Download: {e}")
-        raise e
+    for opts in ydl_opts_list:
+        try:
+            with yt_dlp.YoutubeDL(opts) as ydl:
+                info = ydl.extract_info(clean_url, download=True)
+                fn = ydl.prepare_filename(info)
+                
+                # Check for merged file extensions
+                if not os.path.exists(fn):
+                    base, _ = os.path.splitext(fn)
+                    for ext in ['.mp4', '.mkv', '.webm', '.ts']:
+                        if os.path.exists(base + ext):
+                            fn = base + ext
+                            break
+                            
+                if os.path.exists(fn) and os.path.getsize(fn) > 0:
+                    downloaded_file = fn
+                    break
+        except Exception as e:
+            print(f"yt-dlp Download-Versuch fehlgeschlagen ({e}). Probiere Fallback-Strategie...")
+            last_err = e
+
+    if not downloaded_file or not os.path.exists(downloaded_file):
+        raise RuntimeError(f"Konnte YouTube-Video nicht herunterladen: {last_err}")
+
+    # Wenn Trimming definiert ist, schneide das Video jetzt sauber lokal per FFmpeg
+    if trim_start is not None and trim_end is not None and trim_end > trim_start:
+        trimmed_path = os.path.join(output_path, f"trimmed_{os.path.basename(downloaded_file)}")
+        dur = trim_end - trim_start
+        try:
+            subprocess.run([
+                "ffmpeg", "-y",
+                "-ss", str(trim_start),
+                "-t", str(dur),
+                "-i", downloaded_file,
+                "-c:v", "libx264",
+                "-pix_fmt", "yuv420p",
+                "-movflags", "+faststart",
+                "-c:a", "aac",
+                trimmed_path
+            ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if os.path.exists(trimmed_path) and os.path.getsize(trimmed_path) > 0:
+                try: os.remove(downloaded_file)
+                except: pass
+                return trimmed_path
+        except Exception as te:
+            print(f"Fehler beim Trimmen nach Download: {te}. Verwende volles Video.")
+            
+    return downloaded_file
 
 def search_youtube_videos(query: str, max_results: int = 8) -> list:
     """
@@ -56,7 +118,6 @@ def search_youtube_videos(query: str, max_results: int = 8) -> list:
     if not clean_query:
         return []
         
-    # Prüfe ob direkte URL
     if clean_query.startswith(('http://', 'https://', 'www.', 'youtube.com', 'youtu.be')):
         search_target = clean_query if clean_query.startswith('http') else f"https://{clean_query}"
     else:
@@ -70,9 +131,13 @@ def search_youtube_videos(query: str, max_results: int = 8) -> list:
         'nocheckcertificate': True,
         'geo_bypass': True,
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
         },
-        'extractor_args': {'youtube': ['player_client=android']}
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'ios', 'web']
+            }
+        }
     }
     
     results = []
@@ -94,7 +159,6 @@ def search_youtube_videos(query: str, max_results: int = 8) -> list:
                 if not url.startswith('http') and video_id:
                     url = f"https://www.youtube.com/watch?v={video_id}"
                     
-                # Thumbnail Ermittlung
                 thumbnails = e.get('thumbnails', [])
                 thumb = e.get('thumbnail', '')
                 if not thumb and thumbnails:
@@ -125,11 +189,9 @@ def search_youtube_videos(query: str, max_results: int = 8) -> list:
 def get_video_info(url: str) -> dict:
     """
     Gibt Metadaten zu einem YouTube Video zurück, ohne es herunterzuladen.
-    Unterstützt auch automatischen Such-Fallback, falls ein Suchbegriff statt URL übergeben wird.
     """
     clean_url = (url or "").strip()
     if not clean_url.startswith(('http://', 'https://', 'www.', 'youtube.com', 'youtu.be')):
-        # User entered a search term -> Search first video
         search_res = search_youtube_videos(clean_url, max_results=1)
         if search_res:
             first = search_res[0]
@@ -147,9 +209,13 @@ def get_video_info(url: str) -> dict:
         'nocheckcertificate': True,
         'geo_bypass': True,
         'http_headers': {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36'
         },
-        'extractor_args': {'youtube': ['player_client=android']}
+        'extractor_args': {
+            'youtube': {
+                'player_client': ['android', 'ios', 'web']
+            }
+        }
     }
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -166,7 +232,6 @@ def get_video_info(url: str) -> dict:
                 "url": clean_url
             }
     except Exception as e:
-        # Fallback to search
         search_res = search_youtube_videos(clean_url, max_results=1)
         if search_res:
             first = search_res[0]

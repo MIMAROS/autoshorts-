@@ -420,7 +420,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         except Exception as e:
             print(f"Error generating title banner: {e}")
 
-    # 4. Overlay CTA Button
+    # 4. Overlay CTA Button (Exact match with Live Interactive Preview at bottom)
     cta = config.get("cta", "none")
     cta_text = ""
     if cta == "subscribe":
@@ -430,36 +430,16 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
     elif cta == "more":
         cta_text = "MEHR VIDEOS"
         
-    if cta_text and show_cta:
+    if cta_text and show_cta and cta != "none":
         cta_img_path = os.path.join(base_dir, f"cta_{os.path.basename(output_path)}.png")
         try:
             generate_cta_button_image(cta_text, primary_color, "#FFFFFF", font_name, resolution, cta_img_path)
             inputs.append(cta_img_path)
             cta_input_index = len(inputs) - 1
             
-            dur_val = float(duration) if duration else 0.0
-            intervals = []
-            if dur_val > 0.0:
-                half_time = dur_val / 2.0
-                intervals.append((half_time, min(half_time + 4.0, dur_val)))
-                if dur_val > 45.0:
-                    t = 30.0
-                    while t < dur_val:
-                        if not (t >= half_time - 4.0 and t <= half_time + 4.0):
-                            intervals.append((t, min(t + 4.0, dur_val)))
-                        t += 30.0
-            else:
-                intervals.append((0.5, 3.0))
-            
-            if intervals:
-                enable_expr = "+".join([f"between(t,{start},{end})" for start, end in intervals])
-                fade_chain = f"[{cta_input_index}:v]loop=loop=-1:size=1:start=0,setpts=PTS-STARTPTS"
-                for start, end in intervals:
-                    fade_chain += f",fade=t=in:st={start}:d=0.5:alpha=1,fade=t=out:st={end-0.5}:d=0.5:alpha=1"
-                fade_chain += "[cta_faded]"
-                
-                filter_complex += f";{fade_chain};{current_v}[cta_faded]overlay=x=(W-w)/2:y=(H-h)/2:enable='{enable_expr}'[v_cta]"
-                current_v = "[v_cta]"
+            cta_y = "H-h-24" if not is_1080 else "H-h-36"
+            filter_complex += f";[{cta_input_index}:v]scale=-1:-1[cta_img];{current_v}[cta_img]overlay=x=(W-w)/2:y={cta_y}[v_cta]"
+            current_v = "[v_cta]"
         except Exception as e:
             print(f"Error generating CTA image button: {e}")
             
@@ -641,14 +621,15 @@ def generate_ass(segments: list, start_time: float, end_time: float, ass_path: s
             # Subtitle Styles mapped 1:1 to modern social media shorts
             if design in ["mimaros_clean", "mimaros_light"]:
                 box_pad = 12.0 if is_1080 else 8.0
-                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,{primary_color_ass},{box_color_ass},-1,0,0,0,100,100,0,0,3,{box_pad},0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                # BorderStyle 3: OutlineColour is box fill, BackColour is box border/glow
+                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,{box_color_ass},{primary_color_ass},-1,0,0,0,100,100,0,0,3,{box_pad},1.5,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             elif design == "dynamic_box":
                 box_pad = 12.0 if is_1080 else 8.0
                 dyn_box_ass = hex_to_ass_color(box_color_hex, "0D")
-                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,&H40FFFFFF,{dyn_box_ass},-1,0,0,0,100,100,0,0,3,{box_pad},0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
+                f.write(f"Style: Default,{ass_font},{sub_font_size},{text_color_ass},&H000000FF,{dyn_box_ass},&H40FFFFFF,-1,0,0,0,100,100,0,0,3,{box_pad},1.5,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
             elif design == "popup_bouncy":
                 box_pad = 14.0 if is_1080 else 10.0
-                f.write(f"Style: Default,{ass_font},{sub_font_size + 8},{highlight_color_ass},&H000000FF,{primary_color_ass},{box_color_ass},-1,0,0,0,100,100,0,0,3,{box_pad},0,5,{ass_margin_lr},{ass_margin_lr},0,1\n")
+                f.write(f"Style: Default,{ass_font},{sub_font_size + 8},{highlight_color_ass},&H000000FF,{box_color_ass},{primary_color_ass},-1,0,0,0,100,100,0,0,3,{box_pad},1.5,5,{ass_margin_lr},{ass_margin_lr},0,1\n")
             elif design == "hormozi":
                 outline_w = 9.0 if is_1080 else 6.0
                 f.write(f"Style: Default,Anton,{sub_font_size + 10},{text_color_ass},&H000000FF,&H00000000,&HFF000000,-1,0,0,0,100,100,0,0,1,{outline_w},0,2,{ass_margin_lr},{ass_margin_lr},{ass_margin_v},1\n")
