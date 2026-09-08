@@ -177,26 +177,24 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         
         # 1. Video herunterladen (oder lokales Video nutzen)
         if is_local:
-            if trim_start is not None and trim_end is not None and trim_end > trim_start:
-                # Trimming local file with FFmpeg
-                import subprocess
-                trimmed_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp")
-                os.makedirs(trimmed_dir, exist_ok=True)
-                trimmed_path = os.path.join(trimmed_dir, f"{job_id}_trimmed.mp4")
-                duration = trim_end - trim_start
-                try:
-                    subprocess.run(["ffmpeg", "-y", "-ss", str(trim_start), "-t", str(duration), "-i", local_path, "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart", "-c:a", "aac", trimmed_path], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-                    video_path = trimmed_path
-                except Exception as e:
-                    print(f"Fehler beim lokalen Trimming: {e}")
-                    video_path = local_path
-            else:
-                video_path = local_path
+            video_path = local_path
         else:
             temp_output = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp", job_id)
             os.makedirs(temp_output, exist_ok=True)
-            video_path = download_video(url, output_path=temp_output, trim_start=trim_start, trim_end=trim_end)
+            video_path = download_video(url, output_path=temp_output)
         
+        # Ermittle Gesamtdauer des Videos
+        import subprocess
+        total_video_dur = 60.0
+        try:
+            probe = subprocess.run(
+                ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", video_path],
+                capture_output=True, text=True, check=True
+            )
+            total_video_dur = float(probe.stdout.strip())
+        except Exception as e:
+            print(f"Dauer-Ermittlung via ffprobe: {e}")
+
         # 2. Transkribieren (Whisper)
         jobs[job_id] = {"status": "transcribing", "progress": 40, "hooks": [], "clips": []}
         transcript_data = transcribe_audio(video_path, video_lang, subtitle_lang)
@@ -217,7 +215,7 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
                 except Exception as e:
                     print(f"Fehler bei Voiceover Transkription: {e}")
         
-        # 3. BLOCKIERENDES TIMING für LLM: Aufruf ERST NACHDEM die Whisper-Transkription abgeschlossen ist!
+        # 3. Titel & Beschreibung generieren
         jobs[job_id] = {"status": "analyzing", "progress": 70, "hooks": [], "clips": []}
         
         full_transcript_text = " ".join([seg.get("text", "") for seg in transcript_data.get("segments", [])]).strip()
@@ -245,121 +243,74 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         subtitle_config["showSubtitles"] = subtitle_config.get("showSubtitles", True)
         hook_title = context_title.upper()
         
-        # Aktualisiere Job-Zustand mit den aus dem Transkript generierten Daten
         jobs[job_id]["generated_title"] = context_title
         jobs[job_id]["generated_caption"] = social_caption
         jobs[job_id]["transcript_text"] = full_transcript_text
         
-        # HARTER 1:1 ISOLATIONS-GUARD (OPTION A - STRIKT EINZELNES VIDEO, KEINE HIGHLIGHT-ERKENNUNG)
-        modus1_opt = str(subtitle_config.get("modus1Option") or subtitle_config.get("modus1_option") or subtitle_config.get("modus") or "").lower().strip()
+        # Modus-Entscheidung: 1:1 vs. Trimming vs. Multi-Clip Highlights
+        modus1_opt = str(subtitle_config.get("modus1Option") or subtitle_config.get("modus1_option") or "").lower().strip()
         selected_mode = str(subtitle_config.get("selectedMode") or subtitle_config.get("mode") or "").lower().strip()
         req_clip_len = str(clip_length).lower().strip()
         
-        is_one_to_one = (
-            modus1_opt in ["one_to_one", "1:1", "single", "1-to-1"] or 
-            (selected_mode in ["standard", "single", "1:1", "one_to_one"] and modus1_opt != "auto_highlights") or 
-            req_clip_len in ["1:1", "single", "full"]
-        )
+        has_custom_trim = (trim_start is not None and trim_end is not None and float(trim_end) > float(trim_start))
         
-        if is_one_to_one:
-            # OPTION A: STRIKT ISOLIERTER 1:1 EXPORT (KEIN SPLITTING, KEIN GEMINI HIGHLIGHT CALL)
-            jobs[job_id] = {"status": "editing", "progress": 85, "hooks": [], "clips": []}
-            
-            # Ermittle tatsächliche Dauer der heruntergeladenen/gespeicherten Videodatei
-            import subprocess
-            try:
-                probe = subprocess.run(
-                    ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", video_path],
-                    capture_output=True, text=True, check=True
-                )
-                total_video_dur = float(probe.stdout.strip())
-            except Exception as e:
-                if transcript_data.get("segments"):
-                    total_video_dur = float(transcript_data["segments"][-1].get("end", 60.0))
-                else:
-                    total_video_dur = 60.0
-
-            # Da video_path bei trim_start/trim_end bereits zugeschnitten ist (oder das volle Video ist),
-            # ist der relative Startpunkt in video_path IMMER 0.0 und die Endzeit total_video_dur!
-            start_sec = 0.0
-            end_sec = total_video_dur
-                        
-            single_hook = {
+        hooks = []
+        if has_custom_trim:
+            t_start = max(0.0, float(trim_start))
+            t_end = min(total_video_dur, float(trim_end))
+            hooks = [{
+                "id": 1,
+                "title": hook_title,
+                "start_time_approx": t_start,
+                "end_time_approx": t_end,
+                "rationale": "Vom Nutzer ausgewählter Bereich",
+                "social_media_caption": social_caption,
+                "viral_score": 98
+            }]
+        elif modus1_opt in ["one_to_one", "1:1", "single"] or req_clip_len in ["1:1", "single", "full"] or (selected_mode == "standard" and modus1_opt != "auto_highlights"):
+            hooks = [{
+                "id": 1,
                 "title": hook_title,
                 "start_time_approx": 0.0,
-                "end_time_approx": end_sec,
-                "rationale": "Option A - 1:1 Video (Strikt einzelnes 1:1 Video)",
+                "end_time_approx": total_video_dur,
+                "rationale": "Option A - 1:1 Video",
                 "social_media_caption": social_caption,
                 "viral_score": 100
-            }
-            
-            export_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Fertige_Shorts")
-            os.makedirs(export_dir, exist_ok=True)
-            output_filename = f"AutoShort_{job_id}_1to1.mp4"
-            output_clip = os.path.join(export_dir, output_filename)
-            
-            process_clip(video_path, transcript_data, start_sec, end_sec, output_clip, resolution, subtitle_config)
-            
-            public_url = upload_file_to_supabase(output_clip, "autoshorts-storage", output_filename)
-            final_clip_url = public_url if public_url else f"/videos/{output_filename}"
-            if public_url:
-                try: os.remove(output_clip)
-                except: pass
-                
-            hooks = [single_hook]
-            clips = [final_clip_url]
-            
-            jobs[job_id] = {
-                "status": "done", 
-                "progress": 100, 
-                "hooks": hooks, 
-                "clips": clips, 
-                "generated_title": context_title, 
-                "generated_caption": social_caption
-            }
-            
-            # In Historie speichern
-            history = load_db()
-            history.insert(0, {
-                "job_id": job_id,
-                "title": hook_title,
-                "thumbnail": clips[0],
-                "clips": clips
-            })
-            save_db(history)
-            return
-
-        # OPTION B: MULTI-CLIP HIGHLIGHT ERKENNUNG (NUR FÜR AUTO-HIGHLIGHTS / YOUTUBE)
-        if trim_start is not None and trim_end is not None and trim_end > trim_start:
-            # Da video_path bereits vorab zugeschnitten wurde, beginnt die Datei bei 0.0
-            hooks = [{
-                "title": hook_title,
-                "start_time_approx": "00:00",
-                "end_time_approx": f"{int(trim_end - trim_start)}",
-                "rationale": "Vom Nutzer definierter Zeitbereich mit Smart Trimming",
-                "social_media_caption": social_caption,
-                "viral_score": 95
             }]
         else:
-            hooks = analyze_hooks(transcript_data["segments"], clip_length)
+            # YouTube AutoShorts & Highlight-Erkennung
+            hooks = analyze_hooks(transcript_data.get("segments", []), clip_length)
+            if not hooks:
+                hooks = [{
+                    "id": 1,
+                    "title": hook_title,
+                    "start_time_approx": 0.0,
+                    "end_time_approx": min(total_video_dur, 60.0),
+                    "rationale": "Viral Highlight Clip",
+                    "social_media_caption": social_caption,
+                    "viral_score": 95
+                }]
         
-        # 4. Videoschnitt & Untertitel
+        # 4. Videoschnitt & Rendering mit CI-Branding und Untertiteln
         jobs[job_id] = {"status": "editing", "progress": 85, "hooks": hooks, "clips": []}
         
         clips = []
         export_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Fertige_Shorts")
-        if not os.path.exists(export_dir):
-            os.makedirs(export_dir)
-            
+        os.makedirs(export_dir, exist_ok=True)
+        
         for i, hook in enumerate(hooks):
-            start = parse_time(hook.get("start_time_approx", "00:00"))
-            end = parse_time(hook.get("end_time_approx", "00:30"))
+            start = parse_time(hook.get("start_time_approx", 0.0))
+            end = parse_time(hook.get("end_time_approx", min(total_video_dur, start + 60.0)))
             
+            if end <= start:
+                end = min(total_video_dur, start + 30.0)
+                
             output_filename = f"AutoShort_{job_id}_Hook_{i+1}.mp4"
             output_clip = os.path.join(export_dir, output_filename)
-            processed_clip = process_clip(video_path, transcript_data, start, end, output_clip, resolution, subtitle_config)
             
-            # SUPABASE UPLOAD
+            process_clip(video_path, transcript_data, start, end, output_clip, resolution, subtitle_config)
+            
+            # SUPABASE UPLOAD (mit lokalem Fallback)
             public_url = upload_file_to_supabase(output_clip, "autoshorts-storage", output_filename)
             if public_url:
                 clips.append(public_url)
@@ -368,21 +319,29 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
             else:
                 clips.append(f"/videos/{output_filename}")
         
-        jobs[job_id] = {"status": "done", "progress": 100, "hooks": hooks, "clips": clips, "generated_title": context_title, "generated_caption": social_caption}
+        jobs[job_id] = {
+            "status": "done",
+            "progress": 100,
+            "hooks": hooks,
+            "clips": clips,
+            "generated_title": context_title,
+            "generated_caption": social_caption
+        }
         
         # In Historie abspeichern
         history = load_db()
         history.insert(0, {
             "job_id": job_id,
-            "title": hooks[0]["title"] if hooks else "Video Projekt",
+            "title": hooks[0]["title"] if hooks else context_title,
             "thumbnail": clips[0] if clips else None,
             "clips": clips
         })
         save_db(history)
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         jobs[job_id] = {"status": "error", "progress": 0, "error": str(e), "hooks": [], "clips": []}
     finally:
-        # Cleanup temp video file
         if 'video_path' in locals() and os.path.exists(video_path):
             try:
                 os.remove(video_path)

@@ -1,5 +1,21 @@
 [
     {
+        "job_id": "test_job_youtube_full",
+        "title": "VIRAL SHORT",
+        "thumbnail": "/videos/AutoShort_test_job_youtube_full_Hook_1.mp4",
+        "clips": [
+            "/videos/AutoShort_test_job_youtube_full_Hook_1.mp4"
+        ]
+    },
+    {
+        "job_id": "test_job_yt",
+        "title": "DER GEHEIME TRICK",
+        "thumbnail": "/videos/AutoShort_test_job_yt_1to1.mp4",
+        "clips": [
+            "/videos/AutoShort_test_job_yt_1to1.mp4"
+        ]
+    },
+    {
         "job_id": "d3745a25-5d97-482c-8a4e-322a67cf07e2",
         "title": "Auto: Der KI-Content-Loop: Vom Skript zum Video in 90 Sekunden",
         "thumbnail": "/videos/AutoShort_d3745a25-5d97-482c-8a4e-322a67cf07e2_Automation.mp4",

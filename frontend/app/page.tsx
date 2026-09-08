@@ -483,7 +483,7 @@ export default function Page() {
       try {
           const config = {
               ...globalSubtitleConfig,
-              design: globalSubtitleConfig.design || 'karaoke',
+              design: globalSubtitleConfig.design || 'mimaros_clean',
               use_master_ci: useMasterCi,
               useMasterCi,
               primaryColor,
@@ -682,17 +682,39 @@ export default function Page() {
             setIsProcessing(false);
             setStatusMessage('');
             
-            const newClips = statusData.hooks.map((hook: any, index: number) => ({
-              id: index + 1,
-              title: hook.title || `Hook ${index + 1}`,
-              start: hook.start_time_approx,
-              end: hook.end_time_approx,
-              rationale: hook.rationale,
-              social_media_caption: hook.social_media_caption,
-              viralScore: hook.viral_score || Math.floor(Math.random() * 20 + 80),
-              videoUrl: statusData.clips && statusData.clips[index] ? statusData.clips[index] : null,
-              clipPath: statusData.clips && statusData.clips[index] ? statusData.clips[index] : null
-            }));
+            const rawHooks = Array.isArray(statusData.hooks) && statusData.hooks.length > 0 ? statusData.hooks : [];
+            const rawClips = Array.isArray(statusData.clips) ? statusData.clips : [];
+            
+            let newClips: any[] = [];
+            if (rawClips.length > 0) {
+              newClips = rawClips.map((clipUrl: string, index: number) => {
+                const hook = rawHooks[index] || {};
+                return {
+                  id: index + 1,
+                  title: hook.title || statusData.generated_title || `Clip ${index + 1}`,
+                  start: hook.start_time_approx || 0,
+                  end: hook.end_time_approx || 0,
+                  rationale: hook.rationale || '',
+                  social_media_caption: hook.social_media_caption || statusData.generated_caption || '',
+                  viralScore: hook.viral_score || 95,
+                  videoUrl: clipUrl,
+                  clipPath: clipUrl
+                };
+              });
+            } else if (rawHooks.length > 0) {
+              newClips = rawHooks.map((hook: any, index: number) => ({
+                id: index + 1,
+                title: hook.title || statusData.generated_title || `Clip ${index + 1}`,
+                start: hook.start_time_approx || 0,
+                end: hook.end_time_approx || 0,
+                rationale: hook.rationale || '',
+                social_media_caption: hook.social_media_caption || statusData.generated_caption || '',
+                viralScore: hook.viral_score || 95,
+                videoUrl: null,
+                clipPath: null
+              }));
+            }
+            
             setClips(newClips);
             if (newClips.length > 0 && newClips[0].social_media_caption) {
               setSocialCaption(newClips[0].social_media_caption);

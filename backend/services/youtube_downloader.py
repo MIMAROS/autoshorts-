@@ -1,11 +1,10 @@
 import yt_dlp
 import os
-import subprocess
 
 def download_video(url: str, output_path: str = "temp", trim_start: int = None, trim_end: int = None) -> str:
     """
     Lädt ein YouTube Video herunter und speichert es in bestmöglicher Qualität (max 1080p).
-    Robuste Multi-Client-Strategie (Android, iOS, Web, MWeb) für Cloud- und Lokal-Umgebungen.
+    Robuste Multi-Client-Strategie (Android, iOS, Web, MWeb).
     """
     if not os.path.exists(output_path):
         os.makedirs(output_path, exist_ok=True)
@@ -16,7 +15,6 @@ def download_video(url: str, output_path: str = "temp", trim_start: int = None, 
         if search_res:
             clean_url = search_res[0].get("url", clean_url)
             
-    # Primary resilient options
     ydl_opts_list = [
         # Strategy 1: Multi-client fallback with best mp4/webm up to 1080p
         {
@@ -84,29 +82,6 @@ def download_video(url: str, output_path: str = "temp", trim_start: int = None, 
     if not downloaded_file or not os.path.exists(downloaded_file):
         raise RuntimeError(f"Konnte YouTube-Video nicht herunterladen: {last_err}")
 
-    # Wenn Trimming definiert ist, schneide das Video jetzt sauber lokal per FFmpeg
-    if trim_start is not None and trim_end is not None and trim_end > trim_start:
-        trimmed_path = os.path.join(output_path, f"trimmed_{os.path.basename(downloaded_file)}")
-        dur = trim_end - trim_start
-        try:
-            subprocess.run([
-                "ffmpeg", "-y",
-                "-ss", str(trim_start),
-                "-t", str(dur),
-                "-i", downloaded_file,
-                "-c:v", "libx264",
-                "-pix_fmt", "yuv420p",
-                "-movflags", "+faststart",
-                "-c:a", "aac",
-                trimmed_path
-            ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-            if os.path.exists(trimmed_path) and os.path.getsize(trimmed_path) > 0:
-                try: os.remove(downloaded_file)
-                except: pass
-                return trimmed_path
-        except Exception as te:
-            print(f"Fehler beim Trimmen nach Download: {te}. Verwende volles Video.")
-            
     return downloaded_file
 
 def search_youtube_videos(query: str, max_results: int = 8) -> list:
