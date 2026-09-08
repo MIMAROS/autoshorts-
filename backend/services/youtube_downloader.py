@@ -203,16 +203,19 @@ def download_video(url: str, output_path: str = "temp", trim_start: int = None, 
     if vid and not clean_url.startswith("http"):
         clean_url = f"https://www.youtube.com/watch?v={vid}"
         
+    fmt_spec = 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best'
+    
     strategies = [
         # Strategy 1: Android Client (High stability on datacenter IPs)
         {
-            'format': 'bestvideo*+bestaudio/best',
+            'format': fmt_spec,
             'merge_output_format': 'mp4',
             'outtmpl': f'{output_path}/%(id)s.%(ext)s',
             'quiet': False,
             'no_warnings': True,
             'nocheckcertificate': True,
             'geo_bypass': True,
+            'noplaylist': True,
             'socket_timeout': 30,
             'http_headers': {
                 'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
@@ -224,15 +227,67 @@ def download_video(url: str, output_path: str = "temp", trim_start: int = None, 
                 }
             }
         },
-        # Strategy 2: Android Creator Client
+        # Strategy 2: iOS Client
         {
-            'format': 'bestvideo*+bestaudio/best',
+            'format': fmt_spec,
             'merge_output_format': 'mp4',
             'outtmpl': f'{output_path}/%(id)s.%(ext)s',
             'quiet': False,
             'no_warnings': True,
             'nocheckcertificate': True,
             'geo_bypass': True,
+            'noplaylist': True,
+            'socket_timeout': 30,
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['ios']
+                }
+            }
+        },
+        # Strategy 3: Mobile Web (mweb) Client
+        {
+            'format': fmt_spec,
+            'merge_output_format': 'mp4',
+            'outtmpl': f'{output_path}/%(id)s.%(ext)s',
+            'quiet': False,
+            'no_warnings': True,
+            'nocheckcertificate': True,
+            'geo_bypass': True,
+            'noplaylist': True,
+            'socket_timeout': 30,
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['mweb']
+                }
+            }
+        },
+        # Strategy 4: TV Embedded Client
+        {
+            'format': fmt_spec,
+            'merge_output_format': 'mp4',
+            'outtmpl': f'{output_path}/%(id)s.%(ext)s',
+            'quiet': False,
+            'no_warnings': True,
+            'nocheckcertificate': True,
+            'geo_bypass': True,
+            'noplaylist': True,
+            'socket_timeout': 30,
+            'extractor_args': {
+                'youtube': {
+                    'player_client': ['tv_embedded']
+                }
+            }
+        },
+        # Strategy 5: Android Creator Client
+        {
+            'format': fmt_spec,
+            'merge_output_format': 'mp4',
+            'outtmpl': f'{output_path}/%(id)s.%(ext)s',
+            'quiet': False,
+            'no_warnings': True,
+            'nocheckcertificate': True,
+            'geo_bypass': True,
+            'noplaylist': True,
             'socket_timeout': 30,
             'extractor_args': {
                 'youtube': {
@@ -240,15 +295,16 @@ def download_video(url: str, output_path: str = "temp", trim_start: int = None, 
                 }
             }
         },
-        # Strategy 3: Standard Client fallback
+        # Strategy 6: Standard Web Client fallback
         {
-            'format': 'bestvideo*+bestaudio/best',
+            'format': fmt_spec,
             'merge_output_format': 'mp4',
             'outtmpl': f'{output_path}/%(id)s.%(ext)s',
             'quiet': False,
             'no_warnings': True,
             'nocheckcertificate': True,
             'geo_bypass': True,
+            'noplaylist': True,
             'socket_timeout': 30,
         }
     ]

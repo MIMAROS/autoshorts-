@@ -415,6 +415,11 @@ export default function Page() {
 
   const handleSelectSearchResult = (item: { id: string; title: string; url: string; duration: number; thumbnail: string }) => {
       setYoutubeUrl(item.url);
+      setLocalFile(null);
+      if (previewObjectUrl) {
+          URL.revokeObjectURL(previewObjectUrl);
+          setPreviewObjectUrl('');
+      }
       setVideoMetadata({
           title: item.title,
           duration: item.duration,
@@ -428,6 +433,7 @@ export default function Page() {
           setTrimStart(0);
           setTrimEnd(Math.max(1, Math.round(item.duration)));
       }
+      setWizardStep(3);
   };
 
   const fetchVideoInfo = async (url: string) => {
@@ -607,8 +613,10 @@ export default function Page() {
               formData.append('video_lang', videoLang);
               formData.append('subtitle_lang', subtitleLang);
               formData.append('subtitle_config', JSON.stringify(subConfig));
-              if (trimStart !== '') formData.append('trim_start', trimStart.toString());
-              if (trimEnd !== '') formData.append('trim_end', trimEnd.toString());
+              if (trimStart !== '' && trimEnd !== '' && Number(trimEnd) > Number(trimStart)) {
+                  formData.append('trim_start', trimStart.toString());
+                  formData.append('trim_end', trimEnd.toString());
+              }
               
               const res = await fetch(`${API_BASE}/api/upload-video`, {
                   method: 'POST',
@@ -631,8 +639,10 @@ export default function Page() {
                   subtitle_lang: subtitleLang,
                   subtitle_config: subConfig
               };
-              if (trimStart !== '') payload.trim_start = Number(trimStart);
-              if (trimEnd !== '') payload.trim_end = Number(trimEnd);
+              if (trimStart !== '' && trimEnd !== '' && Number(trimEnd) > Number(trimStart)) {
+                  payload.trim_start = Number(trimStart);
+                  payload.trim_end = Number(trimEnd);
+              }
               
               const res = await fetch(`${API_BASE}/api/process-video`, {
                 method: 'POST',

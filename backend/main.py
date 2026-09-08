@@ -254,10 +254,62 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         
         has_custom_trim = (trim_start is not None and trim_end is not None and float(trim_end) > float(trim_start))
         
-        hooks = []
+        # Check if custom trim is just the default full-video range
+        is_default_full_range = False
         if has_custom_trim:
             t_start = max(0.0, float(trim_start))
             t_end = min(total_video_dur, float(trim_end))
+            if t_start == 0.0 and t_end >= min(total_video_dur - 1.0, 599.0):
+                is_default_full_range = True
+        else:
+            t_start = 0.0
+            t_end = total_video_dur
+            is_default_full_range = True
+
+        hooks = []
+        if selected_mode == "youtube" or modus1_opt == "auto_highlights":
+            # In YouTube AutoShorts or Highlight mode:
+            # If user explicitly trimmed a short snippet (<= 90s)
+            if has_custom_trim and not is_default_full_range and (t_end - t_start) <= 90.0:
+                hooks = [{
+                    "id": 1,
+                    "title": hook_title,
+                    "start_time_approx": t_start,
+                    "end_time_approx": t_end,
+                    "rationale": "Vom Nutzer ausgewählter Short-Bereich",
+                    "social_media_caption": social_caption,
+                    "viral_score": 98
+                }]
+            else:
+                # Analyze segments with Gemini for viral 30-60s Shorts
+                all_segs = transcript_data.get("segments", [])
+                if has_custom_trim and not is_default_full_range:
+                    all_segs = [s for s in all_segs if float(s.get("end", 0)) > t_start and float(s.get("start", 0)) < t_end]
+                
+                hooks = analyze_hooks(all_segs, clip_length)
+                if not hooks:
+                    # Multi-hook fallback: generate 1-3 highlight slices of max 45s
+                    h_dur = min(total_video_dur, 45.0)
+                    hooks = [{
+                        "id": 1,
+                        "title": hook_title,
+                        "start_time_approx": t_start,
+                        "end_time_approx": min(t_start + h_dur, total_video_dur),
+                        "rationale": "Viral AutoShort Highlight",
+                        "social_media_caption": social_caption,
+                        "viral_score": 95
+                    }]
+                    if total_video_dur > 90.0:
+                        hooks.append({
+                            "id": 2,
+                            "title": f"{hook_title} - TEIL 2",
+                            "start_time_approx": min(45.0, total_video_dur - 30.0),
+                            "end_time_approx": min(90.0, total_video_dur),
+                            "rationale": "Viral AutoShort Highlight 2",
+                            "social_media_caption": social_caption,
+                            "viral_score": 92
+                        })
+        elif has_custom_trim and not is_default_full_range:
             hooks = [{
                 "id": 1,
                 "title": hook_title,
@@ -278,7 +330,7 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
                 "viral_score": 100
             }]
         else:
-            # YouTube AutoShorts & Highlight-Erkennung
+            # Standard auto-highlights fallback
             hooks = analyze_hooks(transcript_data.get("segments", []), clip_length)
             if not hooks:
                 hooks = [{
@@ -304,6 +356,8 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
             
             if end <= start:
                 end = min(total_video_dur, start + 30.0)
+            if (selected_mode == "youtube" or modus1_opt == "auto_highlights") and (end - start) > 90.0:
+                end = min(total_video_dur, start + 60.0)
                 
             output_filename = f"AutoShort_{job_id}_Hook_{i+1}.mp4"
             output_clip = os.path.join(export_dir, output_filename)
