@@ -190,10 +190,11 @@ def search_youtube_videos(query: str, max_results: int = 8) -> list:
         print(f"Fehler bei YouTube Websuche: {e}")
         return []
 
-def download_video(url: str, output_path: str = "temp", trim_start: int = None, trim_end: int = None) -> str:
+def download_video(url: str, output_path: str = "temp", trim_start: float = None, trim_end: float = None) -> str:
     """
-    Lädt ein YouTube Video herunter und speichert es in bester MP4-Qualität.
-    Nutzt eine mehrstufige Client-Fallback-Strategie für maximale Cloud-Kompatibilität.
+    Lädt ein YouTube Video herunter und speichert es in optimierter Qualität.
+    Unterstützt segmentweises Herunterladen (download_ranges) für blitzschnellen
+    Download von bis zu 3h Videos innerhalb von Sekunden.
     """
     if not os.path.exists(output_path):
         os.makedirs(output_path, exist_ok=True)
@@ -203,118 +204,80 @@ def download_video(url: str, output_path: str = "temp", trim_start: int = None, 
     if vid and not clean_url.startswith("http"):
         clean_url = f"https://www.youtube.com/watch?v={vid}"
         
-    fmt_spec = 'bestvideo[height<=1080][ext=mp4]+bestaudio[ext=m4a]/best[height<=1080][ext=mp4]/bestvideo[height<=1080]+bestaudio/best[height<=1080]/best'
+    fmt_spec = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/bestvideo[height<=720]+bestaudio/best[height<=720]/bestvideo+bestaudio/best'
     
-    strategies = [
-        # Strategy 1: Android Client (High stability on datacenter IPs)
-        {
-            'format': fmt_spec,
-            'merge_output_format': 'mp4',
-            'outtmpl': f'{output_path}/%(id)s.%(ext)s',
-            'quiet': False,
-            'no_warnings': True,
-            'nocheckcertificate': True,
-            'geo_bypass': True,
-            'noplaylist': True,
-            'socket_timeout': 30,
-            'http_headers': {
-                'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-                'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
-            },
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['android']
-                }
-            }
-        },
-        # Strategy 2: iOS Client
-        {
-            'format': fmt_spec,
-            'merge_output_format': 'mp4',
-            'outtmpl': f'{output_path}/%(id)s.%(ext)s',
-            'quiet': False,
-            'no_warnings': True,
-            'nocheckcertificate': True,
-            'geo_bypass': True,
-            'noplaylist': True,
-            'socket_timeout': 30,
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['ios']
-                }
-            }
-        },
-        # Strategy 3: Mobile Web (mweb) Client
-        {
-            'format': fmt_spec,
-            'merge_output_format': 'mp4',
-            'outtmpl': f'{output_path}/%(id)s.%(ext)s',
-            'quiet': False,
-            'no_warnings': True,
-            'nocheckcertificate': True,
-            'geo_bypass': True,
-            'noplaylist': True,
-            'socket_timeout': 30,
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['mweb']
-                }
-            }
-        },
-        # Strategy 4: TV Embedded Client
-        {
-            'format': fmt_spec,
-            'merge_output_format': 'mp4',
-            'outtmpl': f'{output_path}/%(id)s.%(ext)s',
-            'quiet': False,
-            'no_warnings': True,
-            'nocheckcertificate': True,
-            'geo_bypass': True,
-            'noplaylist': True,
-            'socket_timeout': 30,
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['tv_embedded']
-                }
-            }
-        },
-        # Strategy 5: Android Creator Client
-        {
-            'format': fmt_spec,
-            'merge_output_format': 'mp4',
-            'outtmpl': f'{output_path}/%(id)s.%(ext)s',
-            'quiet': False,
-            'no_warnings': True,
-            'nocheckcertificate': True,
-            'geo_bypass': True,
-            'noplaylist': True,
-            'socket_timeout': 30,
-            'extractor_args': {
-                'youtube': {
-                    'player_client': ['android_creator']
-                }
-            }
-        },
-        # Strategy 6: Standard Web Client fallback
-        {
-            'format': fmt_spec,
-            'merge_output_format': 'mp4',
-            'outtmpl': f'{output_path}/%(id)s.%(ext)s',
-            'quiet': False,
-            'no_warnings': True,
-            'nocheckcertificate': True,
-            'geo_bypass': True,
-            'noplaylist': True,
-            'socket_timeout': 30,
-        }
-    ]
-
+    # Try range download if trim specified
+    has_range = (trim_start is not None and trim_end is not None and float(trim_end) > float(trim_start))
+    
+    base_headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+        'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
+    }
+    
+    clients = ['android', 'ios', 'mweb', 'tv_embedded', 'android_creator', 'web']
+    
     downloaded_file = None
     last_err = None
-
-    for s in strategies:
+    
+    # Pass 1: Try with download_ranges if range specified
+    if has_range:
+        s_val = max(0.0, float(trim_start))
+        e_val = float(trim_end)
+        for client_name in clients:
+            try:
+                opts = {
+                    'format': fmt_spec,
+                    'merge_output_format': 'mp4',
+                    'outtmpl': f'{output_path}/%(id)s_trimmed.%(ext)s',
+                    'quiet': True,
+                    'no_warnings': True,
+                    'nocheckcertificate': True,
+                    'geo_bypass': True,
+                    'noplaylist': True,
+                    'socket_timeout': 25,
+                    'http_headers': base_headers,
+                    'download_ranges': yt_dlp.utils.download_range_func(None, [(s_val, e_val)]),
+                    'force_keyframes_at_cuts': True
+                }
+                if client_name != 'web':
+                    opts['extractor_args'] = {'youtube': {'player_client': [client_name]}}
+                    
+                with yt_dlp.YoutubeDL(opts) as ydl:
+                    info = ydl.extract_info(clean_url, download=True)
+                    fn = ydl.prepare_filename(info)
+                    if not os.path.exists(fn):
+                        base, _ = os.path.splitext(fn)
+                        for ext in ['.mp4', '.mkv', '.webm', '.ts']:
+                            if os.path.exists(base + ext):
+                                fn = base + ext
+                                break
+                    if os.path.exists(fn) and os.path.getsize(fn) > 1000:
+                        downloaded_file = fn
+                        print(f"Segment-Download erfolgreich ({s_val}s - {e_val}s) mit Client {client_name}.")
+                        return downloaded_file
+            except Exception as re_err:
+                print(f"Segment-Download Versuch fehlgeschlagen ({client_name}): {re_err}")
+                last_err = re_err
+                
+    # Pass 2: Regular stream download fallback
+    for client_name in clients:
         try:
-            with yt_dlp.YoutubeDL(s) as ydl:
+            opts = {
+                'format': fmt_spec,
+                'merge_output_format': 'mp4',
+                'outtmpl': f'{output_path}/%(id)s.%(ext)s',
+                'quiet': False,
+                'no_warnings': True,
+                'nocheckcertificate': True,
+                'geo_bypass': True,
+                'noplaylist': True,
+                'socket_timeout': 30,
+                'http_headers': base_headers
+            }
+            if client_name != 'web':
+                opts['extractor_args'] = {'youtube': {'player_client': [client_name]}}
+                
+            with yt_dlp.YoutubeDL(opts) as ydl:
                 info = ydl.extract_info(clean_url, download=True)
                 fn = ydl.prepare_filename(info)
                 if not os.path.exists(fn):
@@ -323,11 +286,12 @@ def download_video(url: str, output_path: str = "temp", trim_start: int = None, 
                         if os.path.exists(base + ext):
                             fn = base + ext
                             break
-                if os.path.exists(fn) and os.path.getsize(fn) > 0:
+                if os.path.exists(fn) and os.path.getsize(fn) > 1000:
                     downloaded_file = fn
+                    print(f"Download erfolgreich mit Client {client_name}.")
                     break
         except Exception as e:
-            print(f"Download-Versuch fehlgeschlagen ({e}). Probiere nächste Strategie...")
+            print(f"Download-Versuch fehlgeschlagen ({client_name}): {e}. Probiere nächsten Client...")
             last_err = e
 
     if not downloaded_file or not os.path.exists(downloaded_file):

@@ -131,6 +131,14 @@ def save_db(data):
     with open(DB_FILE, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=4)
 
+def safe_float(val, default=None):
+    if val is None or val == "":
+        return default
+    try:
+        return float(val)
+    except (ValueError, TypeError):
+        return default
+
 class VideoRequest(BaseModel):
     youtube_url: str
     resolution: str = "720p"
@@ -138,8 +146,8 @@ class VideoRequest(BaseModel):
     clip_length: str = "auto"
     video_lang: str = "auto"
     subtitle_lang: str = "auto"
-    trim_start: int = None
-    trim_end: int = None
+    trim_start: Optional[Union[float, int, str]] = None
+    trim_end: Optional[Union[float, int, str]] = None
 
 class VideoInfoRequest(BaseModel):
     youtube_url: str
@@ -161,7 +169,7 @@ class ScheduleRequest(BaseModel):
     caption: str = ""
 
 def parse_time(time_val) -> float:
-    # Falls time_val bereits ein float oder int ist (von Gemini neues Format)
+    # Falls time_val bereits ein float oder int ist
     if isinstance(time_val, (int, float)):
         return float(time_val)
     # Wandelt MM:SS in Sekunden um falls es ein string ist
@@ -169,11 +177,27 @@ def parse_time(time_val) -> float:
         parts = time_val.split(":")
         if len(parts) == 2:
             return float(parts[0]) * 60 + float(parts[1])
+        if len(parts) == 3:
+            return float(parts[0]) * 3600 + float(parts[1]) * 60 + float(parts[2])
     return 0.0
 
-def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: dict, clip_length: str = "auto", video_lang: str = "auto", subtitle_lang: str = "auto", is_local: bool = False, local_path: str = "", trim_start: int = None, trim_end: int = None):
+def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: dict, clip_length: str = "auto", video_lang: str = "auto", subtitle_lang: str = "auto", is_local: bool = False, local_path: str = "", trim_start: Union[float, int, str] = None, trim_end: Union[float, int, str] = None):
     try:
         jobs[job_id] = {"status": "downloading", "progress": 10, "hooks": [], "clips": []}
+        
+        # Parse trim parameters safely
+        parsed_s = safe_float(trim_start, 0.0) or 0.0
+        parsed_e = safe_float(trim_end, None)
+        
+        # Enforce maximum 10-minute (600s) processing window across all modes, supporting videos up to 3h (10,800s)
+        if parsed_e is not None and parsed_e > parsed_s:
+            if (parsed_e - parsed_s) > 600.0:
+                t_end = parsed_s + 600.0
+            else:
+                t_end = parsed_e
+        else:
+            t_end = parsed_s + 600.0
+        t_start = max(0.0, parsed_s)
         
         # 1. Video herunterladen (oder lokales Video nutzen)
         if is_local:
@@ -181,9 +205,9 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         else:
             temp_output = os.path.join(os.path.dirname(os.path.abspath(__file__)), "temp", job_id)
             os.makedirs(temp_output, exist_ok=True)
-            video_path = download_video(url, output_path=temp_output)
+            video_path = download_video(url, output_path=temp_output, trim_start=t_start, trim_end=t_end)
         
-        # Ermittle Gesamtdauer des Videos
+        # Ermittle Gesamtdauer der heruntergeladenen Datei
         import subprocess
         total_video_dur = 60.0
         try:
@@ -194,10 +218,15 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
             total_video_dur = float(probe.stdout.strip())
         except Exception as e:
             print(f"Dauer-Ermittlung via ffprobe: {e}")
-
-        # 2. Transkribieren (Whisper)
+            
+        # Prüfe ob video_path bereits das getrimmte Segment ist oder das ganze Video
+        is_already_trimmed = (abs(total_video_dur - (t_end - t_start)) < 5.0) or (total_video_dur <= (t_end - t_start) + 2.0)
+        
+        # 2. Transkribieren (Whisper/Gemini)
         jobs[job_id] = {"status": "transcribing", "progress": 40, "hooks": [], "clips": []}
-        transcript_data = transcribe_audio(video_path, video_lang, subtitle_lang)
+        audio_start = 0.0 if is_already_trimmed else t_start
+        audio_dur = t_end - t_start
+        transcript_data = transcribe_audio(video_path, video_lang, subtitle_lang, start_time=audio_start, duration=audio_dur)
         
         # KI Voiceover Transkription Sync Check
         voiceover_url = subtitle_config.get("voiceoverUrl")
@@ -252,48 +281,36 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         selected_mode = str(subtitle_config.get("selectedMode") or subtitle_config.get("mode") or "").lower().strip()
         req_clip_len = str(clip_length).lower().strip()
         
-        has_custom_trim = (trim_start is not None and trim_end is not None and float(trim_end) > float(trim_start))
+        window_start = 0.0 if is_already_trimmed else t_start
+        window_end = min(total_video_dur, (t_end - t_start) if is_already_trimmed else t_end)
         
-        # Enforce maximum 10-minute (600s) processing window across all modes, supporting videos up to 3h (10,800s)
-        if has_custom_trim:
-            t_start = max(0.0, float(trim_start))
-            t_end = min(total_video_dur, float(trim_end))
-            if t_end <= t_start:
-                t_end = min(total_video_dur, t_start + 600.0)
-            if (t_end - t_start) > 600.0:
-                t_end = t_start + 600.0
-        else:
-            t_start = 0.0
-            t_end = min(total_video_dur, 600.0)
-
         hooks = []
         if selected_mode == "youtube" or modus1_opt == "auto_highlights":
             # In YouTube AutoShorts or Highlight mode:
-            # If user explicitly trimmed a short snippet (<= 90s)
-            if (t_end - t_start) <= 90.0:
+            # If window is already short (<= 90s)
+            if (window_end - window_start) <= 90.0:
                 hooks = [{
                     "id": 1,
                     "title": hook_title,
-                    "start_time_approx": t_start,
-                    "end_time_approx": t_end,
+                    "start_time_approx": window_start,
+                    "end_time_approx": window_end,
                     "rationale": "Vom Nutzer ausgewählter Short-Bereich",
                     "social_media_caption": social_caption,
                     "viral_score": 98
                 }]
             else:
                 # Analyze segments with Gemini for viral 30-60s Shorts within the selected <= 10 min window
-                all_segs = [s for s in transcript_data.get("segments", []) if float(s.get("end", 0)) > t_start and float(s.get("start", 0)) < t_end]
+                all_segs = [s for s in transcript_data.get("segments", []) if float(s.get("end", 0)) > window_start and float(s.get("start", 0)) < window_end]
                 
                 hooks = analyze_hooks(all_segs, clip_length)
                 if not hooks:
-                    # Multi-hook fallback: generate 1-3 highlight slices of max 45s within the selected window
-                    window_len = t_end - t_start
+                    window_len = window_end - window_start
                     h_dur = min(window_len, 45.0)
                     hooks = [{
                         "id": 1,
                         "title": hook_title,
-                        "start_time_approx": t_start,
-                        "end_time_approx": min(t_start + h_dur, t_end),
+                        "start_time_approx": window_start,
+                        "end_time_approx": min(window_start + h_dur, window_end),
                         "rationale": "Viral AutoShort Highlight",
                         "social_media_caption": social_caption,
                         "viral_score": 95
@@ -302,8 +319,8 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
                         hooks.append({
                             "id": 2,
                             "title": f"{hook_title} - TEIL 2",
-                            "start_time_approx": min(t_start + 45.0, t_end - 30.0),
-                            "end_time_approx": min(t_start + 90.0, t_end),
+                            "start_time_approx": min(window_start + 45.0, window_end - 30.0),
+                            "end_time_approx": min(window_start + 90.0, window_end),
                             "rationale": "Viral AutoShort Highlight 2",
                             "social_media_caption": social_caption,
                             "viral_score": 92
@@ -312,8 +329,8 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
             hooks = [{
                 "id": 1,
                 "title": hook_title,
-                "start_time_approx": t_start,
-                "end_time_approx": t_end,
+                "start_time_approx": window_start,
+                "end_time_approx": window_end,
                 "rationale": "Option A - 1:1 Video (max. 10 Min)",
                 "social_media_caption": social_caption,
                 "viral_score": 100
@@ -323,8 +340,8 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
             hooks = [{
                 "id": 1,
                 "title": hook_title,
-                "start_time_approx": t_start,
-                "end_time_approx": t_end,
+                "start_time_approx": window_start,
+                "end_time_approx": window_end,
                 "rationale": "Vom Nutzer ausgewählter Bereich (max. 10 Min)",
                 "social_media_caption": social_caption,
                 "viral_score": 98
@@ -338,7 +355,7 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         os.makedirs(export_dir, exist_ok=True)
         
         for i, hook in enumerate(hooks):
-            start = parse_time(hook.get("start_time_approx", 0.0))
+            start = parse_time(hook.get("start_time_approx", window_start))
             end = parse_time(hook.get("end_time_approx", min(total_video_dur, start + 60.0)))
             
             if end <= start:
@@ -381,7 +398,7 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         traceback.print_exc()
         jobs[job_id] = {"status": "error", "progress": 0, "error": str(e), "hooks": [], "clips": []}
     finally:
-        if 'video_path' in locals() and os.path.exists(video_path):
+        if 'video_path' in locals() and os.path.exists(video_path) and not is_local:
             try:
                 os.remove(video_path)
             except Exception as e:
@@ -500,8 +517,8 @@ async def generate_voiceover(req: VoiceoverRequest):
 async def analyze_trimmed_section(
     file: Optional[UploadFile] = File(None),
     youtube_url: Optional[str] = Form(None),
-    trim_start: Optional[float] = Form(0.0),
-    trim_end: Optional[float] = Form(None),
+    trim_start: Optional[Union[float, int, str]] = Form(0.0),
+    trim_end: Optional[Union[float, int, str]] = Form(None),
     video_lang: Optional[str] = Form("auto")
 ):
     """
@@ -512,39 +529,26 @@ async def analyze_trimmed_section(
     raw_video = os.path.join(temp_dir, "raw_input.mp4")
     target_video = raw_video
     
+    t_start = safe_float(trim_start, 0.0) or 0.0
+    t_end = safe_float(trim_end, None)
+    
     try:
         if file:
             with open(raw_video, "wb") as f:
                 f.write(await file.read())
         elif youtube_url:
             loop = asyncio.get_event_loop()
-            dl_path = await loop.run_in_executor(None, download_video, youtube_url, temp_dir)
+            dl_path = await loop.run_in_executor(None, download_video, youtube_url, temp_dir, t_start, t_end)
             target_video = dl_path if dl_path and os.path.exists(dl_path) else raw_video
         else:
             raise HTTPException(status_code=400, detail="Weder Datei noch YouTube URL angegeben.")
             
-        # Falls getrimmt werden soll, erstelle getrimmte Version für präzise Audio-Analyse
-        t_start = float(trim_start) if trim_start is not None and float(trim_start) >= 0 else 0.0
-        t_end = float(trim_end) if trim_end is not None and float(trim_end) > t_start else None
-        
-        if t_end and t_end > t_start:
-            trimmed_video = os.path.join(temp_dir, "trimmed_section.mp4")
-            duration = t_end - t_start
-            try:
-                subprocess.run(
-                    ["ffmpeg", "-y", "-ss", str(t_start), "-t", str(duration), "-i", target_video, "-c", "copy", trimmed_video],
-                    check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL
-                )
-                if os.path.exists(trimmed_video) and os.path.getsize(trimmed_video) > 100:
-                    target_video = trimmed_video
-            except Exception as trim_err:
-                print(f"Schnelles Trimming Hinweis ({trim_err}), nutze Originaldatei.")
-                
         loop = asyncio.get_event_loop()
         
         # Audio für den Zeitbereich transkribieren
+        audio_dur = (t_end - t_start) if t_end and t_end > t_start else None
         transcript_data = await loop.run_in_executor(
-            None, transcribe_audio, target_video, video_lang or "auto"
+            None, transcribe_audio, target_video, video_lang or "auto", "auto", 0.0, audio_dur
         )
         
         full_text = ""
@@ -738,8 +742,8 @@ async def upload_video(
     sub_config = json.loads(subtitle_config)
     
     # Parse trim_start and trim_end safely
-    t_start = int(trim_start) if trim_start and trim_start.isdigit() else None
-    t_end = int(trim_end) if trim_end and trim_end.isdigit() else None
+    t_start = safe_float(trim_start, None)
+    t_end = safe_float(trim_end, None)
 
     background_tasks.add_task(process_video_task, job_id, "", resolution, sub_config, clip_length, video_lang, subtitle_lang, True, file_path, t_start, t_end)
     

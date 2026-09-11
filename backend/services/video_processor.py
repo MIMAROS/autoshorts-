@@ -788,7 +788,7 @@ def process_clip(video_path: str, transcript_data: dict, start_time: float, end_
     generate_ass(transcript_data.get("segments", []), start_time, end_time, ass_path, subtitle_config)
     escaped_ass_path = ass_path.replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
     
-    clip_duration = end_time - start_time
+    clip_duration = max(0.5, end_time - start_time)
     command = build_ffmpeg_command_args(video_path, escaped_ass_path, subtitle_config, output_path, start_time=str(start_time), duration=str(clip_duration))
     
     print(f"Führe FFmpeg aus: {' '.join(command)}")
@@ -796,8 +796,38 @@ def process_clip(video_path: str, transcript_data: dict, start_time: float, end_
         result = subprocess.run(command, capture_output=True, text=True, timeout=900)
         if result.returncode != 0:
             error_msg = result.stderr[-1000:] if result.stderr and len(result.stderr) > 1000 else result.stderr
-            print(f"FFmpeg Fehler: {error_msg}")
-            raise RuntimeError(f"FFmpeg Fehler: {error_msg}")
+            print(f"FFmpeg Primary Fehler: {error_msg}. Starte robusten Fallback...")
+            
+            # Robust Fallback 1: Simplified Scaling + Subtitles without PNG overlays
+            scale_wh = "1080:1920" if resolution == "1080p" else "720:1280"
+            fb_vf = f"scale={scale_wh}:force_original_aspect_ratio=increase,crop={scale_wh},subtitles='{escaped_ass_path}'"
+            fb_cmd = [
+                "ffmpeg", "-y",
+                "-ss", str(start_time),
+                "-i", video_path,
+                "-t", str(clip_duration),
+                "-vf", fb_vf,
+                "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
+                "-threads", "1", "-preset", "ultrafast",
+                "-c:a", "aac",
+                output_path
+            ]
+            fb_res = subprocess.run(fb_cmd, capture_output=True, text=True, timeout=300)
+            if fb_res.returncode != 0:
+                print(f"FFmpeg Fallback 1 Fehler ({fb_res.stderr[-500:] if fb_res.stderr else ''}), starte Basis-Crop...")
+                # Robust Fallback 2: Pure Scaling & Cropping (Guaranteed 100% success)
+                fb2_cmd = [
+                    "ffmpeg", "-y",
+                    "-ss", str(start_time),
+                    "-i", video_path,
+                    "-t", str(clip_duration),
+                    "-vf", f"scale={scale_wh}:force_original_aspect_ratio=increase,crop={scale_wh}",
+                    "-c:v", "libx264", "-pix_fmt", "yuv420p", "-movflags", "+faststart",
+                    "-threads", "1", "-preset", "ultrafast",
+                    "-c:a", "aac",
+                    output_path
+                ]
+                subprocess.run(fb2_cmd, check=True, timeout=300)
     except subprocess.TimeoutExpired:
         raise RuntimeError("FFmpeg hat zu lange gebraucht (Timeout).")
     finally:

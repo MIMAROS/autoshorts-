@@ -18,6 +18,34 @@ def _get_genai_client():
         print(f"Fehler beim Erstellen des GenAI Clients: {e}")
         return None
 
+import time
+
+GEMINI_MODELS = [
+    "gemini-2.5-flash",
+    "gemini-2.5-flash-lite",
+    "gemini-2.0-flash",
+    "gemini-2.0-flash-lite",
+    "gemini-1.5-flash",
+    "gemini-1.5-flash-8b",
+    "gemini-1.5-pro"
+]
+
+def _call_gemini_with_fallback(client, contents):
+    for m_name in GEMINI_MODELS:
+        for attempt in range(2):
+            try:
+                response = client.models.generate_content(model=m_name, contents=contents)
+                if response and response.text:
+                    return response.text.strip()
+            except Exception as e:
+                err_str = str(e).lower()
+                if "503" in err_str or "429" in err_str or "overloaded" in err_str or "quota" in err_str:
+                    time.sleep(1.0)
+                    continue
+                else:
+                    break
+    return None
+
 def analyze_hooks(transcript_segments: list, clip_length: str = "auto") -> list:
     """
     Sendet das Transkript an Gemini und erhält die besten Passagen basierend auf clip_length.
@@ -68,17 +96,8 @@ def analyze_hooks(transcript_segments: list, clip_length: str = "auto") -> list:
         {transcript_with_times}
         """
         
-        response = None
-        for m_name in ["gemini-2.5-flash", "gemini-flash-latest", "gemini-3.7-flash", "gemini-3.6-flash"]:
-            try:
-                response = client.models.generate_content(model=m_name, contents=prompt)
-                if response and response.text:
-                    break
-            except Exception:
-                continue
-                
-        if response and response.text:
-            text = response.text.strip()
+        text = _call_gemini_with_fallback(client, prompt)
+        if text:
             if text.startswith("```json"):
                 text = text.replace("```json", "", 1).rsplit("```", 1)[0].strip()
             elif text.startswith("```"):
@@ -145,18 +164,9 @@ def generate_context_aware_title(transcript_text: str) -> str:
         Antworte AUSSCHLIESSLICH mit dem reinen Titel in GROSSBUCHSTABEN (keine Anführungszeichen, kein Markdown, keine Erklärung).
         """
         
-        response = None
-        for m_name in ["gemini-2.5-flash", "gemini-flash-latest", "gemini-3.7-flash", "gemini-3.6-flash"]:
-            try:
-                response = client.models.generate_content(model=m_name, contents=prompt)
-                if response and response.text:
-                    break
-            except Exception:
-                continue
-                
-        if response and response.text:
-            title = response.text.strip().replace('"', '').replace("'", "").replace("*", "").strip()
-            # Falls mehrzeilig, nimm die erste nicht-leere Zeile
+        text = _call_gemini_with_fallback(client, prompt)
+        if text:
+            title = text.replace('"', '').replace("'", "").replace("*", "").strip()
             lines = [l.strip() for l in title.splitlines() if l.strip()]
             if lines:
                 title = lines[0]
@@ -197,17 +207,9 @@ def generate_social_caption(transcript_text: str) -> str:
         Antworte direkt mit dem fertigen Text.
         """
         
-        response = None
-        for m_name in ["gemini-2.5-flash", "gemini-flash-latest", "gemini-3.7-flash", "gemini-3.6-flash"]:
-            try:
-                response = client.models.generate_content(model=m_name, contents=prompt)
-                if response and response.text:
-                    break
-            except Exception:
-                continue
-                
-        if response and response.text:
-            return response.text.strip()
+        text = _call_gemini_with_fallback(client, prompt)
+        if text:
+            return text
     except Exception as e:
         print(f"Fehler bei Social Caption Generierung: {e}")
         
