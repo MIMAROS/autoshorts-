@@ -355,8 +355,6 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
             public_url = upload_file_to_supabase(output_clip, "autoshorts-storage", output_filename)
             if public_url:
                 clips.append(public_url)
-                try: os.remove(output_clip)
-                except: pass
             else:
                 clips.append(f"/videos/{output_filename}")
         

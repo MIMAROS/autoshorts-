@@ -371,7 +371,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
             inputs.append(watermark_img_path)
             wm_idx = len(inputs) - 1
             wm_y = 24 if is_1080 else 16
-            filter_complex += f";[{wm_idx}:v]scale=-1:-1[wm_img];{current_v}[wm_img]overlay=x=(W-w)/2:y={wm_y}[v_wm]"
+            filter_complex += f";[{wm_idx}:v]scale=-1:-1[wm_img];{current_v}[wm_img]overlay=x=(W-w)/2:y={wm_y}:eof_action=repeat[v_wm]"
             current_v = "[v_wm]"
         except Exception as e:
             print(f"Error generating watermark badge: {e}")
@@ -393,7 +393,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         else:
             x_pos = f"{margin_x}"
             
-        filter_complex += f";[{logo_input_index}:v]scale={logo_width}:-2[logo];{current_v}[logo]overlay=x={x_pos}:y={y_pos}[v_logo]"
+        filter_complex += f";[{logo_input_index}:v]scale={logo_width}:-2[logo];{current_v}[logo]overlay=x={x_pos}:y={y_pos}:eof_action=repeat[v_logo]"
         current_v = "[v_logo]"
         
     # 3. Overlay Title Banner (Rounded Box / Outline / Clean)
@@ -415,7 +415,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
             else: # top (positioned cleanly below the watermark badge)
                 t_y_pos = "88" if is_1080 else "58"
                 
-            filter_complex += f";[{title_idx}:v]scale=-1:-1[title_img];{current_v}[title_img]overlay=x=(W-w)/2:y={t_y_pos}[v_title]"
+            filter_complex += f";[{title_idx}:v]scale=-1:-1[title_img];{current_v}[title_img]overlay=x=(W-w)/2:y={t_y_pos}:eof_action=repeat[v_title]"
             current_v = "[v_title]"
         except Exception as e:
             print(f"Error generating title banner: {e}")
@@ -438,7 +438,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
             cta_input_index = len(inputs) - 1
             
             cta_y = "H-h-24" if not is_1080 else "H-h-36"
-            filter_complex += f";[{cta_input_index}:v]scale=-1:-1[cta_img];{current_v}[cta_img]overlay=x=(W-w)/2:y={cta_y}[v_cta]"
+            filter_complex += f";[{cta_input_index}:v]scale=-1:-1[cta_img];{current_v}[cta_img]overlay=x=(W-w)/2:y={cta_y}:eof_action=repeat[v_cta]"
             current_v = "[v_cta]"
         except Exception as e:
             print(f"Error generating CTA image button: {e}")
@@ -473,7 +473,10 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
             else:
                 cmd.extend(["-i", path])
         else:
-            cmd.extend(["-i", path])
+            if path.lower().endswith(('.png', '.jpg', '.jpeg')):
+                cmd.extend(["-loop", "1", "-i", path])
+            else:
+                cmd.extend(["-i", path])
             
     if duration:
         cmd.extend(["-t", str(duration)])
