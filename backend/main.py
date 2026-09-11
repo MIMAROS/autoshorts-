@@ -254,23 +254,23 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         
         has_custom_trim = (trim_start is not None and trim_end is not None and float(trim_end) > float(trim_start))
         
-        # Check if custom trim is just the default full-video range
-        is_default_full_range = False
+        # Enforce maximum 10-minute (600s) processing window across all modes, supporting videos up to 3h (10,800s)
         if has_custom_trim:
             t_start = max(0.0, float(trim_start))
             t_end = min(total_video_dur, float(trim_end))
-            if t_start == 0.0 and t_end >= min(total_video_dur - 1.0, 599.0):
-                is_default_full_range = True
+            if t_end <= t_start:
+                t_end = min(total_video_dur, t_start + 600.0)
+            if (t_end - t_start) > 600.0:
+                t_end = t_start + 600.0
         else:
             t_start = 0.0
-            t_end = total_video_dur
-            is_default_full_range = True
+            t_end = min(total_video_dur, 600.0)
 
         hooks = []
         if selected_mode == "youtube" or modus1_opt == "auto_highlights":
             # In YouTube AutoShorts or Highlight mode:
             # If user explicitly trimmed a short snippet (<= 90s)
-            if has_custom_trim and not is_default_full_range and (t_end - t_start) <= 90.0:
+            if (t_end - t_start) <= 90.0:
                 hooks = [{
                     "id": 1,
                     "title": hook_title,
@@ -281,67 +281,54 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
                     "viral_score": 98
                 }]
             else:
-                # Analyze segments with Gemini for viral 30-60s Shorts
-                all_segs = transcript_data.get("segments", [])
-                if has_custom_trim and not is_default_full_range:
-                    all_segs = [s for s in all_segs if float(s.get("end", 0)) > t_start and float(s.get("start", 0)) < t_end]
+                # Analyze segments with Gemini for viral 30-60s Shorts within the selected <= 10 min window
+                all_segs = [s for s in transcript_data.get("segments", []) if float(s.get("end", 0)) > t_start and float(s.get("start", 0)) < t_end]
                 
                 hooks = analyze_hooks(all_segs, clip_length)
                 if not hooks:
-                    # Multi-hook fallback: generate 1-3 highlight slices of max 45s
-                    h_dur = min(total_video_dur, 45.0)
+                    # Multi-hook fallback: generate 1-3 highlight slices of max 45s within the selected window
+                    window_len = t_end - t_start
+                    h_dur = min(window_len, 45.0)
                     hooks = [{
                         "id": 1,
                         "title": hook_title,
                         "start_time_approx": t_start,
-                        "end_time_approx": min(t_start + h_dur, total_video_dur),
+                        "end_time_approx": min(t_start + h_dur, t_end),
                         "rationale": "Viral AutoShort Highlight",
                         "social_media_caption": social_caption,
                         "viral_score": 95
                     }]
-                    if total_video_dur > 90.0:
+                    if window_len > 90.0:
                         hooks.append({
                             "id": 2,
                             "title": f"{hook_title} - TEIL 2",
-                            "start_time_approx": min(45.0, total_video_dur - 30.0),
-                            "end_time_approx": min(90.0, total_video_dur),
+                            "start_time_approx": min(t_start + 45.0, t_end - 30.0),
+                            "end_time_approx": min(t_start + 90.0, t_end),
                             "rationale": "Viral AutoShort Highlight 2",
                             "social_media_caption": social_caption,
                             "viral_score": 92
                         })
-        elif has_custom_trim and not is_default_full_range:
+        elif modus1_opt in ["one_to_one", "1:1", "single"] or req_clip_len in ["1:1", "single", "full"] or (selected_mode == "standard" and modus1_opt != "auto_highlights"):
             hooks = [{
                 "id": 1,
                 "title": hook_title,
                 "start_time_approx": t_start,
                 "end_time_approx": t_end,
-                "rationale": "Vom Nutzer ausgewählter Bereich",
-                "social_media_caption": social_caption,
-                "viral_score": 98
-            }]
-        elif modus1_opt in ["one_to_one", "1:1", "single"] or req_clip_len in ["1:1", "single", "full"] or (selected_mode == "standard" and modus1_opt != "auto_highlights"):
-            hooks = [{
-                "id": 1,
-                "title": hook_title,
-                "start_time_approx": 0.0,
-                "end_time_approx": total_video_dur,
-                "rationale": "Option A - 1:1 Video",
+                "rationale": "Option A - 1:1 Video (max. 10 Min)",
                 "social_media_caption": social_caption,
                 "viral_score": 100
             }]
         else:
-            # Standard auto-highlights fallback
-            hooks = analyze_hooks(transcript_data.get("segments", []), clip_length)
-            if not hooks:
-                hooks = [{
-                    "id": 1,
-                    "title": hook_title,
-                    "start_time_approx": 0.0,
-                    "end_time_approx": min(total_video_dur, 60.0),
-                    "rationale": "Viral Highlight Clip",
-                    "social_media_caption": social_caption,
-                    "viral_score": 95
-                }]
+            # Standard custom trim fallback
+            hooks = [{
+                "id": 1,
+                "title": hook_title,
+                "start_time_approx": t_start,
+                "end_time_approx": t_end,
+                "rationale": "Vom Nutzer ausgewählter Bereich (max. 10 Min)",
+                "social_media_caption": social_caption,
+                "viral_score": 98
+            }]
         
         # 4. Videoschnitt & Rendering mit CI-Branding und Untertiteln
         jobs[job_id] = {"status": "editing", "progress": 85, "hooks": hooks, "clips": []}

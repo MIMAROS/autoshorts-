@@ -14,6 +14,33 @@ const API_BASE = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_
   ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')
   : '';
 
+const formatSecondsToTime = (seconds: number): string => {
+  const s = Math.max(0, Math.floor(seconds || 0));
+  const h = Math.floor(s / 3600);
+  const m = Math.floor((s % 3600) / 60);
+  const sec = s % 60;
+  if (h > 0) {
+    return `${h}:${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+  }
+  return `${String(m).padStart(2, '0')}:${String(sec).padStart(2, '0')}`;
+};
+
+const parseTimeToSeconds = (timeStr: string): number => {
+  if (!timeStr) return 0;
+  const parts = timeStr.trim().split(':').map(p => Number(p.trim()));
+  if (parts.some(isNaN)) return 0;
+  if (parts.length === 3) {
+    return parts[0] * 3600 + parts[1] * 60 + parts[2];
+  }
+  if (parts.length === 2) {
+    return parts[0] * 60 + parts[1];
+  }
+  if (parts.length === 1) {
+    return parts[0];
+  }
+  return 0;
+};
+
 export default function Page() {
   // Navigation & Layout
   const [currentView, setCurrentView] = useState('new'); // 'new', 'history', 'calendar'
@@ -136,6 +163,75 @@ export default function Page() {
     if (previewObjectUrl) {
       URL.revokeObjectURL(previewObjectUrl);
       setPreviewObjectUrl('');
+    }
+  };
+
+  // Timeline Trimming & Max 10-Minute Range Control (Supporting videos up to 3h / 10,800s)
+  const totalVideoDuration = Math.min(10800, Math.max(1, Math.round(videoMetadata?.duration || (localFile ? 600 : 600))));
+  const currentTrimStart = trimStart === '' ? 0 : Number(trimStart);
+  const currentTrimEnd = trimEnd === '' ? Math.min(600, totalVideoDuration) : Number(trimEnd);
+  const selectedDuration = Math.max(0, currentTrimEnd - currentTrimStart);
+
+  const handleStartChange = (val: number) => {
+    const s = Math.max(0, Math.min(val, totalVideoDuration - 1));
+    setTrimStart(s);
+    if (currentTrimEnd <= s) {
+      setTrimEnd(Math.min(totalVideoDuration, s + Math.min(600, Math.max(5, totalVideoDuration - s))));
+    } else if (currentTrimEnd - s > 600) {
+      setTrimEnd(Math.min(totalVideoDuration, s + 600));
+    }
+  };
+
+  const handleEndChange = (val: number) => {
+    const e = Math.min(totalVideoDuration, Math.max(1, val));
+    if (e <= currentTrimStart) {
+      setTrimStart(Math.max(0, e - Math.min(600, e)));
+      setTrimEnd(e);
+    } else if (e - currentTrimStart > 600) {
+      setTrimStart(Math.max(0, e - 600));
+      setTrimEnd(e);
+    } else {
+      setTrimEnd(e);
+    }
+  };
+
+  const handleShiftWindow = (deltaSeconds: number) => {
+    const dur = Math.min(600, Math.max(5, selectedDuration || Math.min(600, totalVideoDuration)));
+    let newStart = currentTrimStart + deltaSeconds;
+    let newEnd = newStart + dur;
+    if (newStart < 0) {
+      newStart = 0;
+      newEnd = Math.min(totalVideoDuration, dur);
+    }
+    if (newEnd > totalVideoDuration) {
+      newEnd = totalVideoDuration;
+      newStart = Math.max(0, newEnd - dur);
+    }
+    setTrimStart(newStart);
+    setTrimEnd(newEnd);
+  };
+
+  const handleSetPreset = (type: 'first' | 'middle' | 'last') => {
+    const windowDur = Math.min(600, totalVideoDuration);
+    if (type === 'first') {
+      setTrimStart(0);
+      setTrimEnd(windowDur);
+    } else if (type === 'middle') {
+      const midStart = Math.max(0, Math.floor((totalVideoDuration - windowDur) / 2));
+      setTrimStart(midStart);
+      setTrimEnd(midStart + windowDur);
+    } else if (type === 'last') {
+      const lastStart = Math.max(0, totalVideoDuration - windowDur);
+      setTrimStart(lastStart);
+      setTrimEnd(totalVideoDuration);
+    }
+  };
+
+  const handleTimeStringInput = (type: 'start' | 'end', val: string) => {
+    const sec = parseTimeToSeconds(val);
+    if (!isNaN(sec)) {
+      if (type === 'start') handleStartChange(sec);
+      else handleEndChange(sec);
     }
   };
 
@@ -420,20 +516,16 @@ export default function Page() {
           URL.revokeObjectURL(previewObjectUrl);
           setPreviewObjectUrl('');
       }
+      const dur = Math.min(10800, Math.max(1, Math.round(item.duration || 60)));
       setVideoMetadata({
           title: item.title,
-          duration: item.duration,
+          duration: dur,
           thumbnail: item.thumbnail
       });
       generateAutoTitle(item.title);
-      if (item.duration > 600) {
-          setTrimStart(0);
-          setTrimEnd(600);
-      } else {
-          setTrimStart(0);
-          setTrimEnd(Math.max(1, Math.round(item.duration)));
-      }
-      setWizardStep(3);
+      setTrimStart(0);
+      setTrimEnd(Math.min(600, dur));
+      setWizardStep(2);
   };
 
   const fetchVideoInfo = async (url: string) => {
@@ -464,18 +556,18 @@ export default function Page() {
           
           const data = await res.json();
           if (data.status === 'success' && data.info) {
-              setVideoMetadata(data.info);
+              const dur = Math.min(10800, Math.max(1, Math.round(data.info.duration || 60)));
+              setVideoMetadata({
+                  ...data.info,
+                  duration: dur
+              });
               if (data.info.url && data.info.url !== cleanUrl) {
                   setYoutubeUrl(data.info.url);
               }
               generateAutoTitle(data.info.title);
-              if (data.info.duration > 600) {
-                  setTrimStart(0);
-                  setTrimEnd(600);
-              } else {
-                  setTrimStart(0);
-                  setTrimEnd(Math.max(1, Math.round(data.info.duration)));
-              }
+              setTrimStart(0);
+              setTrimEnd(Math.min(600, dur));
+              setWizardStep(2);
           }
       } catch (e) {
           console.error(e);
@@ -1243,48 +1335,218 @@ export default function Page() {
                                   <Video className="w-4 h-4 text-mimaros-blue" /> Echter Video-Player (Vorschau)
                               </h4>
                               {previewObjectUrl ? (
-                                  <video src={previewObjectUrl} controls className="w-full aspect-[9/16] bg-black rounded-xl max-h-[380px] object-contain shadow-2xl mx-auto" />
+                                  <video 
+                                      src={previewObjectUrl} 
+                                      controls 
+                                      onLoadedMetadata={(e) => {
+                                          const dur = Math.min(10800, Math.max(1, Math.round(e.currentTarget.duration || 60)));
+                                          if (!videoMetadata) {
+                                              setVideoMetadata({
+                                                  title: localFile ? localFile.name : 'Lokales Video',
+                                                  duration: dur,
+                                                  thumbnail: ''
+                                              });
+                                          }
+                                          if (trimEnd === '' || Number(trimEnd) === 0 || Number(trimEnd) > dur) {
+                                              setTrimEnd(Math.min(600, dur));
+                                          }
+                                      }}
+                                      className="w-full aspect-[9/16] bg-black rounded-xl max-h-[380px] object-contain shadow-2xl mx-auto" 
+                                  />
                               ) : videoMetadata && (
                                   <div className="flex items-center gap-4 bg-panel/50 p-4 rounded-xl">
                                       {videoMetadata.thumbnail && <img src={videoMetadata.thumbnail} alt="Thumbnail" className="w-24 h-auto rounded-lg" />}
                                       <div>
                                           <p className="text-white font-bold text-sm">{videoMetadata.title}</p>
-                                          <p className="text-textDim text-xs mt-1">Dauer: {Math.floor(videoMetadata.duration / 60)}:{String(Math.floor(videoMetadata.duration % 60)).padStart(2, '0')} min</p>
+                                          <p className="text-textDim text-xs mt-1">Gesamtdauer: {formatSecondsToTime(videoMetadata.duration)} (bis zu 3h unterstützt)</p>
                                       </div>
                                   </div>
                               )}
                           </div>
 
-                          {/* Trimmer & Range Selector */}
-                          <div className="bg-background/50 p-5 rounded-2xl border border-borderGlass space-y-4">
-                              <div className="flex justify-between items-center border-b border-borderGlass/40 pb-3">
-                                  <span className="text-xs font-bold text-white flex items-center gap-2">
-                                      <Scissors className="w-4 h-4 text-mimaros-blue" /> Bereich festlegen (Start & Ende)
-                                  </span>
-                                  <span className="text-xs font-mono font-bold text-mimaros-blue bg-mimaros-blue/10 px-3 py-1 rounded-full border border-mimaros-blue/20">
-                                      {trimStart !== '' && trimEnd !== '' ? `${Math.max(0, Number(trimEnd) - Number(trimStart))}s ausgewählt` : 'Ganzes Video'}
-                                  </span>
+                          {/* Interaktive Timeline-Leiste (Maximal 10 Minuten Verarbeitungsbereich) */}
+                          <div className="bg-background/50 p-6 rounded-2xl border border-borderGlass space-y-6 shadow-glass">
+                              {/* Header & Badges */}
+                              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-borderGlass/40 pb-4">
+                                  <div>
+                                      <div className="flex items-center gap-2">
+                                          <Scissors className="w-5 h-5 text-mimaros-blue" />
+                                          <h3 className="text-sm font-bold text-white uppercase tracking-wider">
+                                              Verarbeitungsbereich festlegen (Max. 10 Min.)
+                                          </h3>
+                                      </div>
+                                      <p className="text-xs text-textDim mt-1">
+                                          Unterstützt Videos bis zu 3 Stunden Gesamtlänge. An der Leiste kannst du den maximal 10-minütigen Bereich verschieben.
+                                      </p>
+                                  </div>
+                                  <div className="flex items-center gap-2 flex-wrap">
+                                      <span className={`text-xs font-mono font-bold px-3 py-1.5 rounded-full border ${selectedDuration >= 599 ? 'bg-amber-400/10 text-amber-300 border-amber-400/30' : 'bg-mimaros-blue/10 text-mimaros-blue border-mimaros-blue/30'}`}>
+                                          ⏱️ {formatSecondsToTime(selectedDuration)} / 10:00 Min.
+                                      </span>
+                                      <span className="text-[11px] font-mono font-medium text-textDim bg-background/80 px-2.5 py-1 rounded-lg border border-borderGlass">
+                                          Gesamt: {formatSecondsToTime(totalVideoDuration)}
+                                      </span>
+                                  </div>
                               </div>
 
-                              <div className="grid grid-cols-2 gap-4">
+                              {/* Interaktive Leiste (Timeline Bar) */}
+                              <div className="space-y-3">
+                                  <div className="flex justify-between text-[11px] font-mono text-textDim">
+                                      <span>00:00 (Start)</span>
+                                      <span className="text-white font-bold bg-panel px-3 py-0.5 rounded-md border border-borderGlass">
+                                          Bereich: {formatSecondsToTime(currentTrimStart)} – {formatSecondsToTime(currentTrimEnd)}
+                                      </span>
+                                      <span>{formatSecondsToTime(totalVideoDuration)} (Ende)</span>
+                                  </div>
+
+                                  {/* Track Container */}
+                                  <div className="relative h-12 bg-background/90 rounded-xl border border-borderGlass/80 overflow-hidden flex items-center px-1">
+                                      {/* Background Grid Ticks */}
+                                      <div className="absolute inset-0 flex justify-between pointer-events-none opacity-20 px-3 items-center">
+                                          {Array.from({ length: 11 }).map((_, i) => (
+                                              <div key={i} className="w-0.5 h-4 bg-white/40 rounded-full" />
+                                          ))}
+                                      </div>
+
+                                      {/* Highlighted Window / Glow Bar */}
+                                      <div 
+                                          className="absolute top-1 bottom-1 rounded-lg bg-gradient-to-r from-mimaros-blue/40 via-mimaros-blue/70 to-mimaros-gold/40 border-2 border-mimaros-blue shadow-blue-glow transition-all duration-75 flex items-center justify-between px-2 cursor-grab"
+                                          style={{
+                                              left: `${(currentTrimStart / totalVideoDuration) * 100}%`,
+                                              width: `${Math.max(2, ((currentTrimEnd - currentTrimStart) / totalVideoDuration) * 100)}%`
+                                          }}
+                                      >
+                                          <div className="w-1.5 h-6 bg-white rounded-full shadow-md shrink-0" />
+                                          <span className="text-[10px] font-mono font-bold text-white drop-shadow px-1 truncate select-none">
+                                              {formatSecondsToTime(selectedDuration)}
+                                          </span>
+                                          <div className="w-1.5 h-6 bg-white rounded-full shadow-md shrink-0" />
+                                      </div>
+                                  </div>
+
+                                  {/* Dual Range Sliders for Start & End */}
+                                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                                      <div className="space-y-1.5 bg-panel/30 p-3 rounded-xl border border-borderGlass/40">
+                                          <div className="flex justify-between text-xs">
+                                              <label className="text-textDim font-bold uppercase text-[10px]">Startpunkt (Leiste):</label>
+                                              <span className="font-mono font-bold text-white">{formatSecondsToTime(currentTrimStart)}</span>
+                                          </div>
+                                          <input 
+                                              type="range"
+                                              min="0"
+                                              max={Math.max(0, totalVideoDuration - 5)}
+                                              step="1"
+                                              value={currentTrimStart}
+                                              onChange={(e) => handleStartChange(Number(e.target.value))}
+                                              className="w-full accent-mimaros-blue cursor-pointer h-2 bg-background rounded-lg"
+                                          />
+                                      </div>
+                                      <div className="space-y-1.5 bg-panel/30 p-3 rounded-xl border border-borderGlass/40">
+                                          <div className="flex justify-between text-xs">
+                                              <label className="text-textDim font-bold uppercase text-[10px]">Endpunkt (max. +10 Min):</label>
+                                              <span className="font-mono font-bold text-white">{formatSecondsToTime(currentTrimEnd)}</span>
+                                          </div>
+                                          <input 
+                                              type="range"
+                                              min={Math.min(currentTrimStart + 1, totalVideoDuration)}
+                                              max={Math.min(totalVideoDuration, currentTrimStart + 600)}
+                                              step="1"
+                                              value={currentTrimEnd}
+                                              onChange={(e) => handleEndChange(Number(e.target.value))}
+                                              className="w-full accent-mimaros-gold cursor-pointer h-2 bg-background rounded-lg"
+                                          />
+                                      </div>
+                                  </div>
+                              </div>
+
+                              {/* Schnell-Auswahl & Fenster verschieben */}
+                              <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-borderGlass/30">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="text-[10px] text-textDim uppercase font-bold mr-1">Presets:</span>
+                                      <button
+                                          type="button"
+                                          onClick={() => handleSetPreset('first')}
+                                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-background/80 hover:bg-mimaros-blue/20 hover:text-white text-textDim border border-borderGlass transition-all"
+                                      >
+                                          ⏮️ Erste 10 Min
+                                      </button>
+                                      <button
+                                          type="button"
+                                          onClick={() => handleSetPreset('middle')}
+                                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-background/80 hover:bg-mimaros-blue/20 hover:text-white text-textDim border border-borderGlass transition-all"
+                                      >
+                                          🎯 Mitte (10 Min)
+                                      </button>
+                                      <button
+                                          type="button"
+                                          onClick={() => handleSetPreset('last')}
+                                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-background/80 hover:bg-mimaros-blue/20 hover:text-white text-textDim border border-borderGlass transition-all"
+                                      >
+                                          ⏭️ Letzte 10 Min
+                                      </button>
+                                  </div>
+
+                                  <div className="flex items-center gap-1.5">
+                                      <span className="text-[10px] text-textDim uppercase font-bold mr-1">Verschieben:</span>
+                                      <button
+                                          type="button"
+                                          onClick={() => handleShiftWindow(-60)}
+                                          disabled={currentTrimStart <= 0}
+                                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-background/80 hover:bg-panel text-white border border-borderGlass disabled:opacity-30 transition-all"
+                                      >
+                                          ⏪ -1 Min.
+                                      </button>
+                                      <button
+                                          type="button"
+                                          onClick={() => handleShiftWindow(60)}
+                                          disabled={currentTrimEnd >= totalVideoDuration}
+                                          className="px-3 py-1.5 text-xs font-bold rounded-lg bg-background/80 hover:bg-panel text-white border border-borderGlass disabled:opacity-30 transition-all"
+                                      >
+                                          ⏩ +1 Min.
+                                      </button>
+                                  </div>
+                              </div>
+
+                              {/* Exakte Eingabefelder (Sekunden & Zeitformat) */}
+                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 bg-panel/40 p-4 rounded-xl border border-borderGlass/50 items-center">
                                   <div>
                                       <label className="block text-[10px] text-textDim uppercase font-bold mb-1">Start (Sekunden)</label>
                                       <input 
                                           type="number" 
-                                          value={trimStart} 
-                                          placeholder="z.B. 0"
-                                          onChange={(e) => setTrimStart(e.target.value ? parseInt(e.target.value) : '')}
-                                          className="w-full bg-panel border border-borderGlass rounded-lg p-2.5 text-white text-xs font-mono"
+                                          min="0"
+                                          max={totalVideoDuration}
+                                          value={currentTrimStart} 
+                                          onChange={(e) => handleStartChange(Number(e.target.value))}
+                                          className="w-full bg-background border border-borderGlass rounded-lg p-2 text-white text-xs font-mono outline-none focus:border-mimaros-blue"
+                                      />
+                                  </div>
+                                  <div>
+                                      <label className="block text-[10px] text-textDim uppercase font-bold mb-1">Start (MM:SS / HH:MM)</label>
+                                      <input 
+                                          type="text" 
+                                          value={formatSecondsToTime(currentTrimStart)} 
+                                          onChange={(e) => handleTimeStringInput('start', e.target.value)}
+                                          className="w-full bg-background border border-borderGlass rounded-lg p-2 text-white text-xs font-mono outline-none focus:border-mimaros-blue"
                                       />
                                   </div>
                                   <div>
                                       <label className="block text-[10px] text-textDim uppercase font-bold mb-1">Ende (Sekunden)</label>
                                       <input 
                                           type="number" 
-                                          value={trimEnd} 
-                                          placeholder="z.B. 60"
-                                          onChange={(e) => setTrimEnd(e.target.value ? parseInt(e.target.value) : '')}
-                                          className="w-full bg-panel border border-borderGlass rounded-lg p-2.5 text-white text-xs font-mono"
+                                          min="0"
+                                          max={totalVideoDuration}
+                                          value={currentTrimEnd} 
+                                          onChange={(e) => handleEndChange(Number(e.target.value))}
+                                          className="w-full bg-background border border-borderGlass rounded-lg p-2 text-white text-xs font-mono outline-none focus:border-mimaros-blue"
+                                      />
+                                  </div>
+                                  <div>
+                                      <label className="block text-[10px] text-textDim uppercase font-bold mb-1">Ende (MM:SS / HH:MM)</label>
+                                      <input 
+                                          type="text" 
+                                          value={formatSecondsToTime(currentTrimEnd)} 
+                                          onChange={(e) => handleTimeStringInput('end', e.target.value)}
+                                          className="w-full bg-background border border-borderGlass rounded-lg p-2 text-white text-xs font-mono outline-none focus:border-mimaros-blue"
                                       />
                                   </div>
                               </div>
