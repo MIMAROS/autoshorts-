@@ -1,3 +1,16 @@
+import sys
+import os
+import tempfile
+import subprocess
+
+# Ensure UTF-8 stdout/stderr on Windows to prevent UnicodeEncodeError with emojis
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
 from typing import Optional, List, Dict, Any, Union
 from fastapi import FastAPI, BackgroundTasks, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
@@ -5,7 +18,6 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 import uvicorn
 import uuid
-import os
 import json
 
 # FFmpeg liegt als ffmpeg.exe im backend ordner
@@ -545,10 +557,24 @@ async def analyze_trimmed_section(
             
         loop = asyncio.get_event_loop()
         
+        # Prüfe, ob target_video bereits auf den Ausschnitt zugeschnitten ist
+        total_vid_dur = 60.0
+        try:
+            probe = subprocess.run(
+                ["ffprobe", "-v", "error", "-show_entries", "format=duration", "-of", "default=noprint_wrappers=1:nokey=1", target_video],
+                capture_output=True, text=True
+            )
+            total_vid_dur = float(probe.stdout.strip())
+        except Exception:
+            pass
+            
+        is_already_trimmed = (abs(total_vid_dur - (t_end - t_start)) < 5.0) or (total_vid_dur <= (t_end - t_start) + 2.0) if (t_end and t_end > t_start) else False
+        audio_start = 0.0 if is_already_trimmed else t_start
+        audio_dur = (t_end - t_start) if (t_end and t_end > t_start) else None
+        
         # Audio für den Zeitbereich transkribieren
-        audio_dur = (t_end - t_start) if t_end and t_end > t_start else None
         transcript_data = await loop.run_in_executor(
-            None, transcribe_audio, target_video, video_lang or "auto", "auto", 0.0, audio_dur
+            None, transcribe_audio, target_video, video_lang or "auto", "auto", audio_start, audio_dur
         )
         
         full_text = ""
@@ -565,8 +591,8 @@ async def analyze_trimmed_section(
         return {
             "status": "success",
             "transcript": full_text,
-            "title": title.upper(),
-            "caption": caption,
+            "title": (title or "VIRAL SHORT").upper(),
+            "caption": caption or "",
             "segments": segments
         }
     except Exception as e:

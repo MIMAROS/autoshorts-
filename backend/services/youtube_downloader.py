@@ -1,14 +1,37 @@
 import yt_dlp
 import os
+import sys
 import re
 import json
 import urllib.request
+import subprocess
+
+# Ensure UTF-8 stdout on Windows
+if sys.platform == "win32":
+    try:
+        sys.stdout.reconfigure(encoding='utf-8', errors='replace')
+        sys.stderr.reconfigure(encoding='utf-8', errors='replace')
+    except Exception:
+        pass
+
+FFMPEG_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+FFMPEG_EXE = os.path.join(FFMPEG_DIR, "ffmpeg.exe")
+
+def get_ffmpeg_location():
+    if os.path.exists(FFMPEG_EXE):
+        return FFMPEG_DIR
+    return None
 
 def extract_video_id(url: str) -> str:
     if not url:
         return ""
-    m = re.search(r'(?:v=|\/|youtu\.be\/|shorts\/|embed\/)([0-9A-Za-z_-]{11})', url.strip())
-    return m.group(1) if m else ""
+    clean = url.strip()
+    m = re.search(r'(?:v=|\/|youtu\.be\/|shorts\/|embed\/|live\/)([0-9A-Za-z_-]{11})', clean)
+    if m:
+        return m.group(1)
+    if len(clean) == 11 and re.match(r'^[0-9A-Za-z_-]{11}$', clean):
+        return clean
+    return ""
 
 def get_video_info(url: str) -> dict:
     """
@@ -22,7 +45,7 @@ def get_video_info(url: str) -> dict:
 
     vid = extract_video_id(clean_url)
     
-    # 1. Schnelleyt-dlp Extraktion mit Android Client
+    # 1. Schnelle yt-dlp Extraktion mit Android Client
     ydl_opts_list = [
         {
             'quiet': True,
@@ -42,6 +65,11 @@ def get_video_info(url: str) -> dict:
             'socket_timeout': 10,
         }
     ]
+    
+    ffmpeg_loc = get_ffmpeg_location()
+    if ffmpeg_loc:
+        for o in ydl_opts_list:
+            o['ffmpeg_location'] = ffmpeg_loc
     
     for opts in ydl_opts_list:
         try:
@@ -144,6 +172,10 @@ def search_youtube_videos(query: str, max_results: int = 8) -> list:
         }
     }
     
+    ffmpeg_loc = get_ffmpeg_location()
+    if ffmpeg_loc:
+        ydl_opts['ffmpeg_location'] = ffmpeg_loc
+    
     results = []
     try:
         with yt_dlp.YoutubeDL(ydl_opts) as ydl:
@@ -194,7 +226,7 @@ def download_video(url: str, output_path: str = "temp", trim_start: float = None
     """
     Lädt ein YouTube Video herunter und speichert es in optimierter Qualität.
     Unterstützt segmentweises Herunterladen (download_ranges) für blitzschnellen
-    Download von bis zu 3h Videos innerhalb von Sekunden.
+    Download sowie lokalen FFmpeg-Trimm-Fallback.
     """
     if not os.path.exists(output_path):
         os.makedirs(output_path, exist_ok=True)
@@ -204,41 +236,90 @@ def download_video(url: str, output_path: str = "temp", trim_start: float = None
     if vid and not clean_url.startswith("http"):
         clean_url = f"https://www.youtube.com/watch?v={vid}"
         
-    fmt_spec = 'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/bestvideo[height<=720]+bestaudio/best[height<=720]/bestvideo+bestaudio/best'
+    fmt_specs = [
+        'bestvideo[height<=720][ext=mp4]+bestaudio[ext=m4a]/best[height<=720][ext=mp4]/bestvideo[height<=720]+bestaudio/best[height<=720]',
+        'bestvideo+bestaudio/best',
+        'best'
+    ]
+    
+    ffmpeg_loc = get_ffmpeg_location()
     
     # Try range download if trim specified
     has_range = (trim_start is not None and trim_end is not None and float(trim_end) > float(trim_start))
+    s_val = max(0.0, float(trim_start)) if has_range else 0.0
+    e_val = float(trim_end) if has_range else 0.0
     
     base_headers = {
         'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
         'Accept-Language': 'en-US,en;q=0.9,de;q=0.8',
     }
     
-    clients = ['android', 'ios', 'mweb', 'tv_embedded', 'android_creator', 'web']
+    clients = ['android', 'ios', 'web', 'mweb']
     
     downloaded_file = None
     last_err = None
     
-    # Pass 1: Try with download_ranges if range specified
+    # Pass 1: Try fast segment download if range specified
     if has_range:
-        s_val = max(0.0, float(trim_start))
-        e_val = float(trim_end)
         for client_name in clients:
+            for fmt_spec in fmt_specs[:2]:
+                try:
+                    opts = {
+                        'format': fmt_spec,
+                        'merge_output_format': 'mp4',
+                        'outtmpl': f'{output_path}/%(id)s_trimmed.%(ext)s',
+                        'quiet': True,
+                        'no_warnings': True,
+                        'nocheckcertificate': True,
+                        'geo_bypass': True,
+                        'noplaylist': True,
+                        'socket_timeout': 15,
+                        'http_headers': base_headers,
+                        'download_ranges': yt_dlp.utils.download_range_func(None, [(s_val, e_val)]),
+                        'force_keyframes_at_cuts': False
+                    }
+                    if ffmpeg_loc:
+                        opts['ffmpeg_location'] = ffmpeg_loc
+                    if client_name != 'web':
+                        opts['extractor_args'] = {'youtube': {'player_client': [client_name]}}
+                        
+                    with yt_dlp.YoutubeDL(opts) as ydl:
+                        info = ydl.extract_info(clean_url, download=True)
+                        fn = ydl.prepare_filename(info)
+                        if not os.path.exists(fn):
+                            base, _ = os.path.splitext(fn)
+                            for ext in ['.mp4', '.mkv', '.webm', '.ts']:
+                                if os.path.exists(base + ext):
+                                    fn = base + ext
+                                    break
+                        if os.path.exists(fn) and os.path.getsize(fn) > 1000:
+                            downloaded_file = fn
+                            print(f"Segment-Download erfolgreich ({s_val}s - {e_val}s) mit Client {client_name}.")
+                            return downloaded_file
+                except Exception as re_err:
+                    last_err = re_err
+                    continue
+            if downloaded_file:
+                break
+                
+    # Pass 2: Direct stream download fallback
+    for client_name in clients:
+        for fmt_spec in fmt_specs:
             try:
                 opts = {
                     'format': fmt_spec,
                     'merge_output_format': 'mp4',
-                    'outtmpl': f'{output_path}/%(id)s_trimmed.%(ext)s',
+                    'outtmpl': f'{output_path}/%(id)s.%(ext)s',
                     'quiet': True,
                     'no_warnings': True,
                     'nocheckcertificate': True,
                     'geo_bypass': True,
                     'noplaylist': True,
-                    'socket_timeout': 25,
-                    'http_headers': base_headers,
-                    'download_ranges': yt_dlp.utils.download_range_func(None, [(s_val, e_val)]),
-                    'force_keyframes_at_cuts': True
+                    'socket_timeout': 20,
+                    'http_headers': base_headers
                 }
+                if ffmpeg_loc:
+                    opts['ffmpeg_location'] = ffmpeg_loc
                 if client_name != 'web':
                     opts['extractor_args'] = {'youtube': {'player_client': [client_name]}}
                     
@@ -253,48 +334,42 @@ def download_video(url: str, output_path: str = "temp", trim_start: float = None
                                 break
                     if os.path.exists(fn) and os.path.getsize(fn) > 1000:
                         downloaded_file = fn
-                        print(f"Segment-Download erfolgreich ({s_val}s - {e_val}s) mit Client {client_name}.")
-                        return downloaded_file
-            except Exception as re_err:
-                print(f"Segment-Download Versuch fehlgeschlagen ({client_name}): {re_err}")
-                last_err = re_err
-                
-    # Pass 2: Regular stream download fallback
-    for client_name in clients:
-        try:
-            opts = {
-                'format': fmt_spec,
-                'merge_output_format': 'mp4',
-                'outtmpl': f'{output_path}/%(id)s.%(ext)s',
-                'quiet': False,
-                'no_warnings': True,
-                'nocheckcertificate': True,
-                'geo_bypass': True,
-                'noplaylist': True,
-                'socket_timeout': 30,
-                'http_headers': base_headers
-            }
-            if client_name != 'web':
-                opts['extractor_args'] = {'youtube': {'player_client': [client_name]}}
-                
-            with yt_dlp.YoutubeDL(opts) as ydl:
-                info = ydl.extract_info(clean_url, download=True)
-                fn = ydl.prepare_filename(info)
-                if not os.path.exists(fn):
-                    base, _ = os.path.splitext(fn)
-                    for ext in ['.mp4', '.mkv', '.webm', '.ts']:
-                        if os.path.exists(base + ext):
-                            fn = base + ext
-                            break
-                if os.path.exists(fn) and os.path.getsize(fn) > 1000:
-                    downloaded_file = fn
-                    print(f"Download erfolgreich mit Client {client_name}.")
-                    break
-        except Exception as e:
-            print(f"Download-Versuch fehlgeschlagen ({client_name}): {e}. Probiere nächsten Client...")
-            last_err = e
+                        print(f"Download erfolgreich mit Client {client_name}.")
+                        break
+            except Exception as e:
+                last_err = e
+                continue
+        if downloaded_file:
+            break
 
     if not downloaded_file or not os.path.exists(downloaded_file):
         raise RuntimeError(f"Konnte YouTube-Video nicht herunterladen: {last_err}")
 
+    # Pass 3: If range was requested but regular download was used, trim locally with FFmpeg
+    if has_range and (e_val > s_val):
+        local_trimmed = os.path.join(output_path, f"{vid or 'video'}_local_trimmed.mp4")
+        dur_clip = e_val - s_val
+        ffmpeg_cmd = FFMPEG_EXE if os.path.exists(FFMPEG_EXE) else "ffmpeg"
+        try:
+            print(f"Schneide heruntergeladenes Video lokal mit FFmpeg von {s_val}s bis {e_val}s...")
+            cut_cmd = [
+                ffmpeg_cmd, "-y",
+                "-ss", str(s_val),
+                "-i", downloaded_file,
+                "-t", str(dur_clip),
+                "-c:v", "libx264", "-c:a", "aac",
+                "-preset", "ultrafast",
+                local_trimmed
+            ]
+            subprocess.run(cut_cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            if os.path.exists(local_trimmed) and os.path.getsize(local_trimmed) > 1000:
+                try:
+                    os.remove(downloaded_file)
+                except Exception:
+                    pass
+                return local_trimmed
+        except Exception as cut_err:
+            print(f"Lokaler FFmpeg Zuschnitt Hinweis: {cut_err}")
+
     return downloaded_file
+

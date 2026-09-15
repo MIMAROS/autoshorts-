@@ -3,17 +3,21 @@ import subprocess
 import tempfile
 import json
 import re
+import time
 from dotenv import load_dotenv
 
-load_dotenv()
-
-import time
+# Ensure .env from backend folder is loaded even if cwd is different
+_env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+if os.path.exists(_env_path):
+    load_dotenv(_env_path)
+else:
+    load_dotenv()
 
 def transcribe_with_gemini(audio_path: str, lang: str = "auto", time_offset: float = 0.0) -> dict:
     """
     Transkribiert Audio über die Google Gemini API mit google.genai Client.
     Verwendet Inline Audio Bytes und eine hochgradig robuste Multi-Model Kaskade
-    mit automatischem Retry bei 503/429/Overloaded.
+    mit schnellem, kompaktem JSON-Format und automatischem Retry.
     """
     try:
         from google import genai
@@ -40,32 +44,27 @@ def transcribe_with_gemini(audio_path: str, lang: str = "auto", time_offset: flo
         Transkribiere das gesprochene Audio Wort für Wort mit präzisen Zeitstempeln (in Sekunden als Float, relativ zum Audioanfang ab 0.0).
         Teile die gesprochenen Sätze in kurze, synchrone Segmente (2 bis 4 Sekunden) auf.
         
-        Antworte AUSSCHLIESSLICH als gültiges JSON-Objekt im folgenden Format (ohne Markdown, ohne ```json):
+        Antworte AUSSCHLIESSLICH als gültiges JSON-Objekt im folgenden kompakten Format (ohne Markdown, ohne ```json):
         {{
           "text": "Vollständiger zusammenhängender Text des Audios",
           "segments": [
             {{
               "start": 0.0,
               "end": 2.5,
-              "text": "Gesprochener Satz",
-              "words": [
-                {{"word": "Gesprochener", "start": 0.0, "end": 1.2}},
-                {{"word": "Satz", "start": 1.2, "end": 2.5}}
-              ]
+              "text": "Gesprochener Satz"
             }}
           ]
         }}
         """
         
-        # Robust multi-model cascade with retry
+        # Robust multi-model cascade with current Gemini models
         models_to_try = [
             "gemini-2.5-flash",
+            "gemini-flash-latest",
             "gemini-2.5-flash-lite",
-            "gemini-2.0-flash",
-            "gemini-2.0-flash-lite",
-            "gemini-1.5-flash",
-            "gemini-1.5-flash-8b",
-            "gemini-1.5-pro"
+            "gemini-flash-lite-latest",
+            "gemini-2.5-pro",
+            "gemini-pro-latest"
         ]
         
         response = None
@@ -99,31 +98,45 @@ def transcribe_with_gemini(audio_path: str, lang: str = "auto", time_offset: flo
         elif raw_text.startswith("```"):
             raw_text = raw_text.replace("```", "", 1).rsplit("```", 1)[0].strip()
             
-        data = json.loads(raw_text)
+        try:
+            data = json.loads(raw_text)
+        except Exception:
+            # Versuche unvollständiges JSON zu reparieren, falls es am Ende abgeschnitten wurde
+            try:
+                fixed_text = raw_text
+                if not fixed_text.endswith("}"):
+                    if not fixed_text.endswith("]"):
+                        fixed_text += "]}"
+                    else:
+                        fixed_text += "}"
+                data = json.loads(fixed_text)
+            except Exception as pe:
+                print(f"JSON Parse Fehler bei Gemini Transkription: {pe}")
+                return None
+                
         if isinstance(data, dict) and "segments" in data:
-            # Stelle sicher, dass jedes Segment auch 'words' mit Start/Endzeit hat und time_offset addiert wird
+            # Berechne präzise word-level Timestamps für Karaoke/Hormozi Untertitel
             for seg in data["segments"]:
                 s_start = round(float(seg.get("start", 0.0)) + time_offset, 2)
                 s_end = round(float(seg.get("end", s_start + 2.0)) + time_offset, 2)
+                if s_end <= s_start:
+                    s_end = round(s_start + 1.5, 2)
                 seg["start"] = s_start
                 seg["end"] = s_end
                 
-                if "words" not in seg or not seg["words"]:
-                    words_list = seg.get("text", "").strip().split()
-                    if words_list:
-                        dur_per_word = max(0.1, (s_end - s_start) / max(len(words_list), 1))
-                        seg["words"] = [
-                            {
-                                "word": w,
-                                "start": round(s_start + (i * dur_per_word), 2),
-                                "end": round(s_start + ((i + 1) * dur_per_word), 2)
-                            }
-                            for i, w in enumerate(words_list)
-                        ]
+                words_list = seg.get("text", "").strip().split()
+                if words_list:
+                    dur_per_word = max(0.1, (s_end - s_start) / max(len(words_list), 1))
+                    seg["words"] = [
+                        {
+                            "word": w,
+                            "start": round(s_start + (i * dur_per_word), 2),
+                            "end": round(s_start + ((i + 1) * dur_per_word), 2)
+                        }
+                        for i, w in enumerate(words_list)
+                    ]
                 else:
-                    for w in seg["words"]:
-                        w["start"] = round(float(w.get("start", 0.0)) + time_offset, 2)
-                        w["end"] = round(float(w.get("end", w["start"] + 0.3)) + time_offset, 2)
+                    seg["words"] = []
             return data
     except Exception as e:
         print(f"Gemini Audio-Transkription Hinweis/Fehler: {e}")
@@ -149,7 +162,8 @@ def transcribe_with_local_whisper(audio_path: str, lang: str = "auto", time_offs
         if model is None:
             return None
         
-        options = {"word_timestamps": True}
+        # Fast transcription on CPU without slow DTW word_timestamps
+        options = {"fp16": False}
         if lang and lang != "auto":
             options["language"] = lang
             

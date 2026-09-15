@@ -59,15 +59,21 @@ def wait_for_serveo_url(serveo_process, timeout=30):
 if __name__ == "__main__":
     # 1. Start Backend
     print("[1/4] Starte Backend (FastAPI)...", flush=True)
-    backend_log = open("backend.log", "w")
+    backend_log = open("backend.log", "w", encoding="utf-8", errors="replace")
     python_exe = os.path.join(BACKEND_DIR, "venv", "Scripts", "python.exe")
     if not os.path.exists(python_exe):
         python_exe = "python"
+        
+    backend_env = os.environ.copy()
+    backend_env["PYTHONIOENCODING"] = "utf-8"
+    backend_env["PYTHONUTF8"] = "1"
+    
     backend = subprocess.Popen(
         [python_exe, "-u", "main.py"],
         cwd=BACKEND_DIR,
         stdout=backend_log,
-        stderr=backend_log
+        stderr=backend_log,
+        env=backend_env
     )
     processes.append(backend)
 
@@ -87,7 +93,7 @@ if __name__ == "__main__":
         cleanup()
 
     hostname = tunnel_url.replace("https://", "").replace("http://", "")
-    with open("tunnel_url.txt", "w") as f:
+    with open("tunnel_url.txt", "w", encoding="utf-8") as f:
         f.write(tunnel_url)
 
     # 3. Update next.config.ts with the new hostname
@@ -96,8 +102,10 @@ if __name__ == "__main__":
 
     # 4. Start Next.js Frontend
     print("[4/4] Starte Frontend (Next.js)...", flush=True)
-    frontend_log = open("frontend.log", "w")
+    frontend_log = open("frontend.log", "w", encoding="utf-8", errors="replace")
     npm_cmd = r"C:\Program Files\nodejs\npm.cmd"
+    if not os.path.exists(npm_cmd):
+        npm_cmd = "npm"
     frontend = subprocess.Popen(
         [npm_cmd, "run", "dev", "--", "-p", "3001"],
         cwd=FRONTEND_DIR,

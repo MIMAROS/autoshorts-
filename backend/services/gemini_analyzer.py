@@ -3,17 +3,23 @@ import json
 import re
 from dotenv import load_dotenv
 
-load_dotenv()
+# Ensure .env from backend folder is loaded even if cwd is different
+_env_path = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), ".env")
+if os.path.exists(_env_path):
+    load_dotenv(_env_path)
+else:
+    load_dotenv()
 
 # API Key Konfiguration
 api_key = os.getenv("GEMINI_API_KEY")
 
 def _get_genai_client():
-    if not api_key:
+    current_key = os.getenv("GEMINI_API_KEY")
+    if not current_key:
         return None
     try:
         from google import genai
-        return genai.Client(api_key=api_key)
+        return genai.Client(api_key=current_key)
     except Exception as e:
         print(f"Fehler beim Erstellen des GenAI Clients: {e}")
         return None
@@ -22,12 +28,11 @@ import time
 
 GEMINI_MODELS = [
     "gemini-2.5-flash",
+    "gemini-flash-latest",
     "gemini-2.5-flash-lite",
-    "gemini-2.0-flash",
-    "gemini-2.0-flash-lite",
-    "gemini-1.5-flash",
-    "gemini-1.5-flash-8b",
-    "gemini-1.5-pro"
+    "gemini-flash-lite-latest",
+    "gemini-2.5-pro",
+    "gemini-pro-latest"
 ]
 
 def _call_gemini_with_fallback(client, contents):
