@@ -489,6 +489,7 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
         "-c:v", "libx264",
         "-pix_fmt", "yuv420p",
         "-movflags", "+faststart",
+        "-shortest",
         "-threads", "1",
         "-preset", "ultrafast",
         output_path
@@ -998,10 +999,11 @@ def stitch_clips(clip_paths: list, output_path: str):
 def apply_branding_and_subs(stitched_path: str, transcript_data: dict, output_path: str, subtitle_config: dict):
     base_dir = os.path.dirname(output_path)
     ass_path = os.path.join(base_dir, f"subtitles_sequence.ass")
-    generate_ass(transcript_data.get("segments", []), 0.0, 9999.0, ass_path, subtitle_config)
-    escaped_ass_path = ass_path.replace('\\', '/').replace(':', '\\:').replace("'", "\\")
+    dur = get_video_duration(stitched_path)
+    generate_ass(transcript_data.get("segments", []), 0.0, dur, ass_path, subtitle_config)
+    escaped_ass_path = ass_path.replace('\\', '/').replace(':', '\\:').replace("'", "\\'")
     
-    command = build_ffmpeg_command_args(stitched_path, escaped_ass_path, subtitle_config, output_path)
+    command = build_ffmpeg_command_args(stitched_path, escaped_ass_path, subtitle_config, output_path, start_time="0", duration=str(dur))
     
     print(f"Führe FFmpeg (Branding) aus: {' '.join(command)}")
     try:
