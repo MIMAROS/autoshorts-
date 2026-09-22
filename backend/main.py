@@ -37,6 +37,41 @@ export_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Fer
 os.makedirs(export_dir, exist_ok=True)
 app.mount("/videos", StaticFiles(directory=export_dir), name="videos")
 
+from fastapi.responses import HTMLResponse, RedirectResponse
+
+@app.get("/", response_class=HTMLResponse)
+def root_endpoint():
+    return """<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MIMAROS AutoShorts API & App</title>
+    <style>
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: #0E1721; color: #FFFFFF; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; }
+        .card { background: #142231; border: 1px solid rgba(20, 174, 234, 0.3); border-radius: 20px; padding: 40px; text-align: center; max-width: 500px; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { color: #14AEEA; margin-bottom: 10px; font-size: 26px; }
+        p { color: #94A3B8; font-size: 14px; line-height: 1.6; }
+        .btn { display: inline-block; margin-top: 25px; padding: 14px 28px; background: linear-gradient(135deg, #14AEEA, #064A63); color: white; text-decoration: none; border-radius: 12px; font-weight: bold; font-size: 16px; border: 1px solid #14AEEA; transition: transform 0.2s; }
+        .btn:hover { transform: scale(1.05); }
+        .badge { display: inline-block; padding: 4px 10px; background: rgba(217, 168, 58, 0.15); color: #D9A83A; border: 1px solid rgba(217, 168, 58, 0.4); border-radius: 20px; font-size: 11px; font-weight: bold; margin-bottom: 15px; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <div class="badge">MIMAROS AUTOSHORTS SUITE</div>
+        <h1>Backend API ist online 🚀</h1>
+        <p>Dies ist der FastAPI-Server (Port 8000). Die vollständige Web-Benutzeroberfläche zur Erstellung von Shorts & Videos läuft auf <strong>Port 3000</strong>.</p>
+        <a href="http://localhost:3000" class="btn">👉 Zur Web-App wechseln (Port 3000)</a>
+    </div>
+</body>
+</html>"""
+
+@app.get("/index.html")
+def index_html_redirect():
+    return RedirectResponse(url="http://localhost:3000")
+
+
 import asyncio
 from datetime import datetime
 
