@@ -435,9 +435,12 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
             raw_end = parse_time(hook.get("end_time_approx", min(total_video_dur, raw_start + 45.0)))
             
             # Safe clamping within [0, total_video_dur]
-            max_valid_start = max(0.0, total_video_dur - 5.0)
-            start = max(0.0, min(raw_start, max_valid_start))
-            end = max(start + 3.0, min(total_video_dur, raw_end if raw_end > start else start + 30.0))
+            start = max(0.0, min(raw_start, max(0.0, total_video_dur - 0.5)))
+            if raw_end > start:
+                end = min(total_video_dur, raw_end)
+            else:
+                end = min(total_video_dur, start + 30.0)
+            end = max(start + 0.5, end)
             
             if is_shorts_mode and (end - start) > 90.0:
                 end = min(total_video_dur, start + 60.0)

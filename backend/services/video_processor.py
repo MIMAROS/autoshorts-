@@ -790,9 +790,8 @@ def process_clip(video_path: str, transcript_data: dict, start_time: float, end_
         try:
             total_dur = get_video_duration(video_path)
             if total_dur > 0:
-                if start_time >= total_dur:
-                    start_time = max(0.0, total_dur - 10.0)
-                end_time = max(start_time + 1.0, min(total_dur, end_time))
+                start_time = max(0.0, min(start_time, max(0.0, total_dur - 0.2)))
+                end_time = max(start_time + 0.2, min(total_dur, end_time))
         except Exception as e:
             print(f"Dur check in process_clip: {e}")
             
