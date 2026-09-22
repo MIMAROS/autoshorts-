@@ -474,7 +474,10 @@ def build_ffmpeg_command_args(video_path: str, escaped_srt_path: str, config: di
                 cmd.extend(["-i", path])
         else:
             if path.lower().endswith(('.png', '.jpg', '.jpeg')):
-                cmd.extend(["-loop", "1", "-i", path])
+                cmd.extend(["-loop", "1"])
+                if duration:
+                    cmd.extend(["-t", str(duration)])
+                cmd.extend(["-i", path])
             else:
                 cmd.extend(["-i", path])
             
@@ -782,6 +785,17 @@ def process_clip(video_path: str, transcript_data: dict, start_time: float, end_
         subtitle_config = {}
     subtitle_config["resolution"] = resolution
     
+    # Defensive duration bounds checking
+    if video_path and video_path != "demo" and os.path.exists(video_path):
+        try:
+            total_dur = get_video_duration(video_path)
+            if total_dur > 0:
+                if start_time >= total_dur:
+                    start_time = max(0.0, total_dur - 10.0)
+                end_time = max(start_time + 1.0, min(total_dur, end_time))
+        except Exception as e:
+            print(f"Dur check in process_clip: {e}")
+            
     base_dir = os.path.dirname(os.path.abspath(output_path))
     os.makedirs(base_dir, exist_ok=True)
         

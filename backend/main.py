@@ -297,45 +297,62 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
         window_end = min(total_video_dur, (t_end - t_start) if is_already_trimmed else t_end)
         
         hooks = []
-        if selected_mode == "youtube" or modus1_opt == "auto_highlights":
-            # In YouTube AutoShorts or Highlight mode:
-            # If window is already short (<= 90s)
-            if (window_end - window_start) <= 90.0:
-                hooks = [{
-                    "id": 1,
-                    "title": hook_title,
-                    "start_time_approx": window_start,
-                    "end_time_approx": window_end,
-                    "rationale": "Vom Nutzer ausgewählter Short-Bereich",
-                    "social_media_caption": social_caption,
-                    "viral_score": 98
-                }]
-            else:
-                # Analyze segments with Gemini for viral 30-60s Shorts within the selected <= 10 min window
-                all_segs = [s for s in transcript_data.get("segments", []) if float(s.get("end", 0)) > window_start and float(s.get("start", 0)) < window_end]
-                
+        is_shorts_mode = (selected_mode == "youtube" or modus1_opt == "auto_highlights")
+        
+        if is_shorts_mode:
+            window_len = window_end - window_start
+            all_segs = [s for s in transcript_data.get("segments", []) if float(s.get("end", 0)) > window_start and float(s.get("start", 0)) < window_end]
+            
+            if window_len > 40.0 and all_segs:
+                # Analyze segments with Gemini for viral 20-60s Shorts within the selected window
                 hooks = analyze_hooks(all_segs, clip_length)
-                if not hooks:
-                    window_len = window_end - window_start
-                    h_dur = min(window_len, 45.0)
+                
+            if not hooks:
+                if window_len <= 45.0:
                     hooks = [{
                         "id": 1,
                         "title": hook_title,
                         "start_time_approx": window_start,
-                        "end_time_approx": min(window_start + h_dur, window_end),
-                        "rationale": "Viral AutoShort Highlight",
+                        "end_time_approx": window_end,
+                        "rationale": "Vollständiger Short-Bereich",
                         "social_media_caption": social_caption,
-                        "viral_score": 95
+                        "viral_score": 98
                     }]
-                    if window_len > 90.0:
+                else:
+                    # Intelligente Aufteilung in bis zu 3 prägnante Shorts
+                    h1_end = min(window_start + 35.0, window_end)
+                    hooks = [{
+                        "id": 1,
+                        "title": hook_title,
+                        "start_time_approx": window_start,
+                        "end_time_approx": h1_end,
+                        "rationale": "Viral AutoShort Highlight 1",
+                        "social_media_caption": social_caption,
+                        "viral_score": 96
+                    }]
+                    if window_len >= 60.0:
+                        h2_start = min(window_start + 30.0, window_end - 25.0)
+                        h2_end = min(h2_start + 35.0, window_end)
                         hooks.append({
                             "id": 2,
                             "title": f"{hook_title} - TEIL 2",
-                            "start_time_approx": min(window_start + 45.0, window_end - 30.0),
-                            "end_time_approx": min(window_start + 90.0, window_end),
+                            "start_time_approx": h2_start,
+                            "end_time_approx": h2_end,
                             "rationale": "Viral AutoShort Highlight 2",
-                            "social_media_caption": social_caption,
-                            "viral_score": 92
+                            "social_media_caption": f"Teil 2: {social_caption}",
+                            "viral_score": 93
+                        })
+                    if window_len >= 90.0:
+                        h3_start = min(window_start + 65.0, window_end - 25.0)
+                        h3_end = min(h3_start + 35.0, window_end)
+                        hooks.append({
+                            "id": 3,
+                            "title": f"{hook_title} - TEIL 3",
+                            "start_time_approx": h3_start,
+                            "end_time_approx": h3_end,
+                            "rationale": "Viral AutoShort Highlight 3",
+                            "social_media_caption": f"Teil 3: {social_caption}",
+                            "viral_score": 90
                         })
         elif modus1_opt in ["one_to_one", "1:1", "single"] or req_clip_len in ["1:1", "single", "full"] or (selected_mode == "standard" and modus1_opt != "auto_highlights"):
             hooks = [{
@@ -360,25 +377,45 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
             }]
         
         # 4. Videoschnitt & Rendering mit CI-Branding und Untertiteln
-        jobs[job_id] = {"status": "editing", "progress": 85, "hooks": hooks, "clips": []}
-        
+        total_hooks = len(hooks)
         clips = []
         export_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "Fertige_Shorts")
         os.makedirs(export_dir, exist_ok=True)
         
         for i, hook in enumerate(hooks):
-            start = parse_time(hook.get("start_time_approx", window_start))
-            end = parse_time(hook.get("end_time_approx", min(total_video_dur, start + 60.0)))
+            hook_num = i + 1
+            cur_progress = 75 + int(22 * (i / max(1, total_hooks)))
+            hook_title_display = hook.get("title") or f"Short {hook_num}"
+            msg = f"Rendere Short {hook_num} von {total_hooks}: {hook_title_display}..." if is_shorts_mode else "Rendere 1:1 Video mit Untertiteln & CI-Design..."
             
-            if end <= start:
-                end = min(total_video_dur, start + 30.0)
-            if (selected_mode == "youtube" or modus1_opt == "auto_highlights") and (end - start) > 90.0:
+            jobs[job_id] = {
+                "status": "editing",
+                "progress": cur_progress,
+                "hooks": hooks,
+                "clips": clips,
+                "message": msg
+            }
+            
+            raw_start = parse_time(hook.get("start_time_approx", window_start))
+            raw_end = parse_time(hook.get("end_time_approx", min(total_video_dur, raw_start + 45.0)))
+            
+            # Safe clamping within [0, total_video_dur]
+            max_valid_start = max(0.0, total_video_dur - 5.0)
+            start = max(0.0, min(raw_start, max_valid_start))
+            end = max(start + 3.0, min(total_video_dur, raw_end if raw_end > start else start + 30.0))
+            
+            if is_shorts_mode and (end - start) > 90.0:
                 end = min(total_video_dur, start + 60.0)
                 
-            output_filename = f"AutoShort_{job_id}_Hook_{i+1}.mp4"
+            output_filename = f"AutoShort_{job_id}_Hook_{hook_num}.mp4"
             output_clip = os.path.join(export_dir, output_filename)
             
-            process_clip(video_path, transcript_data, start, end, output_clip, resolution, subtitle_config)
+            # Individual hook config so title banner displays the specific hook title
+            clip_sub_config = dict(subtitle_config)
+            if hook.get("title"):
+                clip_sub_config["hookHeader"] = hook["title"]
+            
+            process_clip(video_path, transcript_data, start, end, output_clip, resolution, clip_sub_config)
             
             # SUPABASE UPLOAD (mit lokalem Fallback)
             public_url = upload_file_to_supabase(output_clip, "autoshorts-storage", output_filename)
@@ -392,6 +429,7 @@ def process_video_task(job_id: str, url: str, resolution: str, subtitle_config: 
             "progress": 100,
             "hooks": hooks,
             "clips": clips,
+            "message": f"Erfolgreich {len(clips)} {'Shorts' if is_shorts_mode else 'Video'} generiert!",
             "generated_title": context_title,
             "generated_caption": social_caption
         }
@@ -976,3 +1014,7 @@ async def save_manual_token_endpoint(platform: str, req: ManualTokenRequest):
         linkedin_uploader.save_manual_token(req.token, req.user_id or "")
         return {"status": "success", "message": "LinkedIn Token manuell gespeichert!"}
     raise HTTPException(status_code=400, detail="Manuelles Token für diese Plattform nicht unterstützt.")
+
+if __name__ == "__main__":
+    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=False)
+

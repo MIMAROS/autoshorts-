@@ -51,6 +51,31 @@ def _call_gemini_with_fallback(client, contents):
                     break
     return None
 
+def parse_time_value(time_val, default: float = 0.0) -> float:
+    """
+    Parst Zeitangaben defensiv aus Strings (z.B. '01:25', '01:25.5', '1:25', '85', '85.5s'),
+    Floats oder Integers und liefert stets eine gültige Sekundenangabe als float.
+    """
+    if time_val is None or time_val == "":
+        return default
+    if isinstance(time_val, (int, float)):
+        return float(time_val)
+    if isinstance(time_val, str):
+        cleaned = re.sub(r'[^\d:.,]', '', time_val.strip()).replace(',', '.')
+        if not cleaned:
+            return default
+        parts = cleaned.split(':')
+        try:
+            if len(parts) == 3:
+                return float(parts[0]) * 3600.0 + float(parts[1]) * 60.0 + float(parts[2])
+            elif len(parts) == 2:
+                return float(parts[0]) * 60.0 + float(parts[1])
+            elif len(parts) == 1:
+                return float(parts[0])
+        except (ValueError, TypeError):
+            pass
+    return default
+
 def analyze_hooks(transcript_segments: list, clip_length: str = "auto") -> list:
     """
     Sendet das Transkript an Gemini und erhält die besten Passagen basierend auf clip_length.
@@ -72,13 +97,14 @@ def analyze_hooks(transcript_segments: list, clip_length: str = "auto") -> list:
     try:
         transcript_with_times = ""
         for seg in transcript_segments:
-            start_m = int(seg.get('start', 0) // 60)
-            start_s = int(seg.get('start', 0) % 60)
+            s_val = float(seg.get('start', 0.0))
+            start_m = int(s_val // 60)
+            start_s = int(s_val % 60)
             transcript_with_times += f"[{start_m:02d}:{start_s:02d}] {seg.get('text', '')}\n"
 
         length_instruction = "30-60 Sekunden"
         if clip_length == "short":
-            length_instruction = "unter 30 Sekunden"
+            length_instruction = "unter 30 Sekunden (ca. 20-30 Sekunden)"
         elif clip_length == "extended":
             length_instruction = "60-90 Sekunden"
 
@@ -89,15 +115,20 @@ def analyze_hooks(transcript_segments: list, clip_length: str = "auto") -> list:
         Liefere die Antwort exakt und AUSSCHLIESSLICH als gültiges JSON-Array mit 3 Objekten. Die Antwort MUSS ZWINGEND ein valides JSON Array sein mit folgendem Format:
         [
             {{
-                "start_time_approx": float,
-                "end_time_approx": float,
-                "rationale": "Kurze Erklärung",
-                "viral_score": int (0-100),
-                "title": "Ein stark klickbarer, viraler Hook/Titel des Clips (max. 3-5 Wörter in GROSSBUCHSTABEN, z.B. DER GEHEIME TRICK)",
-                "social_media_caption": "Virale Beschreibung mit starkem Hook, einer Frage/Call-to-Action und passenden Hashtags."
+                "start_time_approx": 15.0,
+                "end_time_approx": 45.0,
+                "rationale": "Kurze Erklärung des viralen Potenzials",
+                "viral_score": 95,
+                "title": "DER GEHEIME TRICK",
+                "social_media_caption": "Virale Beschreibung mit starkem Hook, einer Frage/Call-to-Action und passenden Hashtags #shorts #viral"
             }}
         ]
-        Hier ist das Transkript mit Zeitstempeln (nutze diese für start_time_approx und end_time_approx):
+        
+        Wichtig:
+        - Die Zeitangaben 'start_time_approx' und 'end_time_approx' müssen die Sekunden als Zahl (Float oder Int) angeben.
+        - Wähle 3 inhaltlich eigenständige Passagen, die direkt fesseln.
+        
+        Hier ist das Transkript mit Zeitstempeln:
         {transcript_with_times}
         """
         
@@ -109,20 +140,26 @@ def analyze_hooks(transcript_segments: list, clip_length: str = "auto") -> list:
                 text = text.replace("```", "", 1).rsplit("```", 1)[0].strip()
                 
             raw_data = json.loads(text)
-            results = []
-            for idx, clip in enumerate(raw_data):
-                hook = {
-                    "id": idx + 1,
-                    "start_time_approx": float(clip.get("start_time_approx", 0.0)),
-                    "end_time_approx": float(clip.get("end_time_approx", 30.0)),
-                    "rationale": clip.get("rationale", "Spannender Ausschnitt"),
-                    "viral_score": int(clip.get("viral_score", 90)),
-                    "title": str(clip.get("title", f"CLIP {idx+1}")).upper(),
-                    "social_media_caption": clip.get("social_media_caption", "Schau dir dieses virale Video an! 🔥 #viral #shorts")
-                }
-                results.append(hook)
-            if results:
-                return results
+            if isinstance(raw_data, list):
+                results = []
+                for idx, clip in enumerate(raw_data):
+                    s_approx = parse_time_value(clip.get("start_time_approx"), default=0.0)
+                    e_approx = parse_time_value(clip.get("end_time_approx"), default=s_approx + 30.0)
+                    if e_approx <= s_approx:
+                        e_approx = s_approx + 30.0
+                        
+                    hook = {
+                        "id": idx + 1,
+                        "start_time_approx": s_approx,
+                        "end_time_approx": e_approx,
+                        "rationale": clip.get("rationale", "Spannender Ausschnitt"),
+                        "viral_score": int(clip.get("viral_score", 90)),
+                        "title": str(clip.get("title", f"CLIP {idx+1}")).upper(),
+                        "social_media_caption": clip.get("social_media_caption", "Schau dir dieses virale Video an! 🔥 #viral #shorts")
+                    }
+                    results.append(hook)
+                if results:
+                    return results
                 
     except Exception as e:
         print("Hinweis bei Gemini Hook-Analyse:", e)

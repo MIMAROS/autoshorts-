@@ -771,11 +771,14 @@ export default function Page() {
             setSocialCaption(statusData.hooks[0].social_media_caption);
           }
           
-          let phaseDesc = statusData.status;
-          if (statusData.status === 'downloading') phaseDesc = "Lade Video herunter...";
-          else if (statusData.status === 'transcribing') phaseDesc = "Transkribiere Audio mit Whisper...";
-          else if (statusData.status === 'analyzing') phaseDesc = "Generiere Titel & Beschreibung aus Transkript...";
-          else if (statusData.status === 'editing') phaseDesc = "Rendere 1:1 Video mit Untertiteln & CI-Design...";
+          let phaseDesc = statusData.message;
+          if (!phaseDesc) {
+            if (statusData.status === 'downloading') phaseDesc = "Lade Video herunter...";
+            else if (statusData.status === 'transcribing') phaseDesc = "Transkribiere Audio mit Whisper...";
+            else if (statusData.status === 'analyzing') phaseDesc = "Analysiere virale Hook-Ausschnitte & erstelle Titel...";
+            else if (statusData.status === 'editing') phaseDesc = selectedMode === 'youtube' || modus1Option === 'auto_highlights' ? "Rendere Shorts mit Untertiteln & CI-Design..." : "Rendere Video mit Untertiteln & CI-Design...";
+            else phaseDesc = "Verarbeite Video...";
+          }
           
           setStatusMessage(`${phaseDesc} (${statusData.progress || 0}%)`);
           
