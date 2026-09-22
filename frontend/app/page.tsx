@@ -10,9 +10,34 @@ const LogoIcon = ({ className = "w-10 h-10 md:w-12 md:h-12 shrink-0" }: { classN
   <Logo className={className} />
 );
 
-const API_BASE = (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL)
-  ? process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '')
-  : '';
+const getApiBase = (): string => {
+  if (typeof process !== 'undefined' && process.env.NEXT_PUBLIC_API_URL) {
+    return process.env.NEXT_PUBLIC_API_URL.replace(/\/$/, '');
+  }
+  if (typeof window !== 'undefined') {
+    if (window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1') {
+      return 'http://127.0.0.1:8000';
+    }
+  }
+  return '';
+};
+
+const API_BASE = getApiBase();
+
+const apiFetch = async (endpoint: string, options?: RequestInit): Promise<Response> => {
+  const base = getApiBase();
+  const primaryUrl = endpoint.startsWith('http') ? endpoint : `${base}${endpoint}`;
+  try {
+    return await fetch(primaryUrl, options);
+  } catch (err) {
+    if (base && !endpoint.startsWith('http')) {
+      console.warn(`Primary API call to ${primaryUrl} failed, falling back to relative ${endpoint}...`);
+      return await fetch(endpoint, options);
+    }
+    throw err;
+  }
+};
+
 
 const formatSecondsToTime = (seconds: number): string => {
   const s = Math.max(0, Math.floor(seconds || 0));
@@ -258,7 +283,7 @@ export default function Page() {
     }
     setIsGeneratingVoiceover(true);
     try {
-      const res = await fetch(`${API_BASE}/api/generate-voiceover`, {
+      const res = await apiFetch('/api/generate-voiceover', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ text: hookHeader, voice: selectedVoice, lang: videoLang })
@@ -302,7 +327,7 @@ export default function Page() {
 
   const fetchAuthStatus = async () => {
     try {
-        const res = await fetch(`${API_BASE}/api/auth/status`);
+        const res = await apiFetch('/api/auth/status');
         const data = await res.json();
         setAuthStatus({
             youtube: !!data.youtube,
@@ -317,7 +342,7 @@ export default function Page() {
 
   const fetchSchedules = async () => {
     try {
-        const res = await fetch(`${API_BASE}/api/schedules`);
+        const res = await apiFetch('/api/schedules');
         const data = await res.json();
         setSchedules(data.schedules || []);
     } catch (e) {
@@ -327,7 +352,7 @@ export default function Page() {
 
   const fetchHistory = async () => {
     try {
-        const res = await fetch(`${API_BASE}/api/history`);
+        const res = await apiFetch('/api/history');
         const data = await res.json();
         setHistory(data.history || []);
     } catch (e) {
@@ -338,7 +363,7 @@ export default function Page() {
   const generateAutoTitle = async (inputText: string) => {
     if (!inputText) return;
     try {
-        const res = await fetch(`${API_BASE}/api/generate-viral-title`, {
+        const res = await apiFetch('/api/generate-viral-title', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ text: inputText })
@@ -394,7 +419,7 @@ export default function Page() {
       if (trimEnd !== '') formData.append('trim_end', trimEnd.toString());
       formData.append('video_lang', videoLang);
 
-      const res = await fetch(`${API_BASE}/api/analyze-trimmed-section`, {
+      const res = await apiFetch('/api/analyze-trimmed-section', {
         method: 'POST',
         body: formData
       });
@@ -471,7 +496,7 @@ export default function Page() {
       const logoData = new FormData();
       logoData.append('file', file);
       try {
-          const logoRes = await fetch(`${API_BASE}/api/upload-logo`, { method: 'POST', body: logoData });
+          const logoRes = await apiFetch('/api/upload-logo', { method: 'POST', body: logoData });
           if (logoRes.ok) {
               const parsedLogo = await logoRes.json();
               setLogoPath(parsedLogo.logo_path);
@@ -489,7 +514,7 @@ export default function Page() {
       if (!q) return;
       setIsSearching(true);
       try {
-          const res = await fetch(`${API_BASE}/api/search-videos`, {
+          const res = await apiFetch('/api/search-videos', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ query: q, limit: 8 })
@@ -541,7 +566,7 @@ export default function Page() {
 
       setIsFetchingMetadata(true);
       try {
-          const res = await fetch(`${API_BASE}/api/video-info`, {
+          const res = await apiFetch('/api/video-info', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ youtube_url: cleanUrl })
@@ -606,7 +631,7 @@ export default function Page() {
               watermark_text: globalSubtitleConfig.watermark_text || 'mimaros.eu'
           };
 
-          const res = await fetch(`${API_BASE}/api/preview-clip`, {
+          const res = await apiFetch('/api/preview-clip', {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ clip_path: 'demo', config })
@@ -690,7 +715,7 @@ export default function Page() {
           formData.append('subtitle_lang', subtitleLang);
           formData.append('subtitle_config', JSON.stringify(subConfig));
           
-          const res = await fetch(`${API_BASE}/api/process-sequence`, {
+          const res = await apiFetch('/api/process-sequence', {
               method: 'POST',
               body: formData
           });
@@ -710,7 +735,7 @@ export default function Page() {
                   formData.append('trim_end', trimEnd.toString());
               }
               
-              const res = await fetch(`${API_BASE}/api/upload-video`, {
+              const res = await apiFetch('/api/upload-video', {
                   method: 'POST',
                   body: formData
               });
@@ -736,7 +761,7 @@ export default function Page() {
                   payload.trim_end = Number(trimEnd);
               }
               
-              const res = await fetch(`${API_BASE}/api/process-video`, {
+              const res = await apiFetch('/api/process-video', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -751,7 +776,7 @@ export default function Page() {
 
       const interval = setInterval(async () => {
         try {
-          const statusRes = await fetch(`${API_BASE}/api/status/${jobId}`);
+          const statusRes = await apiFetch(`/api/status/${jobId}`);
           const statusData = await statusRes.json();
           
           if (statusData.status === 'error') {
@@ -840,7 +865,7 @@ export default function Page() {
 
   const handleScheduleSubmit = async () => {
     try {
-        await fetch(`${API_BASE}/api/schedule`, {
+        await apiFetch('/api/schedule', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -2550,7 +2575,7 @@ export default function Page() {
 
   const handleOAuthConnect = async (platform: string) => {
       try {
-          const res = await fetch(`${API_BASE}/api/auth/${platform}`, { method: 'POST' });
+          const res = await apiFetch(`/api/auth/${platform}`, { method: 'POST' });
           if (res.ok) {
               const data = await res.json();
               if (data.auth_url) {
@@ -2571,7 +2596,7 @@ export default function Page() {
   const handleDisconnect = async (platform: string) => {
       if (!confirm(`Möchtest du die Verknüpfung mit ${platform} wirklich trennen?`)) return;
       try {
-          const res = await fetch(`${API_BASE}/api/auth/${platform}/disconnect`, { method: 'POST' });
+          const res = await apiFetch(`/api/auth/${platform}/disconnect`, { method: 'POST' });
           if (res.ok) {
               alert(`${platform} erfolgreich getrennt.`);
               fetchAuthStatus();
@@ -2587,7 +2612,7 @@ export default function Page() {
           return;
       }
       try {
-          const res = await fetch(`${API_BASE}/api/auth/${platform}/manual-token`, {
+          const res = await apiFetch(`/api/auth/${platform}/manual-token`, {
               method: 'POST',
               headers: { 'Content-Type': 'application/json' },
               body: JSON.stringify({ token: manualToken, user_id: manualUserId })
