@@ -1,7 +1,8 @@
 FROM python:3.11-slim
 
-# Install system dependencies including FFmpeg
-RUN apt-get update && apt-get install -y ffmpeg && rm -rf /var/lib/apt/lists/*
+# Install system dependencies including FFmpeg and font libraries for ASS subtitles
+RUN apt-get update && apt-get install -y ffmpeg fontconfig fonts-dejavu-core && rm -rf /var/lib/apt/lists/*
+
 
 # Set working directory
 WORKDIR /app
